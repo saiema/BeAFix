@@ -39,6 +39,22 @@ import edu.mit.csail.sdg.alloy4.Util;
 
 public abstract class Browsable {
 
+    private int mutGenLimit = 0;
+
+    public void mutGenLimit(int m) {
+        if (m < 0)
+            throw new IllegalArgumentException("Can't use a negative value with mutGenLimit");
+        this.mutGenLimit = m;
+    }
+
+    public int mutGenLimit() {
+        return this.mutGenLimit;
+    }
+
+    public boolean hasMutGenLimit() {
+        return mutGenLimit > 0;
+    }
+
     /**
      * Returns a Pos object representing the position of this Expr.
      */
@@ -161,7 +177,8 @@ public abstract class Browsable {
             }
 
             @Override
-            public void focusLost(FocusEvent e) {}
+            public void focusLost(FocusEvent e) {
+            }
         });
         final JFrame x = new JFrame("Parse Tree");
         x.setLayout(new BorderLayout());
