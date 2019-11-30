@@ -162,6 +162,7 @@ public final class ExprBinary extends Expr {
 
     /** This class contains all possible binary operators. */
     public static enum Op {
+
                            /** -&gt; */
                            ARROW("->", true),
                            /** -&gt;some */
@@ -745,4 +746,20 @@ public final class ExprBinary extends Expr {
     public List< ? extends Browsable> getSubnodes() {
         return Util.asList(left, right);
     }
+
+    //methods needed for mutation
+
+    public ExprBinary mutateLeft(Expr left) {
+        return new ExprBinary(pos, closingBracket, op, left, right, type, errors);
+    }
+
+    public ExprBinary mutateRight(Expr right) {
+        return new ExprBinary(pos, closingBracket, op, left, right, type, errors);
+    }
+
+    public ExprBinary mutateOp(Op op) {
+        return new ExprBinary(pos, closingBracket, op, left, right, type, errors);
+    }
+
+
 }
