@@ -23,9 +23,9 @@ import edu.mit.csail.sdg.ast.VisitReturn;
 
 public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
-    protected static final Optional<List<Mutation>> EMPTY          = Optional.empty();
-    protected static final List<Op>                 RELATIONAL_OPS = Arrays.asList(Op.EQUALS, Op.GT, Op.GTE, Op.LT, Op.LTE, Op.NOT_EQUALS, Op.NOT_GT, Op.NOT_GTE, Op.NOT_LT, Op.NOT_LTE);
-
+    protected static final Optional<List<Mutation>> EMPTY           = Optional.empty();
+    protected static final List<Op>                 RELATIONAL_OPS  = Arrays.asList(Op.EQUALS, Op.GT, Op.GTE, Op.LT, Op.LTE, Op.NOT_EQUALS, Op.NOT_GT, Op.NOT_GTE, Op.NOT_LT, Op.NOT_LTE);
+    protected static final List<Op>                 CONDITIONAL_OPS = Arrays.asList(Op.AND, Op.OR, Op.IMPLIES, Op.IFF);
 
     public Optional<List<Mutation>> mutate(Expr e) {
         return this.visitThis(e);
@@ -37,6 +37,12 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (!(e instanceof ExprBinary))
             return false;
         return RELATIONAL_OPS.contains(((ExprBinary) e).op);
+    }
+
+    protected boolean isConditionalExpression(Expr e) {
+        if (!(e instanceof ExprBinary))
+            return false;
+        return CONDITIONAL_OPS.contains(((ExprBinary) e).op);
     }
 
     //DEFAULT VISIT IMPLEMENTATION
