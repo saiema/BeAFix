@@ -223,6 +223,8 @@ parser code {:
     ch.put(CompSym.ID, "NAME");
     ch.put(CompSym.NUMBER, "NUMBER");
     ch.put(CompSym.STR, "STRING");
+    ch.put(CompSym.MUTABLE, "#m#");
+
     TreeSet<String> list = new TreeSet<String>();
     Pos p=Pos.UNKNOWN;
     if (x!=null && x.value instanceof Pos) p=(Pos)(x.value);
@@ -475,6 +477,7 @@ terminal Pos SUM;              //  sum       // The filter enables us to disambi
 terminal Pos THIS;             //  this
 terminal Pos TILDE;            //  ~
 terminal Pos UNIV;             //  univ
+terminal Pos MUTABLE;             //  #m#
 
 terminal ExprVar ID;
 
@@ -803,6 +806,9 @@ SuperOpt ::= Super:x                       {: RESULT=x;                         
 Super    ::= LBRACE:a SuperP:x RBRACE:b    {: RESULT=ExprUnary.Op.NOOP.make(a.merge(b), x);     :};
 Super    ::= LBRACE:a          RBRACE:b    {: RESULT=ExprConstant.Op.TRUE.make(a.merge(b), 0);  :};
 SuperP   ::= Expr:a                        {: RESULT=a;                                         :};
+//-> ------- MUTATION MARK
+SuperP   ::= MUTABLE Expr:a                        {: RESULT=a;                                         :};
+//-> ------- END MUTATION MARK
 SuperP   ::= SuperP:a Expr:b               {: RESULT=ExprBinary.Op.AND.make(null, null, a, b);  :};
 
 SuperOrBar ::= BAR Expr:x  {: RESULT=x; :};
