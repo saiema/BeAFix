@@ -23,9 +23,11 @@ import edu.mit.csail.sdg.ast.VisitReturn;
 
 public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
-    protected static final Optional<List<Mutation>> EMPTY           = Optional.empty();
-    protected static final List<Op>                 RELATIONAL_OPS  = Arrays.asList(Op.EQUALS, Op.GT, Op.GTE, Op.LT, Op.LTE, Op.NOT_EQUALS, Op.NOT_GT, Op.NOT_GTE, Op.NOT_LT, Op.NOT_LTE);
-    protected static final List<Op>                 CONDITIONAL_OPS = Arrays.asList(Op.AND, Op.OR, Op.IMPLIES, Op.IFF);
+    protected static final Optional<List<Mutation>> EMPTY                 = Optional.empty();
+    protected static final List<Op>                 RELATIONAL_OPS        = Arrays.asList(Op.EQUALS, Op.GT, Op.GTE, Op.LT, Op.LTE, Op.NOT_EQUALS, Op.NOT_GT, Op.NOT_GTE, Op.NOT_LT, Op.NOT_LTE);
+    protected static final List<Op>                 CONDITIONAL_OPS       = Arrays.asList(Op.AND, Op.OR, Op.IMPLIES, Op.IFF);
+    protected static final List<Op>                 ARITHMETIC_BINARY_OPS = Arrays.asList(Op.DIV, Op.MUL, Op.REM, Op.IPLUS, Op.IMINUS);
+    protected static final List<ExprUnary.Op>       RELATIONAL_UNARY_OPS  = Arrays.asList(ExprUnary.Op.CLOSURE, ExprUnary.Op.RCLOSURE, ExprUnary.Op.TRANSPOSE);
 
     public Optional<List<Mutation>> mutate(Expr e) {
         return this.visitThis(e);
@@ -43,6 +45,19 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (!(e instanceof ExprBinary))
             return false;
         return CONDITIONAL_OPS.contains(((ExprBinary) e).op);
+    }
+
+    //for the moment only binary expressions are considered
+    protected boolean isArithmeticExpression(Expr e) {
+        if (!(e instanceof ExprBinary))
+            return false;
+        return ARITHMETIC_BINARY_OPS.contains(((ExprBinary) e).op);
+    }
+
+    protected boolean isUnaryRelationalExpression(Expr e) {
+        if (!(e instanceof ExprUnary))
+            return false;
+        return RELATIONAL_UNARY_OPS.contains(((ExprUnary) e).op);
     }
 
     //DEFAULT VISIT IMPLEMENTATION
