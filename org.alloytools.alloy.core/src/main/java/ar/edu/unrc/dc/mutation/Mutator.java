@@ -1,10 +1,12 @@
 package ar.edu.unrc.dc.mutation;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
@@ -64,26 +66,61 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
     @Override
     public Optional<List<Mutation>> visit(Sig x) throws Err {
+        //TODO: need help with this
         return EMPTY;
     }
 
     @Override
     public Optional<List<Mutation>> visit(Field x) throws Err {
+        //TODO: need help with this
         return EMPTY;
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
+        List<Mutation> mutations = new LinkedList<>();
+        if (x.left != null) {
+            Optional<List<Mutation>> leftMutations = x.left.accept(this);
+            if (leftMutations.isPresent())
+                mutations.addAll(leftMutations.get());
+        }
+        if (x.right != null) {
+            Optional<List<Mutation>> rightMutations = x.right.accept(this);
+            if (rightMutations.isPresent())
+                mutations.addAll(rightMutations.get());
+        }
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
         return EMPTY;
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprList x) throws Err {
+        List<Mutation> mutations = new LinkedList<>();
+        if (x.args != null) {
+            for (Expr e : x.args) {
+                Optional<List<Mutation>> argMutations = e.accept(this);
+                if (argMutations.isPresent())
+                    mutations.addAll(argMutations.get());
+            }
+        }
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
         return EMPTY;
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprCall x) throws Err {
+        List<Mutation> mutations = new LinkedList<>();
+        if (x.args != null) {
+            for (Expr e : x.args) {
+                Optional<List<Mutation>> argMutations = e.accept(this);
+                if (argMutations.isPresent())
+                    mutations.addAll(argMutations.get());
+            }
+        }
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
         return EMPTY;
     }
 
@@ -94,21 +131,80 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
     @Override
     public Optional<List<Mutation>> visit(ExprITE x) throws Err {
+        List<Mutation> mutations = new LinkedList<>();
+        if (x.cond != null) {
+            Optional<List<Mutation>> condMutations = x.cond.accept(this);
+            if (condMutations.isPresent())
+                mutations.addAll(condMutations.get());
+        }
+        if (x.left != null) {
+            Optional<List<Mutation>> thenMutations = x.left.accept(this);
+            if (thenMutations.isPresent())
+                mutations.addAll(thenMutations.get());
+        }
+        if (x.right != null) {
+            Optional<List<Mutation>> elseMutations = x.right.accept(this);
+            if (elseMutations.isPresent())
+                mutations.addAll(elseMutations.get());
+        }
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
         return EMPTY;
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprLet x) throws Err {
+        //TODO: need help with this part
+        List<Mutation> mutations = new LinkedList<>();
+        if (x.var != null) {
+            Optional<List<Mutation>> letVarMutations = x.var.accept(this);
+            if (letVarMutations.isPresent())
+                mutations.addAll(letVarMutations.get());
+        }
+        if (x.expr != null) {
+            Optional<List<Mutation>> letVarBoundedExprMutations = x.expr.accept(this);
+            if (letVarBoundedExprMutations.isPresent())
+                mutations.addAll(letVarBoundedExprMutations.get());
+        }
+        if (x.sub != null) {
+            Optional<List<Mutation>> exprMutations = x.sub.accept(this);
+            if (exprMutations.isPresent())
+                mutations.addAll(exprMutations.get());
+        }
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
         return EMPTY;
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprQt x) throws Err {
+        List<Decl> vars = x.decls;
+        List<Mutation> declMutations = new LinkedList<>();
+        if (vars != null) {
+            for (Decl d : vars) {
+                //TODO: need help with this part
+            }
+        }
+
+        Expr formula = x.sub;
+        if (formula != null)
+            if (declMutations.isEmpty())
+                return formula.accept(this);
+            else {
+                Optional<List<Mutation>> formulaMutations = formula.accept(this);
+                if (formulaMutations.isPresent()) {
+                    declMutations.addAll(formulaMutations.get());
+                }
+                return Optional.of(declMutations);
+            }
         return EMPTY;
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
+        Expr sub = x.sub;
+        if (sub != null)
+            return sub.accept(this);
         return EMPTY;
     }
 
