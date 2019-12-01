@@ -146,6 +146,7 @@ public final class ExprUnary extends Expr {
 
     /** This class contains all possible unary operators. */
     public enum Op {
+
                     /** :some x (where x is a unary set) */
                     SOMEOF("some of"),
                     /** :lone x (where x is a unary set) */
@@ -503,5 +504,15 @@ public final class ExprUnary extends Expr {
             return super.referenced((Clause) sub);
         } else
             return super.referenced();
+    }
+
+    public ExprUnary mutateExpression(Expr sub) {
+        if (op == Op.NOOP)
+            throw new IllegalArgumentException("Shouldn't be mutating the expression of a unary expression with NOOP");
+        return new ExprUnary(pos, op, sub, type, weight, errors);
+    }
+
+    public ExprUnary mutateOp(Op op) {
+        return new ExprUnary(pos, op, sub, type, weight, errors);
     }
 }

@@ -39,7 +39,9 @@ import edu.mit.csail.sdg.alloy4.Util;
 
 public abstract class Browsable {
 
-    private int mutGenLimit = 0;
+    private static int NEXT_ID     = 0;
+    private int        mutGenLimit = 0;
+    private int        ID          = NEXT_ID++;
 
     public void mutGenLimit(int m) {
         if (m < 0)
@@ -53,6 +55,14 @@ public abstract class Browsable {
 
     public boolean hasMutGenLimit() {
         return mutGenLimit > 0;
+    }
+
+    public int getID() {
+        return ID;
+    }
+
+    protected void setID(int id) {
+        this.ID = id;
     }
 
     /**
