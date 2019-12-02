@@ -73,6 +73,7 @@ public final class ExprBinary extends Expr {
         this.op = op;
         this.left = left;
         this.right = right;
+        defineParentForComponents();
     }
 
     // ============================================================================================================//
@@ -761,5 +762,10 @@ public final class ExprBinary extends Expr {
         return new ExprBinary(pos, closingBracket, op, left, right, type, errors);
     }
 
+    @Override
+    public void defineParentForComponents() {
+        this.left.setBrowsableParent(this);
+        this.right.setBrowsableParent(this);
+    }
 
 }

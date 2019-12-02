@@ -55,4 +55,8 @@ public abstract class ExprHasName extends Expr {
     public final int getDepth() {
         return 1;
     }
+
+    @Override
+    public void defineParentForComponents() {
+    }
 }

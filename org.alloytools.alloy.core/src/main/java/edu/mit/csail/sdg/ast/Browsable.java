@@ -42,6 +42,7 @@ public abstract class Browsable {
     private static int NEXT_ID     = 0;
     private int        mutGenLimit = 0;
     private int        ID          = NEXT_ID++;
+    private Browsable  browsableParent;
 
     public void mutGenLimit(int m) {
         if (m < 0)
@@ -63,6 +64,14 @@ public abstract class Browsable {
 
     protected void setID(int id) {
         this.ID = id;
+    }
+
+    public Browsable getBrowsableParent() {
+        return this.browsableParent;
+    }
+
+    public void setBrowsableParent(Browsable p) {
+        this.browsableParent = p;
     }
 
     /**
@@ -118,7 +127,7 @@ public abstract class Browsable {
      */
     public static final Browsable make(final Pos pos, final Pos span, final String html, final List< ? extends Browsable> subnodes) {
         final ConstList< ? extends Browsable> constlist = ConstList.make(subnodes);
-        return new Browsable() {
+        Browsable newBrowsable = new Browsable() {
 
             @Override
             public Pos pos() {
@@ -139,7 +148,16 @@ public abstract class Browsable {
             public List< ? extends Browsable> getSubnodes() {
                 return constlist;
             }
+
+            @Override
+            protected void defineParentForComponents() {
+                for (Browsable n : getSubnodes()) {
+                    n.setBrowsableParent(this);
+                }
+            }
+
         };
+        return newBrowsable;
     }
 
     /**
@@ -201,4 +219,6 @@ public abstract class Browsable {
             tree.listeners.add(listener);
         return x;
     }
+
+    protected abstract void defineParentForComponents();
 }

@@ -191,6 +191,7 @@ public final class Command extends Browsable {
         this.scope = ConstList.make(scope);
         this.additionalExactScopes = ConstList.make(additionalExactSig);
         this.parent = parent;
+        defineParentForComponents();
     }
 
     /**
@@ -318,5 +319,11 @@ public final class Command extends Browsable {
     @Override
     public List< ? extends Browsable> getSubnodes() {
         return formula == null ? (new ArrayList<Browsable>(0)) : Util.asList(formula);
+    }
+
+    @Override
+    protected void defineParentForComponents() {
+        this.nameExpr.setBrowsableParent(this);
+        this.formula.setBrowsableParent(this);
     }
 }

@@ -159,6 +159,7 @@ public final class ExprQt extends Expr {
         this.op = op;
         this.decls = decls;
         this.sub = sub;
+        defineParentForComponents();
     }
 
     // =============================================================================================================//
@@ -167,6 +168,7 @@ public final class ExprQt extends Expr {
      * This class contains all possible quantification operators.
      */
     public enum Op {
+
                     /** all a,b:x | formula */
                     ALL("all"),
                     /** no a,b:x | formula */
@@ -380,5 +382,15 @@ public final class ExprQt extends Expr {
             }
         ans.add(make(sub.span(), sub.span(), "<b>body</b>", sub));
         return ans;
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        for (Decl d : this.decls) {
+            for (Expr n : d.names)
+                n.setBrowsableParent(this);
+            d.expr.setBrowsableParent(this);
+        }
+        this.sub.setBrowsableParent(this);
     }
 }

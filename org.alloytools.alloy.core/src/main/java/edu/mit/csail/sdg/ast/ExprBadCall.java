@@ -92,6 +92,7 @@ public final class ExprBadCall extends Expr {
         this.fun = fun;
         this.args = args;
         this.extraWeight = extraWeight;
+        defineParentForComponents();
     }
 
     /** Constructs an ExprBadCall object. */
@@ -166,5 +167,12 @@ public final class ExprBadCall extends Expr {
     @Override
     public List< ? extends Browsable> getSubnodes() {
         return new ArrayList<Browsable>(0);
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        this.fun.setBrowsableParent(this);
+        for (Expr a : this.args)
+            a.setBrowsableParent(this);
     }
 }

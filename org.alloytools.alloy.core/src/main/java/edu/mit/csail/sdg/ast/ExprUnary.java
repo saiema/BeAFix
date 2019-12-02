@@ -120,6 +120,7 @@ public final class ExprUnary extends Expr {
         super(pos, null, sub.ambiguous, type, (op == Op.EXACTLYOF || op == Op.SOMEOF || op == Op.LONEOF || op == Op.ONEOF || op == Op.SETOF) ? 1 : 0, weight, errors);
         this.op = op;
         this.sub = sub;
+        defineParentForComponents();
     }
 
     // ============================================================================================================//
@@ -514,5 +515,10 @@ public final class ExprUnary extends Expr {
 
     public ExprUnary mutateOp(Op op) {
         return new ExprUnary(pos, op, sub, type, weight, errors);
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        this.sub.setBrowsableParent(this);
     }
 }

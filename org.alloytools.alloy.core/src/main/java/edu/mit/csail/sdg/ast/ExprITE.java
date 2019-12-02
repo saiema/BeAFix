@@ -86,6 +86,7 @@ public final class ExprITE extends Expr {
         this.cond = cond;
         this.left = left;
         this.right = right;
+        defineParentForComponents();
     }
 
     /**
@@ -203,5 +204,12 @@ public final class ExprITE extends Expr {
     @Override
     public List< ? extends Browsable> getSubnodes() {
         return Util.asList(cond, left, right);
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        this.cond.setBrowsableParent(this);
+        this.left.setBrowsableParent(this);
+        this.right.setBrowsableParent(this);
     }
 }

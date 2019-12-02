@@ -158,6 +158,7 @@ public final class ExprConstant extends Expr {
 
     /** This class contains all possible constant types. */
     public enum Op {
+
                     /** true */
                     TRUE("true"),
                     /** false */
@@ -260,5 +261,9 @@ public final class ExprConstant extends Expr {
     @Override
     public List< ? extends Browsable> getSubnodes() {
         return new ArrayList<Browsable>(0);
+    }
+
+    @Override
+    public void defineParentForComponents() {
     }
 }

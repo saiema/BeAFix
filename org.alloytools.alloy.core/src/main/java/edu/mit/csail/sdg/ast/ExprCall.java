@@ -107,7 +107,8 @@ public final class ExprCall extends Expr {
 
         private final Env<ExprVar,Type> env = new Env<ExprVar,Type>();
 
-        private DeduceType() {}
+        private DeduceType() {
+        }
 
         @Override
         public Type visit(ExprITE x) throws Err {
@@ -280,6 +281,7 @@ public final class ExprCall extends Expr {
         this.fun = fun;
         this.args = args;
         this.extraWeight = extraWeight;
+        defineParentForComponents();
     }
 
     // ============================================================================================================//
@@ -433,5 +435,11 @@ public final class ExprCall extends Expr {
     @Override
     public Clause referenced() {
         return super.referenced(fun);
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        for (Expr a : this.args)
+            a.setBrowsableParent(this);
     }
 }

@@ -61,4 +61,8 @@ public abstract class ExprCustom extends Expr {
     public <T> T accept(VisitReturn<T> visitor) throws Err {
         throw errors.pick();
     }
+
+    @Override
+    public void defineParentForComponents() {
+    }
 }
