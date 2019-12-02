@@ -15,7 +15,7 @@ import edu.mit.csail.sdg.ast.ExprBinary.Op;
  * Conditional Operator Replacement
  * <p>
  *
- * Replaces a conditional operator in a binary expression, relational operators
+ * Replaces a conditional operator in a binary expression, conditional operators
  * being:
  * <li>AND (&&)</li>
  * <li>OR (||)</li>
@@ -32,8 +32,8 @@ public class COR extends Mutator {
             if (mutants.isPresent())
                 mutations.addAll(mutants.get());
         }
-        Optional<List<Mutation>> leftMutations = x.left != null ? x.left.accept(this) : EMPTY;
-        Optional<List<Mutation>> rightMutations = x.left != null ? x.left.accept(this) : EMPTY;
+        Optional<List<Mutation>> leftMutations = x.left.accept(this);
+        Optional<List<Mutation>> rightMutations = x.right.accept(this);
         if (leftMutations.isPresent())
             mutations.addAll(leftMutations.get());
         if (rightMutations.isPresent())

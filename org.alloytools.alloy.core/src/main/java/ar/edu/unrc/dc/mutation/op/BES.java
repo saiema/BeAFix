@@ -21,7 +21,7 @@ import edu.mit.csail.sdg.ast.Type;
  * <p>
  *
  * <pre>
- *      a && b  => a
+ *      a op b  => a
  *              => b
  * </pre>
  *
@@ -39,8 +39,8 @@ public class BES extends Mutator {
             if (mutants.isPresent())
                 mutations.addAll(mutants.get());
         }
-        Optional<List<Mutation>> leftMutations = x.left != null ? x.left.accept(this) : EMPTY;
-        Optional<List<Mutation>> rightMutations = x.left != null ? x.left.accept(this) : EMPTY;
+        Optional<List<Mutation>> leftMutations = x.left.accept(this);
+        Optional<List<Mutation>> rightMutations = x.right.accept(this);
         if (leftMutations.isPresent())
             mutations.addAll(leftMutations.get());
         if (rightMutations.isPresent())
