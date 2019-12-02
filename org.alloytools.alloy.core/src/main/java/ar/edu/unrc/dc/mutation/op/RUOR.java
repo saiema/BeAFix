@@ -8,7 +8,6 @@ import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprUnary;
 
 /**
@@ -23,19 +22,19 @@ import edu.mit.csail.sdg.ast.ExprUnary;
  */
 public class RUOR extends Mutator {
 
-    @Override
-    public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
-        List<Mutation> mutations = new LinkedList<>();
-        Optional<List<Mutation>> leftMutations = x.left != null ? x.left.accept(this) : EMPTY;
-        Optional<List<Mutation>> rightMutations = x.right != null ? x.right.accept(this) : EMPTY;
-        if (leftMutations.isPresent())
-            mutations.addAll(leftMutations.get());
-        if (rightMutations.isPresent())
-            mutations.addAll(rightMutations.get());
-        if (!mutations.isEmpty())
-            return Optional.of(mutations);
-        return EMPTY;
-    }
+    //    @Override
+    //    public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
+    //        List<Mutation> mutations = new LinkedList<>();
+    //        Optional<List<Mutation>> leftMutations = x.left != null ? x.left.accept(this) : EMPTY;
+    //        Optional<List<Mutation>> rightMutations = x.right != null ? x.right.accept(this) : EMPTY;
+    //        if (leftMutations.isPresent())
+    //            mutations.addAll(leftMutations.get());
+    //        if (rightMutations.isPresent())
+    //            mutations.addAll(rightMutations.get());
+    //        if (!mutations.isEmpty())
+    //            return Optional.of(mutations);
+    //        return EMPTY;
+    //    }
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
