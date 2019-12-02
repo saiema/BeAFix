@@ -12,6 +12,7 @@ import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
 import edu.mit.csail.sdg.ast.ExprCall;
 import edu.mit.csail.sdg.ast.ExprConstant;
+import edu.mit.csail.sdg.ast.ExprHasName;
 import edu.mit.csail.sdg.ast.ExprITE;
 import edu.mit.csail.sdg.ast.ExprLet;
 import edu.mit.csail.sdg.ast.ExprList;
@@ -31,7 +32,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     protected static final List<Op>                 ARITHMETIC_BINARY_OPS = Arrays.asList(Op.DIV, Op.MUL, Op.REM, Op.IPLUS, Op.IMINUS);
     protected static final List<ExprUnary.Op>       RELATIONAL_UNARY_OPS  = Arrays.asList(ExprUnary.Op.CLOSURE, ExprUnary.Op.RCLOSURE, ExprUnary.Op.TRANSPOSE);
 
-    public Optional<List<Mutation>> mutate(Expr e) {
+    public Optional<List<Mutation>> getMutations(Expr e) {
         return this.visitThis(e);
     }
 
@@ -72,7 +73,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
     @Override
     public Optional<List<Mutation>> visit(Field x) throws Err {
-        //TODO: need help with this
+        //TODO: should visit the decl
         return EMPTY;
     }
 
@@ -126,6 +127,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
     @Override
     public Optional<List<Mutation>> visit(ExprConstant x) throws Err {
+        //this expressions are TRUE, FALSE, and numbers
         return EMPTY;
     }
 
@@ -154,7 +156,6 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
     @Override
     public Optional<List<Mutation>> visit(ExprLet x) throws Err {
-        //TODO: need help with this part
         List<Mutation> mutations = new LinkedList<>();
         if (x.var != null) {
             Optional<List<Mutation>> letVarMutations = x.var.accept(this);
@@ -182,7 +183,13 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         List<Mutation> declMutations = new LinkedList<>();
         if (vars != null) {
             for (Decl d : vars) {
-                //TODO: need help with this part
+                //only mutate names for now
+                //TODO: maybe add bounds later
+                for (ExprHasName n : d.names) {
+                    Optional<List<Mutation>> nMutations = n.accept(this);
+                    if (nMutations.isPresent())
+                        declMutations.addAll(nMutations.get());
+                }
             }
         }
 
