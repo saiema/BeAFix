@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
@@ -19,6 +20,7 @@ import edu.mit.csail.sdg.ast.ExprList;
 import edu.mit.csail.sdg.ast.ExprQt;
 import edu.mit.csail.sdg.ast.ExprUnary;
 import edu.mit.csail.sdg.ast.ExprVar;
+import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.VisitReturn;
@@ -61,6 +63,14 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (!(e instanceof ExprUnary))
             return false;
         return RELATIONAL_UNARY_OPS.contains(((ExprUnary) e).op);
+    }
+
+    protected Optional<Browsable> getContainerFunc(Expr x) {
+        Browsable current = x;
+        while (current != null && !(current instanceof Func)) {
+            current = current.getBrowsableParent();
+        }
+        return Optional.ofNullable(current);
     }
 
     //DEFAULT VISIT IMPLEMENTATION
