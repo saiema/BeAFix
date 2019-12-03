@@ -112,6 +112,7 @@ public final class ExprList extends Expr {
         super(pos, closingBracket, ambiguous, Type.FORMULA, 0, weight, errs);
         this.op = op;
         this.args = args;
+        defineParentForComponents();
     }
 
     // ============================================================================================================//
@@ -317,5 +318,11 @@ public final class ExprList extends Expr {
     @Override
     public List< ? extends Browsable> getSubnodes() {
         return args;
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        for (Expr a : this.args)
+            a.setBrowsableParent(this);
     }
 }

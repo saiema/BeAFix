@@ -115,4 +115,19 @@ public class Mutation {
         this.parent = Optional.of(parent);
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (parent.isPresent())
+            sb.append("FROM ").append(parent.get().toString()).append("\n\t");
+        sb.append("(");
+        sb.append(operator.toString());
+        sb.append(", ");
+        sb.append(original.toString());
+        sb.append(", ");
+        sb.append(mutant.toString());
+        sb.append(")");
+        return sb.toString();
+    }
+
 }

@@ -105,6 +105,7 @@ public final class ExprChoice extends Expr {
         super(pos, null, true, type, 0, weight, emptyListOfErrors.make(type == EMPTY ? complain(pos, choices) : null));
         this.choices = choices;
         this.reasons = reasons;
+        defineParentForComponents();
     }
 
     // ============================================================================================================//
@@ -288,5 +289,11 @@ public final class ExprChoice extends Expr {
     @Override
     public List< ? extends Browsable> getSubnodes() {
         return new ArrayList<Browsable>(0);
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        for (Expr choice : this.choices)
+            choice.setBrowsableParent(this);
     }
 }

@@ -15,7 +15,7 @@ import edu.mit.csail.sdg.ast.ExprBinary.Op;
  * Conditional Operator Replacement
  * <p>
  *
- * Replaces a conditional operator in a binary expression, relational operators
+ * Replaces a conditional operator in a binary expression, conditional operators
  * being:
  * <li>AND (&&)</li>
  * <li>OR (||)</li>
@@ -26,9 +26,21 @@ public class COR extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
-        if (!isConditionalExpression(x))
-            return super.visit(x);
-        return mutants(x);
+        List<Mutation> mutations = new LinkedList<>();
+        if (isConditionalExpression(x)) {
+            Optional<List<Mutation>> mutants = mutants(x);
+            if (mutants.isPresent())
+                mutations.addAll(mutants.get());
+        }
+        Optional<List<Mutation>> leftMutations = x.left.accept(this);
+        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        if (leftMutations.isPresent())
+            mutations.addAll(leftMutations.get());
+        if (rightMutations.isPresent())
+            mutations.addAll(rightMutations.get());
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return EMPTY;
     }
 
     private Optional<List<Mutation>> mutants(ExprBinary x) {

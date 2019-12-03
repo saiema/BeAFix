@@ -21,7 +21,7 @@ import edu.mit.csail.sdg.ast.Type;
  * <p>
  *
  * <pre>
- *      a && b  => a
+ *      a op b  => a
  *              => b
  * </pre>
  *
@@ -33,10 +33,28 @@ public class BES extends Mutator {
         Type binaryExpressionType = x.type();
         Type leftType = x.left.type();
         Type rightType = x.right.type();
-        if (binaryExpressionType.equals(Type.EMPTY) || leftType.equals(Type.EMPTY) || rightType.equals(Type.EMPTY))
-            return Optional.empty();
-        List<Mutation> mutants = new LinkedList<>();
+        List<Mutation> mutations = new LinkedList<>();
+        if (!binaryExpressionType.equals(Type.EMPTY) && !leftType.equals(Type.EMPTY) && !rightType.equals(Type.EMPTY)) {
+            Optional<List<Mutation>> mutants = mutants(x);
+            if (mutants.isPresent())
+                mutations.addAll(mutants.get());
+        }
+        Optional<List<Mutation>> leftMutations = x.left.accept(this);
+        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        if (leftMutations.isPresent())
+            mutations.addAll(leftMutations.get());
+        if (rightMutations.isPresent())
+            mutations.addAll(rightMutations.get());
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return EMPTY;
+    }
 
+    private Optional<List<Mutation>> mutants(ExprBinary x) throws Err {
+        Type binaryExpressionType = x.type();
+        Type leftType = x.left.type();
+        Type rightType = x.right.type();
+        List<Mutation> mutants = new LinkedList<>();
         if (strictTypeCheck() && leftType.canOverride(binaryExpressionType))
             mutants.add(new Mutation(Ops.BES, x, x.left));
         else if (leftType.equals(binaryExpressionType))
@@ -47,7 +65,7 @@ public class BES extends Mutator {
         else if (rightType.equals(binaryExpressionType))
             mutants.add(new Mutation(Ops.BES, x, x.right));
         if (mutants.isEmpty())
-            return Optional.empty();
+            return EMPTY;
         return Optional.of(mutants);
     }
 

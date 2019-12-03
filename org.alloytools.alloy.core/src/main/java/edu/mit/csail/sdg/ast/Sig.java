@@ -257,6 +257,7 @@ public abstract class Sig extends Expr implements Clause {
         this.isMeta = null;
         this.isEnum = null;
         this.attributes = ConstList.make();
+        defineParentForComponents();
     }
 
     /** Constructs a new PrimSig or SubsetSig. */
@@ -322,6 +323,7 @@ public abstract class Sig extends Expr implements Clause {
             throw new ErrorSyntax(isAbstract, "Subset signature cannot be abstract.");
         if (isSubset != null && isSubsig != null)
             throw new ErrorSyntax(isAbstract, "Subset signature cannot be a regular subsignature.");
+        defineParentForComponents();
     }
 
     /**
@@ -459,6 +461,7 @@ public abstract class Sig extends Expr implements Clause {
             this.parent = parent;
             if (add)
                 this.parent.children.add(this);
+            defineParentForComponents();
         }
 
         /**
@@ -496,6 +499,7 @@ public abstract class Sig extends Expr implements Clause {
                     if (isOne == null)
                         throw new ErrorSyntax(pos, "sig " + label + " is an atom in an enum, so it must have the \"one\" multiplicity.");
                 }
+            defineParentForComponents();
         }
 
         /**
@@ -562,6 +566,15 @@ public abstract class Sig extends Expr implements Clause {
                     return UNIV;
             }
         }
+
+        @Override
+        public void defineParentForComponents() {
+            if (this.children == null)
+                return;
+            for (PrimSig children : this.children)
+                children.setBrowsableParent(this);
+        }
+
     }
 
     // ==============================================================================================================//
@@ -936,5 +949,21 @@ public abstract class Sig extends Expr implements Clause {
         sb.append(" }");
 
         return sb.toString();
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        for (Expr n : this.decl.names)
+            n.setBrowsableParent(this);
+        this.decl.expr.setBrowsableParent(this);
+        for (Expr f : this.facts)
+            f.setBrowsableParent(this);
+        for (Decl field : this.fields) {
+            for (Expr n : field.names)
+                n.setBrowsableParent(this);
+            field.expr.setBrowsableParent(this);
+        }
+        for (Field rfield : this.realFields)
+            rfield.setBrowsableParent(this);
     }
 }

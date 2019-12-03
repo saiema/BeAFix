@@ -85,6 +85,7 @@ public final class ExprLet extends Expr {
         this.var = var;
         this.expr = expr;
         this.sub = sub;
+        defineParentForComponents();
     }
 
     // =============================================================================================================//
@@ -159,5 +160,12 @@ public final class ExprLet extends Expr {
         Browsable a = make(var.pos, var.pos, "<b>var</b> " + var.label + " = ...", expr);
         Browsable b = make(sub.span(), sub.span(), "<b>where...</b>", sub);
         return Util.asList(a, b);
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        this.var.setBrowsableParent(this);
+        this.expr.setBrowsableParent(this);
+        this.sub.setBrowsableParent(this);
     }
 }

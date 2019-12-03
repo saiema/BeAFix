@@ -796,6 +796,7 @@ public final class CompModule extends Browsable implements Module {
         this.path = path;
         if (filename != null && filename.length() > 0)
             this.modulePos = new Pos(filename, 1, 1);
+        defineParentForComponents();
     }
 
     /** {@inheritDoc} */
@@ -2439,6 +2440,29 @@ public final class CompModule extends Browsable implements Module {
     @Override
     public String explain() {
         return "module " + moduleName;
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        for (Pair<String,Expr> fact : this.facts)
+            fact.b.setBrowsableParent(this);
+        for (Expr a : this.asserts.values())
+            a.setBrowsableParent(this);
+        for (ArrayList<Func> fs : this.funcs.values())
+            for (Func f : fs)
+                f.setBrowsableParent(this);
+        for (Sig s : this.sigs.values())
+            s.setBrowsableParent(this);
+        for (Sig s : this.params.values())
+            s.setBrowsableParent(this);
+        this.metaField.setBrowsableParent(this);
+        this.metaSig.setBrowsableParent(this);
+        for (Expr g : this.globals.values())
+            g.setBrowsableParent(this);
+        for (Sig s : this.exactSigs)
+            s.setBrowsableParent(this);
+        for (CompModule m : this.allModules)
+            m.setBrowsableParent(this);
     }
 
 }

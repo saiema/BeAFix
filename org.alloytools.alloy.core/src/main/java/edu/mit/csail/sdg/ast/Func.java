@@ -192,6 +192,7 @@ public final class Func extends Browsable implements Clause {
                 throw new ErrorSyntax(d.expr.span(), "Parameter declaration cannot contain predicate/function calls.");
         if (returnDecl.hasCall())
             throw new ErrorSyntax(returnDecl.span(), "Return type declaration cannot contain predicate/function calls.");
+        defineParentForComponents();
     }
 
     /** The predicate/function body; never null. */
@@ -322,6 +323,17 @@ public final class Func extends Browsable implements Clause {
         }
 
         return sb.toString();
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        this.body.setBrowsableParent(this);
+        this.returnDecl.setBrowsableParent(this);
+        for (Decl d : this.decls) {
+            for (Expr n : d.names)
+                n.setBrowsableParent(this);
+            d.expr.setBrowsableParent(this);
+        }
     }
 
 }

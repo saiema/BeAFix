@@ -33,9 +33,21 @@ public class ROR extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
-        if (!isRelationalExpression(x))
-            return super.visit(x);
-        return mutants(x);
+        List<Mutation> mutations = new LinkedList<>();
+        if (isRelationalExpression(x)) {
+            Optional<List<Mutation>> mutants = mutants(x);
+            if (mutants.isPresent())
+                mutations.addAll(mutants.get());
+        }
+        Optional<List<Mutation>> leftMutations = x.left.accept(this);
+        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        if (leftMutations.isPresent())
+            mutations.addAll(leftMutations.get());
+        if (rightMutations.isPresent())
+            mutations.addAll(rightMutations.get());
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return EMPTY;
     }
 
     private Optional<List<Mutation>> mutants(ExprBinary x) {

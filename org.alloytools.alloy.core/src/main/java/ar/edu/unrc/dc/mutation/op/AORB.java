@@ -12,13 +12,38 @@ import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
 
 
+/**
+ * Arithmetic Operator Replacement Binary
+ * <p>
+ *
+ * Replaces an arithmetic operator in a binary expression, binary arithmetic
+ * operators being:
+ * <li>divide</li>
+ * <li>multiply</li>
+ * <li>remainder</li>
+ * <li>plus (+)</li>
+ * <li>minus (-)</li>
+ *
+ */
 public class AORB extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
-        if (!isArithmeticExpression(x))
-            return super.visit(x);
-        return mutants(x);
+        List<Mutation> mutations = new LinkedList<>();
+        if (isArithmeticExpression(x)) {
+            Optional<List<Mutation>> mutants = mutants(x);
+            if (mutants.isPresent())
+                mutations.addAll(mutants.get());
+        }
+        Optional<List<Mutation>> leftMutations = x.left.accept(this);
+        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        if (leftMutations.isPresent())
+            mutations.addAll(leftMutations.get());
+        if (rightMutations.isPresent())
+            mutations.addAll(rightMutations.get());
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return EMPTY;
     }
 
     private Optional<List<Mutation>> mutants(ExprBinary x) {

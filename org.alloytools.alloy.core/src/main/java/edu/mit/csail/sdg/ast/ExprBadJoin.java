@@ -75,6 +75,7 @@ public final class ExprBadJoin extends Expr {
         super(pos, closingBracket, (left.ambiguous || right.ambiguous), EMPTY, 0, 0, errors);
         this.left = left;
         this.right = right;
+        defineParentForComponents();
     }
 
     /** Constructs an ExprBadJoin node. */
@@ -123,5 +124,11 @@ public final class ExprBadJoin extends Expr {
     @Override
     public List< ? extends Browsable> getSubnodes() {
         return new ArrayList<Browsable>(0);
+    }
+
+    @Override
+    public void defineParentForComponents() {
+        this.left.setBrowsableParent(this);
+        this.right.setBrowsableParent(this);
     }
 }

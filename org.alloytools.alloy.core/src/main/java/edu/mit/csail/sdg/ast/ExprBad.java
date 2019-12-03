@@ -91,4 +91,8 @@ public final class ExprBad extends Expr {
     public List< ? extends Browsable> getSubnodes() {
         return new ArrayList<Browsable>(0);
     }
+
+    @Override
+    public void defineParentForComponents() {
+    }
 }

@@ -9,19 +9,30 @@ public enum Ops {
                      public boolean isImplemented() {
                          return true;
                      }
+
+                     @Override
+                     public Mutator getOperator() {
+                         return new ar.edu.unrc.dc.mutation.op.AORB();
+                     }
                  },
                  AORU {
 
                      @Override
                      public boolean isImplemented() {
-                         return true;
+                         return false;
                      }
+
                  },
                  ROR {
 
                      @Override
                      public boolean isImplemented() {
                          return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator() {
+                         return new ar.edu.unrc.dc.mutation.op.ROR();
                      }
                  },
                  COR {
@@ -30,12 +41,22 @@ public enum Ops {
                      public boolean isImplemented() {
                          return true;
                      }
+
+                     @Override
+                     public Mutator getOperator() {
+                         return new ar.edu.unrc.dc.mutation.op.COR();
+                     }
                  },
                  BES {
 
                      @Override
                      public boolean isImplemented() {
                          return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator() {
+                         return new ar.edu.unrc.dc.mutation.op.BES();
                      }
                  },
                  BEE {
@@ -44,13 +65,15 @@ public enum Ops {
                      public boolean isImplemented() {
                          return false;
                      }
+
                  },
-                 PRV {
+                 JER {
 
                      @Override
                      public boolean isImplemented() {
                          return false;
                      }
+
                  },
                  RUOR {
 
@@ -58,15 +81,29 @@ public enum Ops {
                      public boolean isImplemented() {
                          return true;
                      }
+
+                     @Override
+                     public Mutator getOperator() {
+                         return new ar.edu.unrc.dc.mutation.op.RUOR();
+                     }
                  },
                  RUOI {
 
                      @Override
                      public boolean isImplemented() {
-                         return false;
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator() {
+                         return new ar.edu.unrc.dc.mutation.op.RUOI();
                      }
                  };
 
     public abstract boolean isImplemented();
+
+    public Mutator getOperator() {
+        throw new UnsupportedOperationException("Operator not implemented");
+    }
 
 }
