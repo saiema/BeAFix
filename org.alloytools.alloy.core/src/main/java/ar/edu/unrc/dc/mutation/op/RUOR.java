@@ -9,6 +9,7 @@ import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.ExprUnary;
+import edu.mit.csail.sdg.parser.CompModule;
 
 /**
  * Relational Unary Operator Replacement
@@ -35,6 +36,10 @@ public class RUOR extends Mutator {
     //            return Optional.of(mutations);
     //        return EMPTY;
     //    }
+
+    public RUOR(CompModule context) {
+        super(context);
+    }
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
@@ -24,6 +25,7 @@ import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.VisitReturn;
+import edu.mit.csail.sdg.parser.CompModule;
 
 
 public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
@@ -33,6 +35,12 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     protected static final List<Op>                 CONDITIONAL_OPS       = Arrays.asList(Op.AND, Op.OR, Op.IMPLIES, Op.IFF);
     protected static final List<Op>                 ARITHMETIC_BINARY_OPS = Arrays.asList(Op.DIV, Op.MUL, Op.REM, Op.IPLUS, Op.IMINUS);
     protected static final List<ExprUnary.Op>       RELATIONAL_UNARY_OPS  = Arrays.asList(ExprUnary.Op.CLOSURE, ExprUnary.Op.RCLOSURE, ExprUnary.Op.TRANSPOSE);
+
+    protected CompModule                            context;
+
+    protected Mutator(CompModule context) {
+        this.context = context;
+    }
 
     public Optional<List<Mutation>> getMutations(Expr e) {
         return this.visitThis(e);
@@ -65,12 +73,53 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         return RELATIONAL_UNARY_OPS.contains(((ExprUnary) e).op);
     }
 
-    protected Optional<Browsable> getContainerFunc(Expr x) {
+    /**
+     * Obtains the function that contains the given expression
+     *
+     * @param x : the expression
+     * @return {@link Optional#empty()} if the {@code expression} is not contained
+     *         in a function, or an {@code Optional} containing the function
+     */
+    protected Optional<Func> getContainerFunc(Expr x) {
         Browsable current = x;
         while (current != null && !(current instanceof Func)) {
             current = current.getBrowsableParent();
         }
-        return Optional.ofNullable(current);
+        if (current == null)
+            return Optional.empty();
+        return Optional.of((Func) current);
+    }
+
+    /**
+     * Obtains compatible variables or signature fields to replace a given
+     * expression
+     *
+     * @param x : the expression
+     * @return an {@code Optional} list of expression extending {@code ExprHasName}
+     *         or {@link Optional#empty()} if none is found
+     */
+    protected Optional<List< ? extends ExprHasName>> getCompatibleVariablesFor(Expr x) {
+        List< ? extends ExprHasName> compatibleVariables = new LinkedList<>();
+        Optional<Func> containerFunc = getContainerFunc(x);
+        SafeList<Sig> sigs = this.context.getAllSigs();
+        for (Sig s : sigs) {
+            //TODO: implement
+        }
+        if (!compatibleVariables.isEmpty())
+            return Optional.of(compatibleVariables);
+        return Optional.empty();
+    }
+
+    /**
+     * Evaluates whether an expression is part of a definition (Signature field,
+     * predicate parameters, etc)
+     *
+     * @param x : the expression
+     * @return {@code true} iff {@code x} is part of a definition
+     */
+    protected boolean belongsToDefinition(Expr x) {
+        //if an expression belongs to a definition is must be either a function argument (belongs to Func#decls)
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 
     //DEFAULT VISIT IMPLEMENTATION

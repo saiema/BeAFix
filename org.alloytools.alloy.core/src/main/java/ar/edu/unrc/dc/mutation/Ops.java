@@ -1,5 +1,6 @@
 package ar.edu.unrc.dc.mutation;
 
+import edu.mit.csail.sdg.parser.CompModule;
 
 public enum Ops {
 
@@ -11,8 +12,8 @@ public enum Ops {
                      }
 
                      @Override
-                     public Mutator getOperator() {
-                         return new ar.edu.unrc.dc.mutation.op.AORB();
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.AORB(context);
                      }
                  },
                  AORU {
@@ -31,8 +32,8 @@ public enum Ops {
                      }
 
                      @Override
-                     public Mutator getOperator() {
-                         return new ar.edu.unrc.dc.mutation.op.ROR();
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.ROR(context);
                      }
                  },
                  COR {
@@ -43,8 +44,8 @@ public enum Ops {
                      }
 
                      @Override
-                     public Mutator getOperator() {
-                         return new ar.edu.unrc.dc.mutation.op.COR();
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.COR(context);
                      }
                  },
                  BES {
@@ -55,8 +56,8 @@ public enum Ops {
                      }
 
                      @Override
-                     public Mutator getOperator() {
-                         return new ar.edu.unrc.dc.mutation.op.BES();
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.BES(context);
                      }
                  },
                  BEE {
@@ -83,8 +84,8 @@ public enum Ops {
                      }
 
                      @Override
-                     public Mutator getOperator() {
-                         return new ar.edu.unrc.dc.mutation.op.RUOR();
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.RUOR(context);
                      }
                  },
                  RUOI {
@@ -95,14 +96,14 @@ public enum Ops {
                      }
 
                      @Override
-                     public Mutator getOperator() {
-                         return new ar.edu.unrc.dc.mutation.op.RUOI();
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.RUOI(context);
                      }
                  };
 
     public abstract boolean isImplemented();
 
-    public Mutator getOperator() {
+    public Mutator getOperator(CompModule context) {
         throw new UnsupportedOperationException("Operator not implemented");
     }
 
