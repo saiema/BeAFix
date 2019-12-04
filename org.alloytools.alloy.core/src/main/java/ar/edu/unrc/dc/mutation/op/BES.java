@@ -12,6 +12,7 @@ import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.Type;
+import edu.mit.csail.sdg.parser.CompModule;
 
 /**
  * Binary Expression Simplifier
@@ -27,6 +28,10 @@ import edu.mit.csail.sdg.ast.Type;
  *
  */
 public class BES extends Mutator {
+
+    public BES(CompModule context) {
+        super(context);
+    }
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {

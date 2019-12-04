@@ -13,6 +13,7 @@ import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprUnary;
 import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Type;
+import edu.mit.csail.sdg.parser.CompModule;
 
 /**
  * Relational Unary Operator Insertion
@@ -30,6 +31,10 @@ public class RUOI extends Mutator {
     //    public Optional<List<Mutation>> visit(ExprCall x) throws Err {
     //        return null;
     //    }
+
+    public RUOI(CompModule context) {
+        super(context);
+    }
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {

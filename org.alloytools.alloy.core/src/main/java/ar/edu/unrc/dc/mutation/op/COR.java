@@ -10,6 +10,7 @@ import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
+import edu.mit.csail.sdg.parser.CompModule;
 
 /**
  * Conditional Operator Replacement
@@ -23,6 +24,10 @@ import edu.mit.csail.sdg.ast.ExprBinary.Op;
  * <li>If and only if (<=>)</li>
  */
 public class COR extends Mutator {
+
+    public COR(CompModule context) {
+        super(context);
+    }
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {

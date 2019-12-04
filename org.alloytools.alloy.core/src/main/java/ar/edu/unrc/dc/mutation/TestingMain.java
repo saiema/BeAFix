@@ -34,14 +34,24 @@ public class TestingMain {
 
         CompModule mainModule = CompUtil.parseEverything_fromFile(null, null, pathToFile);
 
-        List<Expr> expressions = findExpressions(mainModule);
+        //generateMutants(mainModule);
+
+        for (Sig s : mainModule.getAllSigs()) {
+            System.out.println(s.toExtendedString());
+        }
+
+
+    }
+
+    private static void generateMutants(CompModule m) {
+        List<Expr> expressions = findExpressions(m);
 
         List<Mutation> mutations = new LinkedList<>();
 
         for (Expr e : expressions) {
             for (Ops o : Ops.values()) {
                 if (o.isImplemented()) {
-                    Optional<List<Mutation>> opMutations = o.getOperator().getMutations(e);
+                    Optional<List<Mutation>> opMutations = o.getOperator(m).getMutations(e);
                     if (opMutations.isPresent())
                         mutations.addAll(opMutations.get());
                 }
@@ -49,8 +59,6 @@ public class TestingMain {
         }
 
         System.out.println(mutations);
-
-
     }
 
     private static List<Expr> findExpressions(CompModule m) {
