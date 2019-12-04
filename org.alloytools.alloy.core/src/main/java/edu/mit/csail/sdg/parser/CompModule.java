@@ -56,37 +56,11 @@ import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4.Version;
-import edu.mit.csail.sdg.ast.Attr;
-import edu.mit.csail.sdg.ast.Browsable;
-import edu.mit.csail.sdg.ast.Clause;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.CommandScope;
-import edu.mit.csail.sdg.ast.Decl;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBad;
-import edu.mit.csail.sdg.ast.ExprBadCall;
-import edu.mit.csail.sdg.ast.ExprBadJoin;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprCall;
-import edu.mit.csail.sdg.ast.ExprChoice;
-import edu.mit.csail.sdg.ast.ExprConstant;
-import edu.mit.csail.sdg.ast.ExprHasName;
-import edu.mit.csail.sdg.ast.ExprITE;
-import edu.mit.csail.sdg.ast.ExprLet;
-import edu.mit.csail.sdg.ast.ExprList;
-import edu.mit.csail.sdg.ast.ExprQt;
-import edu.mit.csail.sdg.ast.ExprUnary;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.ast.Func;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Module;
-import edu.mit.csail.sdg.ast.ModuleReference;
-import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Sig.SubsetSig;
-import edu.mit.csail.sdg.ast.Type;
-import edu.mit.csail.sdg.ast.VisitQueryOnce;
-import edu.mit.csail.sdg.ast.VisitReturn;
 
 /**
  * Mutable; this class represents an Alloy module; equals() uses object
@@ -235,6 +209,12 @@ public final class CompModule extends Browsable implements Module {
      * are allowed.
      */
     private final List<Command>               commands    = new ArrayList<Command>();
+
+    /**
+     * The list of ( expression to mutate in order to fix )
+     */
+    private final List<Mutant>               mutants    = new ArrayList<Mutant>();
+
 
     // ============================================================================================================================//
 
@@ -2465,4 +2445,11 @@ public final class CompModule extends Browsable implements Module {
             m.setBrowsableParent(this);
     }
 
+
+    //================== Mutants methods ===================
+    /** Add a mutant expression parsed. */
+    void addMutant(Pos p, Expr v)  {
+        Mutant m = new Mutant(p,v);
+        mutants.add(m);
+    }
 }

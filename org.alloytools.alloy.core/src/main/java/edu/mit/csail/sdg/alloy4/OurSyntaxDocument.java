@@ -145,6 +145,12 @@ class OurSyntaxDocument extends DefaultStyledDocument {
         all.add(styleKeyword);
     }
 
+    /** The character style for mutable keyword. */
+    private final MutableAttributeSet styleMutableKeyword = style(font, fontSize, true, false, false, new Color(0xA8740E), 0);
+    {
+        all.add(styleMutableKeyword);
+    }
+
     /** The character style for string literals. */
     private final MutableAttributeSet styleString = style(font, fontSize, false, false, false, new Color(0xA80AA8), 0);
     {
@@ -507,6 +513,7 @@ class OurSyntaxDocument extends DefaultStyledDocument {
             } else if (do_iden(c)) {
                 for (i++; i < n && do_iden(txt.charAt(i)); i++) {}
                 AttributeSet style = (c >= '0' && c <= '9') ? styleNumber : (do_keyword(txt, oldi, i - oldi) ? styleKeyword : styleNormal);
+
                 setCharacterAttributes(oldi, i - oldi, style, false);
             } else {
                 for (i++; i < n && !do_iden(txt.charAt(i)) && txt.charAt(i) != '\n' && txt.charAt(i) != '-' && txt.charAt(i) != '/'; i++) {}
