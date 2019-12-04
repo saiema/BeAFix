@@ -30,17 +30,10 @@ import static edu.mit.csail.sdg.ast.Sig.UNIV;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+import ar.edu.unrc.dc.mutation.Mutation;
+import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ConstList.TempList;
@@ -2451,5 +2444,55 @@ public final class CompModule extends Browsable implements Module {
     void addMutant(Pos p, Expr v)  {
         Mutant m = new Mutant(p,v);
         mutants.add(m);
+    }
+
+    /** build mutantions .   */
+    public void genMutantions () {
+        for (Mutant m : mutants) {
+            List<Mutation> ms = new LinkedList<>();
+            for (Ops o : Ops.values()) {
+                if (o.isImplemented()) {
+                    Optional<List<Mutation>> opMutations = o.getOperator(this).getMutations(m.exprToMutate);
+                    if (opMutations.isPresent())
+                        ms.addAll(opMutations.get());
+                }
+            }
+            m.mutations = ms;
+        }
+    }
+
+
+    /** update mutant references.   */
+    public void updateMutantRefs (){
+        for (Mutant m: mutants) {
+            boolean found=false;
+            VisitSearchExpByPos v=new VisitSearchExpByPos(m.exprToMutate.pos);
+             //search in all possible funcs and preds
+            for (ArrayList<Func> entry : funcs.values())
+                if (!found) {
+                    for (Func ff : entry) {
+                        Expr newexpr = ff.getBody().accept(v);
+                        if (newexpr != null) {
+                            m.exprToMutate = newexpr;
+                            found = true;
+                            break;
+                        }
+
+                    }
+                }
+            //search in all possible facs
+            if (!found) {
+                for (Pair<String, Expr> f : facts) {
+                    Expr newexpr = f.b.accept(v);
+                    if (newexpr != null) {
+                        m.exprToMutate = newexpr;
+                        found=true;
+                        break;
+                    }
+
+                }
+            }
+            //TODO search in the rest of expressions (Sigs)
+        }
     }
 }

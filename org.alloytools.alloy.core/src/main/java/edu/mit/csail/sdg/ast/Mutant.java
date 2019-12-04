@@ -15,6 +15,7 @@
 
 package edu.mit.csail.sdg.ast;
 
+import ar.edu.unrc.dc.mutation.Mutation;
 import edu.mit.csail.sdg.alloy4.*;
 
 import java.util.ArrayList;
@@ -39,6 +40,9 @@ public  class Mutant extends Browsable  {
 
     /** never null. */
     public  Expr            exprToMutate;
+
+    /** list of mutation for this mutant*/
+    public List<Mutation>   mutations = new ArrayList<Mutation>();
 
 
 

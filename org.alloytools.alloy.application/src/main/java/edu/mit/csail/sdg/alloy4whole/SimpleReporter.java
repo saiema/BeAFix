@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import edu.mit.csail.sdg.parser.CompModule;
 import org.alloytools.alloy.core.AlloyCore;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
@@ -58,6 +59,7 @@ import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.A4SolutionReader;
 import edu.mit.csail.sdg.translator.A4SolutionWriter;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
+
 
 /** This helper method is used by SimpleGUI. */
 
@@ -649,6 +651,10 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "S2", "Starting the solver...\n\n");
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final Module world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
+            //Mutant test
+            ((CompModule) world).updateMutantRefs();
+            ((CompModule) world).genMutantions();
+            //
             final List<Sig> sigs = world.getAllReachableSigs();
             final ConstList<Command> cmds = world.getAllCommands();
             cb(out, "warnings", bundleWarningNonFatal);
