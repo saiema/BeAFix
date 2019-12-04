@@ -26,5 +26,6 @@ Export-Package: \
 	edu.mit.csail.sdg.sim,\
 	edu.mit.csail.sdg.translator,\
 	org.alloytools.util.table,\
-	org.alloytools.alloy.core
+	org.alloytools.alloy.core,\
+	ar.edu.unrc.dc.mutation.*
 Private-Package: java_cup.runtime
