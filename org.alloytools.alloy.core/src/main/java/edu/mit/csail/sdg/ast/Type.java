@@ -85,7 +85,7 @@ public final class Type implements Iterable<Type.ProductType>, Clause {
          * Note: this constructor promises it won't call any method or read anything
          * from any of the sig(s).
          */
-        private ProductType(PrimSig[] array) {
+        /* private */public ProductType(PrimSig[] array) {
             types = array;
         }
 
@@ -95,7 +95,7 @@ public final class Type implements Iterable<Type.ProductType>, Clause {
          * Note: this constructor promises it won't call any method or read anything
          * from the sig.
          */
-        private ProductType(PrimSig sig) {
+        /* private */public ProductType(PrimSig sig) {
             types = new PrimSig[] {
                                    sig
             };
@@ -178,6 +178,13 @@ public final class Type implements Iterable<Type.ProductType>, Clause {
          */
         public PrimSig get(int i) {
             return types[i];
+        }
+
+        /**
+         * @return all PrimSig related to this ProductType
+         */
+        public PrimSig[] getAll() {
+            return types;
         }
 
         /** Returns true if this.arity==0 or this==NONE->..->NONE */
@@ -455,7 +462,7 @@ public final class Type implements Iterable<Type.ProductType>, Clause {
      * <p>
      * Precondition: entries and arities must be consistent
      */
-    private Type(boolean is_bool, ConstList<ProductType> entries, int arities) {
+    /* private */public Type(boolean is_bool, ConstList<ProductType> entries, int arities) {
         this.is_bool = is_bool;
         if (entries == null || entries.size() == 0 || arities == 0) {
             this.entries = ConstList.make();
