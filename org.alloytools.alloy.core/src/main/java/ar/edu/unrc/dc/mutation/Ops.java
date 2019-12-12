@@ -16,14 +16,6 @@ public enum Ops {
                          return new ar.edu.unrc.dc.mutation.op.AORB(context);
                      }
                  },
-                 AORU {
-
-                     @Override
-                     public boolean isImplemented() {
-                         return false;
-                     }
-
-                 },
                  ROR {
 
                      @Override
@@ -60,19 +52,54 @@ public enum Ops {
                          return new ar.edu.unrc.dc.mutation.op.BES(context);
                      }
                  },
-                 BEE {
+                 BESOR {
 
                      @Override
                      public boolean isImplemented() {
-                         return false;
+                         return true;
                      }
 
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.BESOR(context);
+                     }
                  },
                  JER {
 
                      @Override
                      public boolean isImplemented() {
-                         return false;
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.JER(context);
+                     }
+
+                 },
+                 JES {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.JES(context);
+                     }
+
+                 },
+                 JEE {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.JEE(context);
                      }
 
                  },
