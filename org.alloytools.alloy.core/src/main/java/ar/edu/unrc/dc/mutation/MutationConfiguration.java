@@ -16,7 +16,19 @@ public class MutationConfiguration {
                                       public Class< ? > getValueType() {
                                           return Boolean.class;
                                       }
-                                  };
+                                  },
+
+                                  OPERATOR_JEX_TYPE_CHECK
+
+                                  {
+
+                                      @Override
+                                      public Class< ? > getValueType() {
+                                          return Boolean.class;
+                                      }
+                                  }
+
+        ;
 
         public abstract Class< ? > getValueType();
     }
