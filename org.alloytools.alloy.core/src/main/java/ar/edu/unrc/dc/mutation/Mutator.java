@@ -1,10 +1,15 @@
 package ar.edu.unrc.dc.mutation;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.ast.Browsable;
@@ -24,6 +29,9 @@ import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
+import edu.mit.csail.sdg.ast.Sig.PrimSig;
+import edu.mit.csail.sdg.ast.Type;
+import edu.mit.csail.sdg.ast.Type.ProductType;
 import edu.mit.csail.sdg.ast.VisitReturn;
 import edu.mit.csail.sdg.parser.CompModule;
 
@@ -35,6 +43,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     protected static final List<Op>                 CONDITIONAL_OPS       = Arrays.asList(Op.AND, Op.OR, Op.IMPLIES, Op.IFF);
     protected static final List<Op>                 ARITHMETIC_BINARY_OPS = Arrays.asList(Op.DIV, Op.MUL, Op.REM, Op.IPLUS, Op.IMINUS);
     protected static final List<ExprUnary.Op>       RELATIONAL_UNARY_OPS  = Arrays.asList(ExprUnary.Op.CLOSURE, ExprUnary.Op.RCLOSURE, ExprUnary.Op.TRANSPOSE);
+    protected static final List<Op>                 SET_OPERATORS         = Arrays.asList(Op.JOIN, Op.PLUS, Op.MINUS, Op.INTERSECT, Op.IN, Op.PLUSPLUS);
 
     protected CompModule                            context;
 
@@ -48,29 +57,35 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
     //UTILITIES
 
-    protected boolean isRelationalExpression(Expr e) {
+    protected final boolean isRelationalExpression(Expr e) {
         if (!(e instanceof ExprBinary))
             return false;
         return RELATIONAL_OPS.contains(((ExprBinary) e).op);
     }
 
-    protected boolean isConditionalExpression(Expr e) {
+    protected final boolean isConditionalExpression(Expr e) {
         if (!(e instanceof ExprBinary))
             return false;
         return CONDITIONAL_OPS.contains(((ExprBinary) e).op);
     }
 
     //for the moment only binary expressions are considered
-    protected boolean isArithmeticExpression(Expr e) {
+    protected final boolean isArithmeticExpression(Expr e) {
         if (!(e instanceof ExprBinary))
             return false;
         return ARITHMETIC_BINARY_OPS.contains(((ExprBinary) e).op);
     }
 
-    protected boolean isUnaryRelationalExpression(Expr e) {
+    protected final boolean isUnaryRelationalExpression(Expr e) {
         if (!(e instanceof ExprUnary))
             return false;
         return RELATIONAL_UNARY_OPS.contains(((ExprUnary) e).op);
+    }
+
+    protected final boolean isSetBinaryExpression(Expr e) {
+        if (!(e instanceof ExprBinary))
+            return false;
+        return SET_OPERATORS.contains(((ExprBinary) e).op);
     }
 
     /**
@@ -80,7 +95,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
      * @return {@link Optional#empty()} if the {@code expression} is not contained
      *         in a function, or an {@code Optional} containing the function
      */
-    protected Optional<Func> getContainerFunc(Expr x) {
+    protected final Optional<Func> getContainerFunc(Expr x) {
         Browsable current = x;
         while (current != null && !(current instanceof Func)) {
             current = current.getBrowsableParent();
@@ -95,19 +110,143 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
      * expression
      *
      * @param x : the expression
-     * @return an {@code Optional} list of expression extending {@code ExprHasName}
-     *         or {@link Optional#empty()} if none is found
+     * @return an {@code Optional} list of expressions {@code Expr} or
+     *         {@link Optional#empty()} if none is found
      */
-    protected Optional<List< ? extends ExprHasName>> getCompatibleVariablesFor(Expr x) {
-        List< ? extends ExprHasName> compatibleVariables = new LinkedList<>();
+    protected final Optional<List<Expr>> getCompatibleVariablesFor(Expr x, boolean strictChecking) {
+        Type xtype = x.type();
+        List<Expr> compatibleVariables = new LinkedList<>();
+        Map<String,Expr> funcVariablesFound = new HashMap<>();
+        Map<String,Expr> variablesFound = new HashMap<>();
         Optional<Func> containerFunc = getContainerFunc(x);
-        SafeList<Sig> sigs = this.context.getAllSigs();
-        for (Sig s : sigs) {
-            //TODO: implement
+        if (containerFunc.isPresent()) {
+            for (Decl arg : containerFunc.get().decls) {
+                Type argType = arg.expr.type();
+                if (compatibleVariablesChecker(x, arg.expr, argType, strictChecking)) {
+                    for (ExprHasName var : arg.names) {
+                        funcVariablesFound.put(cleanLabelFromThis(var.label), var);
+                    }
+                }
+            }
         }
+        SafeList<Sig> sigs = this.context.getAllSigs();
+        List<Decl> sigDecls = new LinkedList<>();
+        for (Sig s : sigs) {
+            Type stype = s.type();
+            if (compatibleVariablesChecker(x, s, stype, strictChecking)) {
+                String label = cleanLabelFromThis(s.label);
+                if (!funcVariablesFound.containsKey(label)) { //a funcs argument will hide all other fields
+                    variablesFound.put(label, s);
+                }
+            }
+            for (Decl d : s.getFieldDecls()) {
+                Type dtype = appendTypes(stype, d.expr.type());
+                if (compatibleVariablesChecker(x, d.expr, dtype, strictChecking)) {
+                    for (Expr var : d.names) {
+                        String label = "";
+                        if (var instanceof Field) {
+                            label = cleanLabelFromThis(((Field) var).label);
+                        } else if (var instanceof ExprHasName) {
+                            label = cleanLabelFromThis(((ExprHasName) var).label);
+                        } else {
+                            throw new IllegalStateException("While searching for sig " + s.label + " fields, found " + var.toString() + " which is not a Field nor an ExprHasName, but instead a " + var.getClass().getCanonicalName());
+                        }
+                        if (funcVariablesFound.containsKey(label)) {
+                            continue; //a funcs argument will hide all other fields
+                        } else {
+                            variablesFound.put(label, var);
+                        }
+                    }
+                }
+
+            }
+        }
+        compatibleVariables.addAll(variablesFound.values());
+        compatibleVariables.addAll(funcVariablesFound.values());
         if (!compatibleVariables.isEmpty())
             return Optional.of(compatibleVariables);
         return Optional.empty();
+    }
+
+    protected final Type getType(Expr e) {
+        if (e instanceof Field) {
+            Field eAsField = (Field) e;
+            return appendTypes(eAsField.sig.type(), e.type());
+        }
+        return e.type();
+    }
+
+    protected final Type appendTypes(Type atype, Type btype) {
+        if (atype.is_bool || atype.is_int())
+            return Type.EMPTY;
+        if (btype.is_bool || btype.is_int())
+            return Type.EMPTY;
+        List<ProductType> rtypes = new LinkedList<>();
+        AtomicInteger arities = new AtomicInteger(0);
+        Iterator<ProductType> atypesIt = atype.iterator();
+        Iterator<ProductType> btypesIt = btype.iterator();
+        atypesIt.forEachRemaining(at -> {
+            rtypes.add(at);
+            arities.addAndGet(at.arity());
+        });
+        btypesIt.forEachRemaining(bt -> {
+            rtypes.add(bt);
+            arities.addAndGet(bt.arity());
+        });
+        List<PrimSig> primSigs = new LinkedList<>();
+        rtypes.forEach(prodType -> {
+            for (PrimSig s : prodType.getAll())
+                primSigs.add(s);
+        });
+        List<ProductType> rProductTypes = Arrays.asList(new ProductType(primSigs.toArray(new PrimSig[primSigs.size()])));
+        ConstList<ProductType> rtypesConstList = ConstList.make(rProductTypes);
+        return new Type(false, rtypesConstList, arities.get());
+    }
+
+    protected boolean compatibleVariablesChecker(Expr toReplace, Expr replacement, Type replacementType, boolean strictTypeChecking) {
+        if (strictTypeChecking)
+            return toReplace.type().equals(replacementType);
+        Type toReplaceType = toReplace.type();
+        ProductType toReplaceTypeFirst = null;
+        ProductType toReplaceTypeLast = null;
+        ProductType replacementTypeFirst = null;
+        ProductType replacementTypeLast = null;
+        Iterator<ProductType> trIt = toReplaceType.iterator();
+        Iterator<ProductType> rIt = replacementType.iterator();
+        while (trIt.hasNext()) {
+            ProductType current = trIt.next();
+            if (toReplaceTypeFirst == null)
+                toReplaceTypeFirst = current;
+            toReplaceTypeLast = current;
+        }
+        while (rIt.hasNext()) {
+            ProductType current = rIt.next();
+            if (replacementTypeFirst == null)
+                replacementTypeFirst = current;
+            replacementTypeLast = current;
+        }
+        if (toReplaceTypeFirst == null || toReplaceTypeLast == null)
+            return false;
+        if (replacementTypeFirst == null || replacementTypeLast == null)
+            return false;
+        return toReplaceTypeFirst.equals(replacementTypeFirst) && toReplaceTypeLast.equals(replacementTypeLast);
+    }
+
+    protected final boolean emptyOrNone(Type joinedType) {
+        if (joinedType.toString().equals(Type.EMPTY.toString()))
+            return true;
+        Iterator<ProductType> it = joinedType.iterator();
+        while (it.hasNext()) {
+            if (it.next().isEmpty())
+                return true;
+        }
+        return false;
+    }
+
+    protected final String cleanLabelFromThis(String label) {
+        if (label.startsWith("this/"))
+            return label.substring(5);
+        return label;
     }
 
     /**
