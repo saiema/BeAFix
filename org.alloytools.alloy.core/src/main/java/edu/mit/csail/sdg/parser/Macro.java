@@ -16,6 +16,7 @@
 package edu.mit.csail.sdg.parser;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -149,6 +150,23 @@ final class Macro extends ExprCustom {
 
     public Macro copy() {
         return new Macro(pos, isPrivate, realModule, name, params, args, body);
+    }
+
+    @Override
+    public Object clone() {
+        CompModule realModuleClone = (CompModule) this.realModule.clone();
+        List<ExprVar> paramsClone = new LinkedList<>();
+        for (ExprVar p : this.params) {
+            paramsClone.add((ExprVar) p.clone());
+        }
+        List<Expr> argsClone = new LinkedList<>();
+        for (Expr a : this.args) {
+            argsClone.add((Expr) a.clone());
+        }
+        Expr bodyClone = (Expr) (this.body != null ? this.body.clone() : null);
+        Macro clone = new Macro(this.pos, this.isPrivate, realModuleClone, this.name, paramsClone, argsClone, bodyClone);
+        clone.setID(getID());
+        return clone;
     }
 
 }
