@@ -126,6 +126,13 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new ar.edu.unrc.dc.mutation.op.RUOI(context);
                      }
+                 },
+                 MULTI { //this operator is used when compressing mutations
+
+                     @Override
+                     public boolean isImplemented() {
+                         return false;
+                     }
                  };
 
     public abstract boolean isImplemented();
