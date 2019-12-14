@@ -203,6 +203,10 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         return new Type(false, rtypesConstList, arities.get());
     }
 
+    protected boolean isMemberOfBinaryExpression(ExprBinary binary, Expr expr) {
+        return (binary.left.getID() == expr.getID()) || (binary.right.getID() == expr.getID());
+    }
+
     protected boolean compatibleVariablesChecker(Expr toReplace, Expr replacement, Type replacementType, boolean strictTypeChecking) {
         if (strictTypeChecking)
             return toReplace.type().equals(replacementType);
