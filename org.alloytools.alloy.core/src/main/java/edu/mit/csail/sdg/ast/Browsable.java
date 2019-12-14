@@ -19,6 +19,7 @@ import java.awt.BorderLayout;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.JFrame;
@@ -62,8 +63,12 @@ public abstract class Browsable {
         return ID;
     }
 
-    protected void setID(int id) {
+    public void setID(int id) {
         this.ID = id;
+    }
+
+    public void newID() {
+        this.ID = NEXT_ID++;
     }
 
     public Browsable getBrowsableParent() {
@@ -156,6 +161,17 @@ public abstract class Browsable {
                 }
             }
 
+            @Override
+            public Object clone() {
+                List<Browsable> subnodes = new LinkedList<>();
+                for (Browsable s : getSubnodes()) {
+                    subnodes.add((Browsable) s.clone());
+                }
+                Browsable clone = Browsable.make(pos, span, getHTML(), ConstList.make(subnodes));
+                clone.setID(getID());
+                return clone;
+            }
+
         };
         return newBrowsable;
     }
@@ -221,4 +237,7 @@ public abstract class Browsable {
     }
 
     protected abstract void defineParentForComponents();
+
+    @Override
+    public abstract Object clone();
 }
