@@ -128,10 +128,6 @@ public class JEE extends JEX {
         return Optional.empty();
     }
 
-    private boolean isMemberOfBinaryExpression(ExprBinary binary, Expr expr) {
-        return (binary.left.getID() == expr.getID()) || (binary.right.getID() == expr.getID());
-    }
-
     private Optional<List<Expr>> obtainReplacements(Expr replace, boolean onlyBinary) {
         List<Expr> replacements = new LinkedList<>();
         List<Expr> simpleReplacements = new LinkedList<>();
@@ -145,10 +141,14 @@ public class JEE extends JEX {
         //type check and filter simple replacements
         if (!simpleReplacements.isEmpty()) {
             for (Expr r : simpleReplacements) {
+                r = (Expr) r.clone();
+                r.newID();
                 if (typeCheck(replace, r, true)) {
                     replacements.add(r);
                 }
                 for (Expr r2 : simpleReplacements) {
+                    r2 = (Expr) r2.clone();
+                    r2.newID();
                     if (typeCheck(r, r2, false)) {
                         ExprBinary joinReplacement = (ExprBinary) r.join(r2);
                         if (typeCheck(replace, joinReplacement, true)) {
