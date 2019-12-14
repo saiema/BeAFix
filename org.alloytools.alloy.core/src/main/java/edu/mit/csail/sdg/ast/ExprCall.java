@@ -18,6 +18,7 @@ package edu.mit.csail.sdg.ast;
 import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -441,5 +442,19 @@ public final class ExprCall extends Expr {
     public void defineParentForComponents() {
         for (Expr a : this.args)
             a.setBrowsableParent(this);
+        this.fun.setBrowsableParent(this);
     }
+
+    @Override
+    public Object clone() {
+        List<Expr> argsClone = new LinkedList<>();
+        for (Expr a : this.args) {
+            argsClone.add((Expr) a.clone());
+        }
+        Func funClone = (Func) this.fun.clone();
+        ExprCall clone = new ExprCall(this.pos, this.closingBracket, this.ambiguous, this.type, funClone, ConstList.make(argsClone), this.extraWeight, this.weight, this.errors);
+        clone.setID(getID());
+        return clone;
+    }
+
 }
