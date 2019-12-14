@@ -45,11 +45,19 @@ public class JER extends JEX {
     protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) {
         List<Mutation> mutations = new LinkedList<>();
         ExprBinary original = (ExprBinary) from;
+        if (!isMemberOfBinaryExpression(original, replace))
+            throw new IllegalArgumentException("replace expression must be either the left or right part of the from expression");
         Optional<List<Expr>> replacements = getCompatibleVariablesFor(replace, strictTypeCheck());
         if (replacements.isPresent()) {
             for (Expr r : replacements.get()) {
-                ExprBinary mutant = original.mutateLeft(r);
-                if (from.toString().equals(mutant.toString()))
+                r = (Expr) r.clone();
+                r.newID();
+                ExprBinary mutant = null;
+                if (original.left.getID() == replace.getID())
+                    mutant = original.mutateLeft(r);
+                if (original.right.getID() == replace.getID())
+                    mutant = original.mutateRight(r);
+                if (mutant == null || from.toString().equals(mutant.toString()))
                     continue;
                 mutations.add(new Mutation(Ops.JER, from, mutant));
             }
