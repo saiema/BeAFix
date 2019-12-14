@@ -6,6 +6,13 @@ import java.util.Optional;
 
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.ExprBinary;
+import edu.mit.csail.sdg.ast.ExprBinary.Op;
+import edu.mit.csail.sdg.ast.Func;
+import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.VisitSearchAndReplace;
+import edu.mit.csail.sdg.ast.VisitSearchExpr;
+import edu.mit.csail.sdg.parser.CompModule;
 
 /**
  * A mutation is represented by a tuple (operator, original, mutant) where the
@@ -74,21 +81,35 @@ public class Mutation {
         }
     }
 
-    public static boolean compatible(Mutation from, Mutation mutate) {
-        Expr fromMutant = from.mutant();
-        int mutateOriginalID = mutate.original().getID();
-        List<Browsable> nodesToVisit = new LinkedList<>();
-        nodesToVisit.addAll(fromMutant.getSubnodes());
-        while (!nodesToVisit.isEmpty()) {
-            List<Browsable> childrens = new LinkedList<>();
-            for (Browsable n : nodesToVisit) {
-                if (n.getID() == mutateOriginalID)
-                    return true;
-                if (!n.getSubnodes().isEmpty())
-                    childrens.addAll(n.getSubnodes());
+    /**
+     * Compresses all mutations into one
+     *
+     * @return {@code this} if this mutation has no parents, or a new mutation with
+     *         all parent mutations applied
+     */
+    public Mutation compress() {
+        if (!this.parent.isPresent())
+            return this;
+        if (!this.parent.get().parent().isPresent()) {
+            //compress this with parent
+            VisitSearchAndReplace replacer = new VisitSearchAndReplace(this.original, this.mutant);
+            Optional<Expr> newMutant = replacer.visitThis(this.parent.get().mutant);
+            if (newMutant.isPresent()) {
+                return new Mutation(Ops.MULTI, this.parent.get().original, newMutant.get());
+            } else {
+                throw new IllegalStateException("Couldn't compress mutations but it should be possible");
             }
+        } else {
+            //compress this with the parent's compression
+            Mutation parentCompress = this.parent.get().compress();
+            setParent(parentCompress);
+            return compress();
         }
-        return false;
+    }
+
+    public static boolean compatible(Mutation from, Mutation mutate) {
+        VisitSearchExpr searcher = new VisitSearchExpr(mutate.original);
+        return searcher.visitThis(from.mutant);
     }
 
     public static Optional<Integer> depth(Mutation from, Mutation mutate) {
@@ -128,6 +149,92 @@ public class Mutation {
         sb.append(mutant.toString());
         sb.append(")");
         return sb.toString();
+    }
+
+    //VARIABILIZATION RELATED UTILITIES
+
+    private enum SEARCH {
+                         LEFT,
+                         RIGHT,
+                         BOTH
+    }
+
+    public boolean isEqualMutation() {
+        return isMutationOfBinExpr(this.original, Op.EQUALS, SEARCH.BOTH);
+    }
+
+    public boolean isInMutation() {
+        return isMutationOfBinExpr(this.original, Op.IN, SEARCH.BOTH);
+    }
+
+    public boolean isEqualLeftMutation() {
+        return isMutationOfBinExpr(this.original, Op.EQUALS, SEARCH.LEFT);
+    }
+
+    public boolean isEqualRightMutation() {
+        return isMutationOfBinExpr(this.original, Op.EQUALS, SEARCH.RIGHT);
+    }
+
+    public boolean isInLeftMutation() {
+        return isMutationOfBinExpr(this.original, Op.IN, SEARCH.LEFT);
+    }
+
+    public boolean isInRightMutation() {
+        return isMutationOfBinExpr(this.original, Op.IN, SEARCH.RIGHT);
+    }
+
+    private boolean isMutationOfBinExpr(Browsable from, Op op, SEARCH search) {
+        if (from == null)
+            return false;
+        if (from instanceof Func)
+            return false;
+        if (from instanceof Sig)
+            return false;
+        if (from instanceof CompModule)
+            return false;
+        if (from instanceof ExprBinary) {
+            ExprBinary asBinExpr = (ExprBinary) from;
+            if (asBinExpr.op.equals(op)) {
+                //search for mutation
+                if (from.getID() == this.original.getID()) {
+                    //original is inside mutant
+                    VisitSearchExpr searcher = new VisitSearchExpr(original);
+                    if (searcher.visitThis(mutant))
+                        return false;
+                    //does the left original expression exists in the mutant
+                    searcher = new VisitSearchExpr(asBinExpr.left);
+                    boolean originalLeftIsInMutant = searcher.visitThis(mutant);
+                    //does the right original expression exists in the mutant
+                    searcher = new VisitSearchExpr(asBinExpr.right);
+                    boolean originalRightIsInMutant = searcher.visitThis(mutant);
+                    if (originalLeftIsInMutant && originalRightIsInMutant) {
+                        //mutant changed the operator
+                        return false;
+                    } else if (originalLeftIsInMutant) {
+                        //mutant changed the right part
+                        return !search.equals(SEARCH.LEFT) ? true : false;
+                    } else if (originalRightIsInMutant) {
+                        //mutant changed the left part
+                        return !search.equals(SEARCH.RIGHT) ? true : false;
+                    } else {
+                        //mutant changed the whole original expression
+                        return false;
+                    }
+
+                } else {
+                    VisitSearchExpr searcher = new VisitSearchExpr(original);
+                    switch (search) {
+                        case BOTH :
+                            return searcher.visitThis(asBinExpr.left) || searcher.visitThis(asBinExpr.right);
+                        case LEFT :
+                            return searcher.visitThis(asBinExpr.left);
+                        case RIGHT :
+                            return searcher.visitThis(asBinExpr.right);
+                    }
+                }
+            }
+        }
+        return isMutationOfBinExpr(from.getBrowsableParent(), op, search);
     }
 
 }
