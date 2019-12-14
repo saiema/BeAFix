@@ -595,6 +595,7 @@ public abstract class Sig extends Expr implements Clause {
                 throw new IllegalStateException("This instance was not built with neither constructor");
             }
             clone.setID(getID());
+            copyComponentsToClone(clone);
             return clone;
         }
 
@@ -698,6 +699,7 @@ public abstract class Sig extends Expr implements Clause {
                 parentsClone.add((Sig) s.clone());
             SubsetSig clone = new SubsetSig(this.label, parentsClone, this.attributes.toArray(new Attr[this.attributes.size()]));
             clone.setID(getID());
+            copyComponentsToClone(clone);
             return clone;
         }
 
@@ -1034,6 +1036,32 @@ public abstract class Sig extends Expr implements Clause {
         //        }
         //        for (Field rfield : this.realFields)
         //            rfield.setBrowsableParent(this);
+    }
+
+    protected void copyComponentsToClone(Sig clone) {
+        if (this.facts != null) {
+            for (Expr f : this.facts) {
+                clone.addFact(f);
+            }
+        }
+        if (this.fields != null) {
+            for (Decl field : this.fields) {
+                if (field.names.size() > 1) {
+                    List<String> names = new LinkedList<>();
+                    for (ExprHasName n : field.names) {
+                        names.add(n.label);
+                    }
+                    clone.addTrickyField(field.names.get(0).pos, field.isPrivate, field.disjoint, field.disjoint2, ((Field) field.names.get(0)).isMeta, names.toArray(new String[names.size()]), field.expr);
+                } else {
+                    clone.addField(field.names.get(0).label, field.expr);
+                }
+            }
+        }
+        if (this.realFields != null) {
+            for (Field rfield : this.realFields) {
+                clone.addField(rfield.label, rfield.type().toExpr());
+            }
+        }
     }
 
 }
