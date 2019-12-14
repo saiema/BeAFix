@@ -10,6 +10,7 @@ import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
+import edu.mit.csail.sdg.ast.ExprCall;
 import edu.mit.csail.sdg.ast.ExprUnary;
 import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Type;
@@ -34,6 +35,23 @@ public class RUOI extends Mutator {
 
     public RUOI(CompModule context) {
         super(context);
+    }
+
+    @Override
+    public Optional<List<Mutation>> visit(ExprCall x) throws Err {
+        List<Mutation> mutations = new LinkedList<>();
+        Optional<List<Mutation>> mutants = mutate(x);
+        if (mutants.isPresent()) {
+            mutations.addAll(mutants.get());
+        }
+        for (Expr arg : x.args) {
+            Optional<List<Mutation>> argMutations = arg.accept(this);
+            if (argMutations.isPresent())
+                mutations.addAll(argMutations.get());
+        }
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return EMPTY;
     }
 
     @Override
@@ -80,12 +98,12 @@ public class RUOI extends Mutator {
 
     private Optional<List<Mutation>> mutate(Expr x) {
         List<Mutation> mutations = new LinkedList<>();
-        Type xtype = x.type();
-        if (xtype.transpose() != Type.EMPTY)
-            mutations.add(new Mutation(Ops.RUOI, x, x.transpose()));
-        if (xtype.closure() != Type.EMPTY) {
-            mutations.add(new Mutation(Ops.RUOI, x, x.closure()));
-            mutations.add(new Mutation(Ops.RUOI, x, x.reflexiveClosure()));
+        Type xtype = getType(x);
+        if (!emptyOrNone(xtype.transpose()))
+            mutations.add(new Mutation(Ops.RUOI, x, ((Expr) x.clone()).transpose()));
+        if (!emptyOrNone(xtype.closure())) {
+            mutations.add(new Mutation(Ops.RUOI, x, ((Expr) x.clone()).closure()));
+            mutations.add(new Mutation(Ops.RUOI, x, ((Expr) x.clone()).reflexiveClosure()));
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
