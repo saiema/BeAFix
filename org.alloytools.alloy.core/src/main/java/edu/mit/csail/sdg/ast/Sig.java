@@ -19,6 +19,7 @@ import static edu.mit.csail.sdg.alloy4.TableView.clean;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -363,6 +364,7 @@ public abstract class Sig extends Expr implements Clause {
         if (!fact.type.is_bool)
             throw new ErrorType(fact.span(), "This expression must be a formula; instead its type is " + fact.type);
         facts.add(fact);
+        fact.setBrowsableParent(this);
     }
 
     /**
@@ -455,12 +457,17 @@ public abstract class Sig extends Expr implements Clause {
          */
         public final PrimSig parent;
 
+        private int          constructorUsed = -1;
+        private boolean      constructor0Add = false;
+
         /** Constructs a builtin PrimSig. */
         private PrimSig(String label, PrimSig parent, boolean add) {
             super(label);
             this.parent = parent;
             if (add)
                 this.parent.children.add(this);
+            constructorUsed = 0;
+            constructor0Add = add;
             defineParentForComponents();
         }
 
@@ -499,6 +506,7 @@ public abstract class Sig extends Expr implements Clause {
                     if (isOne == null)
                         throw new ErrorSyntax(pos, "sig " + label + " is an atom in an enum, so it must have the \"one\" multiplicity.");
                 }
+            constructorUsed = 1;
             defineParentForComponents();
         }
 
@@ -573,6 +581,21 @@ public abstract class Sig extends Expr implements Clause {
                 return;
             for (PrimSig children : this.children)
                 children.setBrowsableParent(this);
+        }
+
+        @Override
+        public Object clone() {
+            PrimSig clone;
+            PrimSig parentClone = (PrimSig) this.parent.clone();
+            if (constructorUsed == 0) {
+                clone = new PrimSig(this.label, parentClone, this.constructor0Add);
+            } else if (constructorUsed == 1) {
+                clone = new PrimSig(this.label, parentClone, this.attributes.toArray(new Attr[this.attributes.size()]));
+            } else {
+                throw new IllegalStateException("This instance was not built with neither constructor");
+            }
+            clone.setID(getID());
+            return clone;
         }
 
     }
@@ -667,6 +690,17 @@ public abstract class Sig extends Expr implements Clause {
                     return true;
             return false;
         }
+
+        @Override
+        public Object clone() {
+            List<Sig> parentsClone = new LinkedList<>();
+            for (Sig s : this.parents)
+                parentsClone.add((Sig) s.clone());
+            SubsetSig clone = new SubsetSig(this.label, parentsClone, this.attributes.toArray(new Attr[this.attributes.size()]));
+            clone.setID(getID());
+            return clone;
+        }
+
     }
 
     // ==============================================================================================================//
@@ -779,6 +813,26 @@ public abstract class Sig extends Expr implements Clause {
             return sb.toString();
         }
 
+        @Override
+        public void defineParentForComponents() {
+            super.defineParentForComponents();
+            this.sig.setBrowsableParent(this);
+            if (this.decl != null) {
+                for (Expr n : this.decl.names)
+                    n.setBrowsableParent(this);
+                this.decl.expr.setBrowsableParent(this);
+            }
+        }
+
+        @Override
+        public Object clone() {
+            Sig sigClone = (Sig) this.sig.clone();
+            Expr boundClone = (Expr) (this.decl != null ? this.decl.expr.clone() : null);
+            Field clone = new Field(this.pos, this.isPrivate, this.isMeta, null, null, sigClone, this.label, boundClone);
+            clone.setID(getID());
+            return clone;
+        }
+
     }
 
     // ==============================================================================================================//
@@ -835,6 +889,10 @@ public abstract class Sig extends Expr implements Clause {
         f.decl = d;
         fields.add(d);
         realFields.add(f);
+        f.setBrowsableParent(this);
+        for (Expr n : d.names)
+            n.setBrowsableParent(this);
+        d.expr.setBrowsableParent(this);
         return f;
     }
 
@@ -869,14 +927,19 @@ public abstract class Sig extends Expr implements Clause {
                                                          // symbol, we assume
                                                          // it's oneOf
         final Field[] f = new Field[labels.length];
-        for (int i = 0; i < f.length; i++)
+        for (int i = 0; i < f.length; i++) {
             f[i] = new Field(pos, isPrivate, isMeta, isDisjoint, isDisjoint2, this, labels[i], bound);
+            f[i].setBrowsableParent(this);
+        }
         final Decl d = new Decl(isPrivate, isDisjoint, isDisjoint2, Arrays.asList(f), bound);
         for (int i = 0; i < f.length; i++) {
             f[i].decl = d;
             realFields.add(f[i]);
         }
         fields.add(d);
+        for (Expr n : d.names)
+            n.setBrowsableParent(this);
+        d.expr.setBrowsableParent(this);
         return f;
     }
 
@@ -914,6 +977,10 @@ public abstract class Sig extends Expr implements Clause {
         f.decl = d;
         fields.add(d);
         realFields.add(f);
+        f.setBrowsableParent(this);
+        for (Expr n : d.names)
+            n.setBrowsableParent(this);
+        d.expr.setBrowsableParent(this);
         return f;
     }
 
@@ -956,14 +1023,17 @@ public abstract class Sig extends Expr implements Clause {
         for (Expr n : this.decl.names)
             n.setBrowsableParent(this);
         this.decl.expr.setBrowsableParent(this);
-        for (Expr f : this.facts)
-            f.setBrowsableParent(this);
-        for (Decl field : this.fields) {
-            for (Expr n : field.names)
-                n.setBrowsableParent(this);
-            field.expr.setBrowsableParent(this);
-        }
-        for (Field rfield : this.realFields)
-            rfield.setBrowsableParent(this);
+        // Bellow code is unnecesary because the setBrowsableParent is done in the
+        // respective add methods
+        //        for (Expr f : this.facts)
+        //            f.setBrowsableParent(this);
+        //        for (Decl field : this.fields) {
+        //            for (Expr n : field.names)
+        //                n.setBrowsableParent(this);
+        //            field.expr.setBrowsableParent(this);
+        //        }
+        //        for (Field rfield : this.realFields)
+        //            rfield.setBrowsableParent(this);
     }
+
 }
