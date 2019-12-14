@@ -17,6 +17,7 @@ package edu.mit.csail.sdg.ast;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -326,4 +327,19 @@ public final class Command extends Browsable {
         this.nameExpr.setBrowsableParent(this);
         this.formula.setBrowsableParent(this);
     }
+
+    @Override
+    public Object clone() {
+        Expr nameExprClone = (Expr) this.nameExpr.clone();
+        List<Sig> sigsClone = new LinkedList<>();
+        for (Sig s : this.additionalExactScopes) {
+            sigsClone.add((Sig) s.clone());
+        }
+        Expr formulaClone = (Expr) this.formula.clone();
+        Command parentClone = (Command) this.parent.clone();
+        Command clone = new Command(this.pos, nameExprClone, this.label, this.check, this.overall, this.bitwidth, this.maxseq, this.expects, this.scope, ConstList.make(sigsClone), formulaClone, parentClone);
+        clone.setID(getID());
+        return clone;
+    }
+
 }

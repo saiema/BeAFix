@@ -19,6 +19,7 @@ import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -175,4 +176,17 @@ public final class ExprBadCall extends Expr {
         for (Expr a : this.args)
             a.setBrowsableParent(this);
     }
+
+    @Override
+    public Object clone() {
+        Func funcClone = (Func) this.fun.clone();
+        List<Expr> argsClone = new LinkedList<>();
+        for (Expr a : this.args) {
+            argsClone.add((Expr) a.clone());
+        }
+        ExprBadCall clone = new ExprBadCall(this.pos, this.closingBracket, this.ambiguous, funcClone, ConstList.make(argsClone), this.errors, this.extraWeight, this.weight);
+        clone.setID(getID());
+        return clone;
+    }
+
 }

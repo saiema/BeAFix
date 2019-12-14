@@ -18,6 +18,7 @@ package edu.mit.csail.sdg.ast;
 import static edu.mit.csail.sdg.alloy4.TableView.clean;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -334,6 +335,24 @@ public final class Func extends Browsable implements Clause {
                 n.setBrowsableParent(this);
             d.expr.setBrowsableParent(this);
         }
+    }
+
+    @Override
+    public Object clone() {
+        List<Decl> declsClone = new LinkedList<>();
+        for (Decl d : this.decls) {
+            List<ExprHasName> dnamesClone = new LinkedList<>();
+            for (Expr dn : d.names)
+                dnamesClone.add((ExprHasName) dn.clone());
+            Expr exprClone = (Expr) d.expr.clone();
+            Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, exprClone);
+            declsClone.add(dclone);
+        }
+        Expr returnDeclClone = (Expr) this.returnDecl.clone();
+        Expr bodyClone = (Expr) this.body.clone();
+        Func clone = new Func(this.pos, this.label, declsClone, returnDeclClone, bodyClone);
+        clone.setID(getID());
+        return clone;
     }
 
 }

@@ -168,4 +168,15 @@ public final class ExprLet extends Expr {
         this.expr.setBrowsableParent(this);
         this.sub.setBrowsableParent(this);
     }
+
+    @Override
+    public Object clone() {
+        ExprVar varClone = (ExprVar) this.var.clone();
+        Expr exprClone = (Expr) this.expr.clone();
+        Expr subClone = (Expr) this.sub.clone();
+        ExprLet clone = new ExprLet(this.pos, varClone, exprClone, subClone, this.errors);
+        clone.setID(getID());
+        return clone;
+    }
+
 }

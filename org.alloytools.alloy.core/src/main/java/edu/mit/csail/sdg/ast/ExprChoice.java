@@ -19,6 +19,7 @@ import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -295,5 +296,16 @@ public final class ExprChoice extends Expr {
     public void defineParentForComponents() {
         for (Expr choice : this.choices)
             choice.setBrowsableParent(this);
+    }
+
+    @Override
+    public Object clone() {
+        List<Expr> choicesClone = new LinkedList<>();
+        for (Expr c : this.choices) {
+            choicesClone.add((Expr) c.clone());
+        }
+        ExprChoice clone = new ExprChoice(this.pos, ConstList.make(choicesClone), this.reasons, this.type, this.weight);
+        clone.setID(getID());
+        return clone;
     }
 }

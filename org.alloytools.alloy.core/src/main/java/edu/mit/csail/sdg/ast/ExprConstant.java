@@ -266,4 +266,11 @@ public final class ExprConstant extends Expr {
     @Override
     public void defineParentForComponents() {
     }
+
+    @Override
+    public Object clone() {
+        ExprConstant clone = new ExprConstant(this.pos, this.op, this.num, this.string);
+        clone.setID(getID());
+        return clone;
+    }
 }

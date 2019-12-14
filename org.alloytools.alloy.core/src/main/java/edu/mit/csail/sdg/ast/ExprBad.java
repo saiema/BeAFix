@@ -95,4 +95,11 @@ public final class ExprBad extends Expr {
     @Override
     public void defineParentForComponents() {
     }
+
+    @Override
+    public Object clone() {
+        ExprBad clone = new ExprBad(this.pos, this.originalText, this.errors.get(0));
+        clone.setID(getID());
+        return clone;
+    }
 }

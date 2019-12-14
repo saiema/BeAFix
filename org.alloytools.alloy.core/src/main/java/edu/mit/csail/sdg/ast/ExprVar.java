@@ -104,4 +104,11 @@ public final class ExprVar extends ExprHasName implements Clause {
     public String explain() {
         return clean(type.explain()) + " : " + label;
     }
+
+    @Override
+    public Object clone() {
+        ExprVar clone = new ExprVar(this.pos, this.label, this.type);
+        clone.setID(getID());
+        return clone;
+    }
 }

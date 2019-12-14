@@ -131,4 +131,14 @@ public final class ExprBadJoin extends Expr {
         this.left.setBrowsableParent(this);
         this.right.setBrowsableParent(this);
     }
+
+    @Override
+    public Object clone() {
+        Expr leftClone = (Expr) this.left.clone();
+        Expr rightClone = (Expr) this.right.clone();
+        ExprBadJoin clone = new ExprBadJoin(this.pos, this.closingBracket, leftClone, rightClone, this.errors);
+        clone.setID(getID());
+        return clone;
+    }
+
 }

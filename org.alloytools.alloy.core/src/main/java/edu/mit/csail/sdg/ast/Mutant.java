@@ -15,34 +15,32 @@
 
 package edu.mit.csail.sdg.ast;
 
-import ar.edu.unrc.dc.mutation.Mutation;
-import edu.mit.csail.sdg.alloy4.*;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 
-import static edu.mit.csail.sdg.alloy4.TableView.clean;
+import ar.edu.unrc.dc.mutation.Mutation;
+import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.Pos;
 
 /**
  * Mutable; represents an expression that can be mutable for repair.
- *  */
+ */
 
-public  class Mutant extends Browsable  {
+public class Mutant extends Browsable {
 
     /**
-     * The location in the original file where this mutant mark is declared;
-     * never null.
+     * The location in the original file where this mutant mark is declared; never
+     * null.
      */
-    public final Pos             pos;
+    public final Pos      pos;
 
 
 
     /** never null. */
-    public  Expr            exprToMutate;
+    public Expr           exprToMutate;
 
-    /** list of mutation for this mutant*/
-    public List<Mutation>   mutations = new ArrayList<Mutation>();
+    /** list of mutation for this mutant */
+    public List<Mutation> mutations = new ArrayList<Mutation>();
 
 
 
@@ -70,7 +68,7 @@ public  class Mutant extends Browsable  {
      */
     @Override
     public final String toString() {
-        return ( "Mutant: ") + exprToMutate.toString();
+        return ("Mutant: ") + exprToMutate.toString();
     }
 
     /** {@inheritDoc} */
@@ -91,7 +89,7 @@ public  class Mutant extends Browsable  {
     }
 
     @Override
-    public List<? extends Browsable> getSubnodes() {
+    public List< ? extends Browsable> getSubnodes() {
         return null;
     }
 
@@ -99,7 +97,16 @@ public  class Mutant extends Browsable  {
     @Override
     public void defineParentForComponents() {
         this.exprToMutate.setBrowsableParent(this);
-        }
     }
+
+    @Override
+    public Object clone() {
+        Expr exprToMutateClone = (Expr) this.exprToMutate.clone();
+        Mutant clone = new Mutant(this.pos, exprToMutateClone);
+        clone.setID(getID());
+        return clone;
+    }
+
+}
 
 

@@ -19,6 +19,7 @@ import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -393,4 +394,22 @@ public final class ExprQt extends Expr {
         }
         this.sub.setBrowsableParent(this);
     }
+
+    @Override
+    public Object clone() {
+        List<Decl> declsClone = new LinkedList<>();
+        for (Decl d : this.decls) {
+            List<ExprHasName> dnamesClone = new LinkedList<>();
+            for (Expr dn : d.names)
+                dnamesClone.add((ExprHasName) dn.clone());
+            Expr exprClone = (Expr) d.expr.clone();
+            Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, exprClone);
+            declsClone.add(dclone);
+        }
+        Expr subClone = (Expr) this.sub.clone();
+        ExprQt clone = new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(declsClone), subClone, this.ambiguous, this.weight, this.errors);
+        clone.setID(getID());
+        return clone;
+    }
+
 }

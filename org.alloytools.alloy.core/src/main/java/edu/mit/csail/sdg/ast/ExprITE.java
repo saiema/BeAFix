@@ -212,4 +212,15 @@ public final class ExprITE extends Expr {
         this.left.setBrowsableParent(this);
         this.right.setBrowsableParent(this);
     }
+
+    @Override
+    public Object clone() {
+        Expr condClone = (Expr) this.cond.clone();
+        Expr leftClone = (Expr) this.left.clone();
+        Expr rightClone = (Expr) this.right.clone();
+        ExprITE clone = new ExprITE(this.pos, condClone, leftClone, rightClone, this.type, this.errors);
+        clone.setID(getID());
+        return clone;
+    }
+
 }
