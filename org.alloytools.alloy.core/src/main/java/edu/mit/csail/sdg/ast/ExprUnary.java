@@ -514,11 +514,19 @@ public final class ExprUnary extends Expr {
     }
 
     public ExprUnary mutateOp(Op op) {
-        return new ExprUnary(pos, op, sub, type, weight, errors);
+        return new ExprUnary(pos, op, (Expr) sub.clone(), type, weight, errors);
     }
 
     @Override
     public void defineParentForComponents() {
         this.sub.setBrowsableParent(this);
+    }
+
+    @Override
+    public Object clone() {
+        Expr subClone = (Expr) this.sub.clone();
+        ExprUnary clone = new ExprUnary(this.pos, this.op, subClone, this.type, this.weight, this.errors);
+        clone.setID(getID());
+        return clone;
     }
 }

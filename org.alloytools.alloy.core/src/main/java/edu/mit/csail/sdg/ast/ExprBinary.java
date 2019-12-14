@@ -751,21 +751,30 @@ public final class ExprBinary extends Expr {
     //methods needed for mutation
 
     public ExprBinary mutateLeft(Expr left) {
-        return new ExprBinary(pos, closingBracket, op, left, right, type, errors);
+        return new ExprBinary(pos, closingBracket, op, left, (Expr) right.clone(), type, errors);
     }
 
     public ExprBinary mutateRight(Expr right) {
-        return new ExprBinary(pos, closingBracket, op, left, right, type, errors);
+        return new ExprBinary(pos, closingBracket, op, (Expr) left.clone(), right, type, errors);
     }
 
     public ExprBinary mutateOp(Op op) {
-        return new ExprBinary(pos, closingBracket, op, left, right, type, errors);
+        return new ExprBinary(pos, closingBracket, op, (Expr) left.clone(), (Expr) right.clone(), type, errors);
     }
 
     @Override
     public void defineParentForComponents() {
         this.left.setBrowsableParent(this);
         this.right.setBrowsableParent(this);
+    }
+
+    @Override
+    public Object clone() {
+        Expr leftClone = (Expr) this.left.clone();
+        Expr rightClone = (Expr) this.right.clone();
+        ExprBinary clone = new ExprBinary(pos, closingBracket, op, leftClone, rightClone, type, errors);
+        clone.setID(getID());
+        return clone;
     }
 
 }
