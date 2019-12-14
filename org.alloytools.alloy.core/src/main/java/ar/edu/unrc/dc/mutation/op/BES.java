@@ -10,6 +10,7 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -60,15 +61,14 @@ public class BES extends Mutator {
         Type leftType = x.left.type();
         Type rightType = x.right.type();
         List<Mutation> mutants = new LinkedList<>();
-        if (strictTypeCheck() && leftType.canOverride(binaryExpressionType))
-            mutants.add(new Mutation(Ops.BES, x, x.left));
-        else if (leftType.equals(binaryExpressionType))
-            mutants.add(new Mutation(Ops.BES, x, x.left));
-
-        if (strictTypeCheck() && rightType.canOverride(binaryExpressionType))
-            mutants.add(new Mutation(Ops.BES, x, x.right));
-        else if (rightType.equals(binaryExpressionType))
-            mutants.add(new Mutation(Ops.BES, x, x.right));
+        if (compatibleVariablesChecker(x, x.left, getType(x.left), strictTypeCheck())) {
+            Expr mutant = (Expr) x.left.clone();
+            mutants.add(new Mutation(Ops.BES, x, mutant));
+        }
+        if (compatibleVariablesChecker(x, x.right, getType(x.right), strictTypeCheck())) {
+            Expr mutant = (Expr) x.right.clone();
+            mutants.add(new Mutation(Ops.BES, x, mutant));
+        }
         if (mutants.isEmpty())
             return EMPTY;
         return Optional.of(mutants);
