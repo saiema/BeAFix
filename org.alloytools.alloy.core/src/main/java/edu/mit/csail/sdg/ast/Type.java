@@ -145,7 +145,7 @@ public final class Type implements Iterable<Type.ProductType>, Clause {
          * <p>
          * Precondition: this.arity == that.arity
          */
-        private boolean isSubtypeOf(ProductType that) {
+        /* private */public boolean isSubtypeOf(ProductType that) {
             if (this == that)
                 return true;
             for (int i = types.length - 1; i >= 0; i--)
