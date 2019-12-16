@@ -586,7 +586,7 @@ public abstract class Sig extends Expr implements Clause {
         @Override
         public Object clone() {
             PrimSig clone;
-            PrimSig parentClone = (PrimSig) this.parent.clone();
+            PrimSig parentClone = (PrimSig) (this.parent != null ? this.parent.clone() : null);
             if (constructorUsed == 0) {
                 clone = new PrimSig(this.label, parentClone, this.constructor0Add);
             } else if (constructorUsed == 1) {
