@@ -8,7 +8,7 @@ public class MutationConfiguration {
 
     public static enum ConfigKey {
 
-                                  OPERATOR_BES_TYPE_CHECK
+                                  OPERATOR_BES_STRICT_TYPE_CHECK
 
                                   {
 
@@ -18,7 +18,7 @@ public class MutationConfiguration {
                                       }
                                   },
 
-                                  OPERATOR_JEX_TYPE_CHECK
+                                  OPERATOR_JEX_STRICT_TYPE_CHECK
 
                                   {
 
