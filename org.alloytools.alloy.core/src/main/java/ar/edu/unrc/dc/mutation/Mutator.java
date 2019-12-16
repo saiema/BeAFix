@@ -211,29 +211,48 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (strictTypeChecking)
             return toReplace.type().equals(replacementType);
         Type toReplaceType = toReplace.type();
-        ProductType toReplaceTypeFirst = null;
-        ProductType toReplaceTypeLast = null;
-        ProductType replacementTypeFirst = null;
-        ProductType replacementTypeLast = null;
-        Iterator<ProductType> trIt = toReplaceType.iterator();
-        Iterator<ProductType> rIt = replacementType.iterator();
-        while (trIt.hasNext()) {
-            ProductType current = trIt.next();
-            if (toReplaceTypeFirst == null)
-                toReplaceTypeFirst = current;
-            toReplaceTypeLast = current;
-        }
-        while (rIt.hasNext()) {
-            ProductType current = rIt.next();
-            if (replacementTypeFirst == null)
-                replacementTypeFirst = current;
-            replacementTypeLast = current;
-        }
-        if (toReplaceTypeFirst == null || toReplaceTypeLast == null)
+        Optional<Sig> toReplaceFirst = getFirst(toReplaceType);
+        Optional<Sig> replacementFirst = getFirst(replacementType);
+        Optional<Sig> toReplaceLast = getLast(toReplaceType);
+        Optional<Sig> replacementLast = getLast(replacementType);
+        if (!toReplaceFirst.isPresent() || !replacementFirst.isPresent())
             return false;
-        if (replacementTypeFirst == null || replacementTypeLast == null)
+        if (!toReplaceLast.isPresent() || !replacementLast.isPresent())
             return false;
-        return toReplaceTypeFirst.equals(replacementTypeFirst) && toReplaceTypeLast.equals(replacementTypeLast);
+        return compatibleTypes(toReplaceFirst.get(), replacementFirst.get()) && compatibleTypes(toReplaceLast.get(), replacementLast.get());
+    }
+
+    private Optional<Sig> getFirst(Type t) {
+        if (t.arity() < 1)
+            return Optional.empty();
+        Iterator<ProductType> it = t.iterator();
+        ProductType first = it.hasNext() ? it.next() : null;
+        if (first == null)
+            return Optional.empty();
+        PrimSig[] types = first.getAll();
+        if (types.length == 0 || types[0] == null)
+            return Optional.empty();
+        return Optional.of(types[0]);
+    }
+
+    private Optional<Sig> getLast(Type t) {
+        if (t.arity() < 1)
+            return Optional.empty();
+        Iterator<ProductType> it = t.iterator();
+        ProductType last = null;
+        while (it.hasNext()) {
+            last = it.next();
+        }
+        if (last == null)
+            return Optional.empty();
+        PrimSig[] types = last.getAll();
+        if (types.length == 0 || types[types.length - 1] == null)
+            return Optional.empty();
+        return Optional.of(types[types.length - 1]);
+    }
+
+    private boolean compatibleTypes(Sig a, Sig b) {
+        return a.isSameOrDescendentOf(b) || b.isSameOrDescendentOf(a);
     }
 
     protected final boolean emptyOrNone(Type joinedType) {
