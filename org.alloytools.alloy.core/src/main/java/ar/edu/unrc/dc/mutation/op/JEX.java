@@ -49,7 +49,7 @@ public abstract class JEX extends Mutator {
     protected abstract Optional<List<Mutation>> generateMutants(Expr from, Expr replace);
 
     protected boolean strictTypeCheck() {
-        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.OPERATOR_JEX_TYPE_CHECK);
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.OPERATOR_JEX_STRICT_TYPE_CHECK);
         if (configValue.isPresent())
             return (Boolean) configValue.get();
         return false;

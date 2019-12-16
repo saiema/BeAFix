@@ -75,7 +75,7 @@ public class BES extends Mutator {
     }
 
     private boolean strictTypeCheck() {
-        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.OPERATOR_BES_TYPE_CHECK);
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.OPERATOR_BES_STRICT_TYPE_CHECK);
         if (configValue.isPresent())
             return (Boolean) configValue.get();
         return false;
