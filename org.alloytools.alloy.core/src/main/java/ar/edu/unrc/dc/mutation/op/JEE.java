@@ -52,7 +52,7 @@ public class JEE extends JEX {
         Optional<List<Mutation>> unaryMutations = generateMutants(x, x);
         if (unaryMutations.isPresent())
             mutations.addAll(unaryMutations.get());
-        Optional<List<Mutation>> subMutations = x.accept(this);
+        Optional<List<Mutation>> subMutations = x.sub.accept(this);
         if (subMutations.isPresent())
             mutations.addAll(subMutations.get());
         if (!mutations.isEmpty())
@@ -72,7 +72,7 @@ public class JEE extends JEX {
         if (callMutations.isPresent())
             mutations.addAll(callMutations.get());
         for (Expr arg : x.args) {
-            Optional<List<Mutation>> argMutations = x.accept(this);
+            Optional<List<Mutation>> argMutations = arg.accept(this);
             if (argMutations.isPresent())
                 mutations.addAll(argMutations.get());
         }
@@ -109,7 +109,7 @@ public class JEE extends JEX {
                 }
             }
         } else if (from instanceof ExprUnary || from instanceof ExprVar || from instanceof ExprCall) {
-            ExprUnary original = (ExprUnary) from;
+            Expr original = from;
             if (original.getID() != replace.getID())
                 throw new IllegalArgumentException("The replace expression for Expr(Unary,HasName,Var,Call) must be the same as the from expression");
             Optional<List<Expr>> replacements = obtainReplacements(replace, true);
@@ -131,19 +131,17 @@ public class JEE extends JEX {
     private Optional<List<Expr>> obtainReplacements(Expr replace, boolean onlyBinary) {
         List<Expr> replacements = new LinkedList<>();
         List<Expr> simpleReplacements = new LinkedList<>();
-        if (onlyBinary)
-            simpleReplacements.add(replace);
-        else {
-            Optional<List<Expr>> simpleReplacementsOp = getCompatibleVariablesFor(replace, strictTypeCheck());
-            if (simpleReplacementsOp.isPresent())
-                simpleReplacements.addAll(simpleReplacementsOp.get());
-        }
+        Optional<List<Expr>> simpleReplacementsOp = getCompatibleVariablesFor(replace, strictTypeCheck());
+        if (simpleReplacementsOp.isPresent())
+            simpleReplacements.addAll(simpleReplacementsOp.get());
+        simpleReplacements.add(replace);
         //type check and filter simple replacements
         if (!simpleReplacements.isEmpty()) {
             for (Expr r : simpleReplacements) {
+                boolean isOriginal = r.getID() == replace.getID();
                 r = (Expr) r.clone();
                 r.newID();
-                if (typeCheck(replace, r, true)) {
+                if (!isOriginal && !onlyBinary && typeCheck(replace, r, true)) {
                     replacements.add(r);
                 }
                 for (Expr r2 : simpleReplacements) {
