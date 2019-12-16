@@ -30,7 +30,18 @@ import static edu.mit.csail.sdg.ast.Sig.UNIV;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
@@ -49,11 +60,39 @@ import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4.Version;
-import edu.mit.csail.sdg.ast.*;
+import edu.mit.csail.sdg.ast.Attr;
+import edu.mit.csail.sdg.ast.Browsable;
+import edu.mit.csail.sdg.ast.Clause;
+import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.CommandScope;
+import edu.mit.csail.sdg.ast.Decl;
+import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.ExprBad;
+import edu.mit.csail.sdg.ast.ExprBadCall;
+import edu.mit.csail.sdg.ast.ExprBadJoin;
+import edu.mit.csail.sdg.ast.ExprBinary;
+import edu.mit.csail.sdg.ast.ExprCall;
+import edu.mit.csail.sdg.ast.ExprChoice;
+import edu.mit.csail.sdg.ast.ExprConstant;
+import edu.mit.csail.sdg.ast.ExprHasName;
+import edu.mit.csail.sdg.ast.ExprITE;
+import edu.mit.csail.sdg.ast.ExprLet;
+import edu.mit.csail.sdg.ast.ExprList;
+import edu.mit.csail.sdg.ast.ExprQt;
+import edu.mit.csail.sdg.ast.ExprUnary;
+import edu.mit.csail.sdg.ast.ExprVar;
+import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.ast.Module;
+import edu.mit.csail.sdg.ast.ModuleReference;
+import edu.mit.csail.sdg.ast.Mutant;
+import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Sig.SubsetSig;
+import edu.mit.csail.sdg.ast.Type;
+import edu.mit.csail.sdg.ast.VisitQueryOnce;
+import edu.mit.csail.sdg.ast.VisitReturn;
+import edu.mit.csail.sdg.ast.VisitSearchExpByPos;
 
 /**
  * Mutable; this class represents an Alloy module; equals() uses object
@@ -206,7 +245,7 @@ public final class CompModule extends Browsable implements Module {
     /**
      * The list of ( expression to mutate in order to fix )
      */
-    private final List<Mutant>               mutants    = new ArrayList<Mutant>();
+    private final List<Mutant>                mutants     = new ArrayList<Mutant>();
 
 
     // ============================================================================================================================//
@@ -2441,13 +2480,13 @@ public final class CompModule extends Browsable implements Module {
 
     //================== Mutants methods ===================
     /** Add a mutant expression parsed. */
-    void addMutant(Pos p, Expr v)  {
-        Mutant m = new Mutant(p,v);
+    void addMutant(Pos p, Expr v) {
+        Mutant m = new Mutant(p, v);
         mutants.add(m);
     }
 
-    /** build mutantions .   */
-    public void genMutantions () {
+    /** build mutantions . */
+    public void genMutantions() {
         for (Mutant m : mutants) {
             List<Mutation> ms = new LinkedList<>();
             for (Ops o : Ops.values()) {
@@ -2462,12 +2501,12 @@ public final class CompModule extends Browsable implements Module {
     }
 
 
-    /** update mutant references.   */
-    public void updateMutantRefs (){
-        for (Mutant m: mutants) {
-            boolean found=false;
-            VisitSearchExpByPos v=new VisitSearchExpByPos(m.exprToMutate.pos);
-             //search in all possible funcs and preds
+    /** update mutant references. */
+    public void updateMutantRefs() {
+        for (Mutant m : mutants) {
+            boolean found = false;
+            VisitSearchExpByPos v = new VisitSearchExpByPos(m.exprToMutate.pos);
+            //search in all possible funcs and preds
             for (ArrayList<Func> entry : funcs.values())
                 if (!found) {
                     for (Func ff : entry) {
@@ -2482,11 +2521,11 @@ public final class CompModule extends Browsable implements Module {
                 }
             //search in all possible facs
             if (!found) {
-                for (Pair<String, Expr> f : facts) {
+                for (Pair<String,Expr> f : facts) {
                     Expr newexpr = f.b.accept(v);
                     if (newexpr != null) {
                         m.exprToMutate = newexpr;
-                        found=true;
+                        found = true;
                         break;
                     }
 
@@ -2494,5 +2533,25 @@ public final class CompModule extends Browsable implements Module {
             }
             //TODO search in the rest of expressions (Sigs)
         }
+    }
+
+    public Optional<List<Expr>> getExpressionsToMutate() {
+        List<Expr> exprToMutate = new LinkedList<>();
+        if (this.mutants != null && !this.mutants.isEmpty()) {
+            for (Mutant m : this.mutants) {
+                exprToMutate.add(m.exprToMutate);
+            }
+        }
+        if (exprToMutate.isEmpty())
+            return Optional.empty();
+        return Optional.of(exprToMutate);
+    }
+
+    @Override
+    public Object clone() {
+        CompModule clone = new CompModule(this.world, this.modulePos.filename, this.path);
+        //TODO: complete this method, although you shouldn't be using it
+        clone.setID(getID());
+        return clone;
     }
 }
