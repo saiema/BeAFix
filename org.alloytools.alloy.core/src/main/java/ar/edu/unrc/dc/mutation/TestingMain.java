@@ -5,13 +5,9 @@ import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Queue;
 
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
-import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.Sig;
-import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.parser.CompUtil;
 
@@ -20,8 +16,8 @@ public class TestingMain {
 
     public static void main(String[] args) {
         MutationConfiguration mconfig = MutationConfiguration.getInstance();
-        mconfig.setConfig(ConfigKey.OPERATOR_BES_TYPE_CHECK, Boolean.TRUE);
-        System.out.println(mconfig.getConfigValue(ConfigKey.OPERATOR_BES_TYPE_CHECK));
+        mconfig.setConfig(ConfigKey.OPERATOR_BES_STRICT_TYPE_CHECK, Boolean.TRUE);
+        mconfig.setConfig(ConfigKey.OPERATOR_JEX_STRICT_TYPE_CHECK, Boolean.FALSE);
 
         if (args.length != 1)
             throw new IllegalArgumentException("Only one argument expected");
@@ -34,22 +30,26 @@ public class TestingMain {
 
         CompModule mainModule = CompUtil.parseEverything_fromFile(null, null, pathToFile);
 
-        //generateMutants(mainModule);
+        generateMutants(mainModule, Ops.JER, Ops.JEE, Ops.JES);
 
-        for (Sig s : mainModule.getAllSigs()) {
-            System.out.println(s.toExtendedString());
-        }
+        //        for (Sig s : mainModule.getAllSigs()) {
+        //            System.out.println(s.toExtendedString());
+        //        }
 
 
     }
 
-    private static void generateMutants(CompModule m) {
-        List<Expr> expressions = findExpressions(m);
+    private static void generateMutants(CompModule m, Ops... ops) {
+        m.updateMutantRefs();
 
         List<Mutation> mutations = new LinkedList<>();
+        Optional<List<Expr>> expressions = m.getExpressionsToMutate();
 
-        for (Expr e : expressions) {
-            for (Ops o : Ops.values()) {
+        if (!expressions.isPresent())
+            System.out.println("No expressions to mutate");
+
+        for (Expr e : m.getExpressionsToMutate().get()) {
+            for (Ops o : ops) {
                 if (o.isImplemented()) {
                     Optional<List<Mutation>> opMutations = o.getOperator(m).getMutations(e);
                     if (opMutations.isPresent())
@@ -59,27 +59,6 @@ public class TestingMain {
         }
 
         System.out.println(mutations);
-    }
-
-    private static List<Expr> findExpressions(CompModule m) {
-        List<Expr> expressions = new LinkedList<>();
-        Queue<Browsable> nodesToVisit = new LinkedList<>();
-        nodesToVisit.add(m);
-        while (!nodesToVisit.isEmpty()) {
-            Browsable n = nodesToVisit.poll();
-            if (n instanceof Expr && !filter((Expr) n))
-                expressions.add((Expr) n);
-            nodesToVisit.addAll(n.getSubnodes());
-        }
-        return expressions;
-    }
-
-    private static boolean filter(Expr e) {
-        if (e instanceof Sig)
-            return true;
-        if (e instanceof Field)
-            return true;
-        return false;
     }
 
 }
