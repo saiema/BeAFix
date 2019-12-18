@@ -40,6 +40,19 @@ public enum Ops {
                          return new ar.edu.unrc.dc.mutation.op.COR(context);
                      }
                  },
+                 CUOI {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return false;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.CUOI(context);
+                     }
+
+                 },
                  BES {
 
                      @Override
