@@ -86,6 +86,16 @@ public abstract class Browsable {
         return getIDEnv();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null)
+            return false;
+        if (!(o instanceof Browsable))
+            return false;
+        Browsable other = (Browsable) o;
+        return this.getIDEnv() == other.getIDEnv();
+    }
+
     public Browsable getBrowsableParent() {
         return this.browsableParent;
     }
