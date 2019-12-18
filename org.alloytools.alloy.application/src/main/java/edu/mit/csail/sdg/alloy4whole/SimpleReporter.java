@@ -757,58 +757,68 @@ final class SimpleReporter extends A4Reporter {
                 //=============================================
                 List<String> result = new ArrayList<String>(cmds.size());
                 // check all commands
-                for (int i = 0; i < cmds.size(); i++){
-                    synchronized (SimpleReporter.class) {
-                        latestModule = world;
-                        latestKodkodSRC = ConstMap.make(map);
-                    }
-                    final String tempXML = tempdir + File.separatorChar + i + ".cnf.xml";
-                    final String tempCNF = tempdir + File.separatorChar + i + ".cnf";
-                    final Command cmd = cmds.get(i);
-                    rep.tempfile = tempCNF;
-                    cb(out, "bold", "Executing \"" + cmd + "\"\n");
-                    //@mutation ==>> pass the mutation lab to the translator for mutation
+                boolean discarted = false;
+                for (int i = 0; i < cmds.size(); i++) {
+                    discarted = false;
+                    try {
+                        synchronized (SimpleReporter.class) {
+                            latestModule = world;
+                            latestKodkodSRC = ConstMap.make(map);
+                        }
+                        final String tempXML = tempdir + File.separatorChar + i + ".cnf.xml";
+                        final String tempCNF = tempdir + File.separatorChar + i + ".cnf";
+                        final Command cmd = cmds.get(i);
+                        rep.tempfile = tempCNF;
+                        cb(out, "bold", "Executing \"" + cmd + "\"\n");
+                        //@mutation ==>> pass the mutation lab to the translator for mutation
 
-                    A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options,mutantLab);
-                    if (ai == null)
-                        result.add(null);
-                    else if (ai.satisfiable())
-                        result.add(tempXML);
-                    else if (ai.highLevelCore().a.size() > 0)
-                        result.add(tempCNF + ".core");
-                    else
-                        result.add("");
+                        A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options, mutantLab);
+                        if (ai == null)
+                            result.add(null);
+                        else if (ai.satisfiable())
+                            result.add(tempXML);
+                        else if (ai.highLevelCore().a.size() > 0)
+                            result.add(tempCNF + ".core");
+                        else
+                            result.add("");
+                    } catch (Exception e) {
+                        cb(out, "bold", "ERROR! -> Mutation discarted. \n");
+                        discarted = true;
+                    }
                 }
                 //=========== check all result to know if is repaired
-                boolean repaired =true;
-                (new File(tempdir)).delete(); // In case it was UNSAT, or
-                // canceled...
+                if (!discarted) {
+                    boolean repaired = true;
+                    (new File(tempdir)).delete(); // In case it was UNSAT, or
+                    // canceled...
 
-                for (int i = 0; i < result.size(); i++) {
-                    Command r = world.getAllCommands().get(i);
-                    if (result.get(i) == null) {
-                        continue;
+                    for (int i = 0; i < result.size(); i++) {
+                        Command r = world.getAllCommands().get(i);
+                        if (result.get(i) == null) {
+                            continue;
+                        }
+                        if (result.get(i).endsWith(".xml")) {
+                            if ((r.expects == 0) || (r.expects == -1)) // by default is 0
+                                repaired = false;
+                        } else if (result.get(i).endsWith(".core")) {
+                            if (r.expects == 1)
+                                repaired = false;
+                        } else {
+
+                            if (r.expects == 1)
+                                repaired = false;
+                        }
                     }
-                    if (result.get(i).endsWith(".xml")) {
-                        if ((r.expects == 0 ) || (r.expects ==-1) ) // by default is 0
-                            repaired = false;
-                    } else if (result.get(i).endsWith(".core")) {
-                        if (r.expects == 1)
-                            repaired = false;
-                    } else {
 
-                        if (r.expects == 1)
-                            repaired = false;
+                    if (!repaired)
+                        rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
+                    else {
+                        rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
+                        break;
                     }
-                }
-
-                if (!repaired)
-                    rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
-                else {
-                    rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
-                    break;
                 }
             }
+
         }
     }
 }
