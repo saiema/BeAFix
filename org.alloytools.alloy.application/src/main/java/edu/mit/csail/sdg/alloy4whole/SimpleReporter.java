@@ -747,79 +747,68 @@ final class SimpleReporter extends A4Reporter {
             MutantLab mutantLab = new MutantLab((CompModule) world);
             cb(out, "", mutantLab.mutantCount() + " mutants generated \n\n");
             //======================== mutants test cycle ===========
-            List<String> resultmutants = new ArrayList<String>(cmds.size());
-            mutantLab.next();
-            cb(out, "S2", "Mutant: "+mutantLab.getCurrentMutant().original().toString() +" -> \n");
-            cb(out, "S2", "--> "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
-            cb(out, "S2", "Validating mutant for "+cmds.size()+" commands...\n\n");
-            //=============================================
-            List<String> result = new ArrayList<String>(cmds.size());
-            // check all commands
-            for (int i = 0; i < cmds.size(); i++){
-                synchronized (SimpleReporter.class) {
-                    latestModule = world;
-                    latestKodkodSRC = ConstMap.make(map);
+            for  (int mutidx =0 ; mutidx < mutantLab.mutantCount(); mutidx++){
+                mutantLab.next();
+                cb(out, "", "--------------------------------\n");
+                cb(out, "S2", "Validating mutant "+(mutidx+1)+"/"+mutantLab.mutantCount()+" for " +cmds.size()+" commands...\n\n");
+                cb(out, "S2", "Original: "+mutantLab.getCurrentMutant().original().toString() +"  \n");
+                cb(out, "S2", "Mutant:   "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
+
+                //=============================================
+                List<String> result = new ArrayList<String>(cmds.size());
+                // check all commands
+                for (int i = 0; i < cmds.size(); i++){
+                    synchronized (SimpleReporter.class) {
+                        latestModule = world;
+                        latestKodkodSRC = ConstMap.make(map);
+                    }
+                    final String tempXML = tempdir + File.separatorChar + i + ".cnf.xml";
+                    final String tempCNF = tempdir + File.separatorChar + i + ".cnf";
+                    final Command cmd = cmds.get(i);
+                    rep.tempfile = tempCNF;
+                    cb(out, "bold", "Executing \"" + cmd + "\"\n");
+                    //@mutation ==>> pass the mutation lab to the translator for mutation
+
+                    A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options,mutantLab);
+                    if (ai == null)
+                        result.add(null);
+                    else if (ai.satisfiable())
+                        result.add(tempXML);
+                    else if (ai.highLevelCore().a.size() > 0)
+                        result.add(tempCNF + ".core");
+                    else
+                        result.add("");
                 }
-                final String tempXML = tempdir + File.separatorChar + i + ".cnf.xml";
-                final String tempCNF = tempdir + File.separatorChar + i + ".cnf";
-                final Command cmd = cmds.get(i);
-                rep.tempfile = tempCNF;
-                cb(out, "bold", "Executing \"" + cmd + "\"\n");
-                //@mutation ==>> pass the mutation manager to the translator for mutation
-                A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options,mutantLab);
-                if (ai == null)
-                    result.add(null);
-                else if (ai.satisfiable())
-                    result.add(tempXML);
-                else if (ai.highLevelCore().a.size() > 0)
-                    result.add(tempCNF + ".core");
-                else
-                    result.add("");
-            }
-            (new File(tempdir)).delete(); // In case it was UNSAT, or
-            // canceled...
-            if (result.size() > 1) {
-                rep.cb("bold", "" + result.size() + " commands were executed. The results are:\n");
+                //=========== check all result to know if is repaired
+                boolean repaired =true;
+                (new File(tempdir)).delete(); // In case it was UNSAT, or
+                // canceled...
+
                 for (int i = 0; i < result.size(); i++) {
                     Command r = world.getAllCommands().get(i);
                     if (result.get(i) == null) {
-                        rep.cb("", "   #" + (i + 1) + ": Unknown.\n");
                         continue;
                     }
                     if (result.get(i).endsWith(".xml")) {
-                        rep.cb("", "   #" + (i + 1) + ": ");
-                        rep.cb("link", r.check ? "Counterexample found. " : "Instance found. ", "XML: " + result.get(i));
-                        rep.cb("", r.label + (r.check ? " is invalid" : " is consistent"));
-                        if (r.expects == 0)
-                            rep.cb("", ", contrary to expectation");
-                        else if (r.expects == 1)
-                            rep.cb("", ", as expected");
+                        if ((r.expects == 0 ) || (r.expects ==-1) ) // by default is 0
+                            repaired = false;
                     } else if (result.get(i).endsWith(".core")) {
-                        rep.cb("", "   #" + (i + 1) + ": ");
-                        rep.cb("link", r.check ? "No counterexample found. " : "No instance found. ", "CORE: " + result.get(i));
-                        rep.cb("", r.label + (r.check ? " may be valid" : " may be inconsistent"));
                         if (r.expects == 1)
-                            rep.cb("", ", contrary to expectation");
-                        else if (r.expects == 0)
-                            rep.cb("", ", as expected");
+                            repaired = false;
                     } else {
-                        if (r.check)
-                            rep.cb("", "   #" + (i + 1) + ": No counterexample found. " + r.label + " may be valid");
-                        else
-                            rep.cb("", "   #" + (i + 1) + ": No instance found. " + r.label + " may be inconsistent");
+
                         if (r.expects == 1)
-                            rep.cb("", ", contrary to expectation");
-                        else if (r.expects == 0)
-                            rep.cb("", ", as expected");
+                            repaired = false;
                     }
-                    rep.cb("", ".\n");
                 }
-                rep.cb("", "\n");
+
+                if (!repaired)
+                    rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
+                else {
+                    rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
+                    break;
+                }
             }
-            if (rep.warn > 1)
-                rep.cb("bold", "Note: There were " + rep.warn + " compilation warnings. Please scroll up to see them.\n");
-            if (rep.warn == 1)
-                rep.cb("bold", "Note: There was 1 compilation warning. Please scroll up to see it.\n");
         }
     }
 }
