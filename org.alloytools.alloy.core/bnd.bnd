@@ -19,6 +19,8 @@
 	
 
 Export-Package: \
+    ar.edu.unrc.dc.mutation,\
+    ar.edu.unrc.dc.mutation.op,\
 	edu.mit.csail.sdg.alloy4,\
 	edu.mit.csail.sdg.ast,\
 	org.alloytools.graphics.util,\

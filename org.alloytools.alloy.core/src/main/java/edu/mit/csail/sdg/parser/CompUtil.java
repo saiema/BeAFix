@@ -15,39 +15,19 @@
 
 package edu.mit.csail.sdg.parser;
 
-import static edu.mit.csail.sdg.ast.Sig.SEQIDX;
-import static edu.mit.csail.sdg.ast.Sig.SIGINT;
-
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorFatal;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprCall;
-import edu.mit.csail.sdg.ast.ExprUnary;
-import edu.mit.csail.sdg.ast.ExprUnary.Op;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Module;
-import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.ExprUnary.Op;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Type.ProductType;
-import edu.mit.csail.sdg.ast.VisitQueryOnce;
 import edu.mit.csail.sdg.parser.CompModule.Open;
+
+import java.io.*;
+import java.util.*;
+
+import static edu.mit.csail.sdg.ast.Sig.SEQIDX;
+import static edu.mit.csail.sdg.ast.Sig.SIGINT;
 
 /**
  * This class provides convenience methods for calling the parser and the
@@ -268,6 +248,16 @@ public final class CompUtil {
     public static ConstList<Command> parseOneModule_fromString(String content) throws Err {
         CompModule u = parseOneModule(content);
         return ConstList.make(u.getAllCommands());
+    }
+
+    /**
+     * Parses 1 module from the input string (without loading any subfiles)
+     *
+     * @return true if there are marked expression for mutation
+     */
+    public static boolean hasMutableExpressions(String content) throws Err {
+        CompModule u = parseOneModule(content);
+        return !u.markedEprsToMutate.isEmpty();
     }
 
     public static CompModule parseOneModule(String content) throws Err {

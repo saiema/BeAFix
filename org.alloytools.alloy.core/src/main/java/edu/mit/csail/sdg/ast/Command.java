@@ -15,18 +15,14 @@
 
 package edu.mit.csail.sdg.ast;
 
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.alloy4.ConstList.TempList;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.ConstList.TempList;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
 
 /**
  * Immutable; reresents a "run" or "check" command.
@@ -92,7 +88,6 @@ public final class Command extends Browsable {
 
     /** The formula associated with this command. */
     public final Expr                    formula;
-
     /** The list of scopes. */
     public final ConstList<CommandScope> scope;
 

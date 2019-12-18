@@ -15,50 +15,22 @@
 
 package edu.mit.csail.sdg.alloy4whole;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import edu.mit.csail.sdg.parser.CompModule;
-import org.alloytools.alloy.core.AlloyCore;
-
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.ConstMap;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.MailBug;
-import edu.mit.csail.sdg.alloy4.OurDialog;
-import edu.mit.csail.sdg.alloy4.Pair;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.alloy4.Version;
+import ar.edu.unrc.dc.mutation.MutantLab;
+import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerTask;
-import edu.mit.csail.sdg.alloy4.XMLNode;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.parser.CompUtil;
-import edu.mit.csail.sdg.translator.A4Options;
-import edu.mit.csail.sdg.translator.A4Solution;
-import edu.mit.csail.sdg.translator.A4SolutionReader;
-import edu.mit.csail.sdg.translator.A4SolutionWriter;
-import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
+import edu.mit.csail.sdg.translator.*;
+import org.alloytools.alloy.core.AlloyCore;
+
+import java.io.*;
+import java.util.*;
 
 
 /** This helper method is used by SimpleGUI. */
@@ -651,10 +623,6 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "S2", "Starting the solver...\n\n");
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final Module world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
-            //Mutant test
-            ((CompModule) world).updateMutantRefs();
-            ((CompModule) world).genMutantions();
-            //
             final List<Sig> sigs = world.getAllReachableSigs();
             final ConstList<Command> cmds = world.getAllCommands();
             cb(out, "warnings", bundleWarningNonFatal);
@@ -699,6 +667,117 @@ final class SimpleReporter extends A4Reporter {
                     }
             (new File(tempdir)).delete(); // In case it was UNSAT, or
                                          // canceled...
+            if (result.size() > 1) {
+                rep.cb("bold", "" + result.size() + " commands were executed. The results are:\n");
+                for (int i = 0; i < result.size(); i++) {
+                    Command r = world.getAllCommands().get(i);
+                    if (result.get(i) == null) {
+                        rep.cb("", "   #" + (i + 1) + ": Unknown.\n");
+                        continue;
+                    }
+                    if (result.get(i).endsWith(".xml")) {
+                        rep.cb("", "   #" + (i + 1) + ": ");
+                        rep.cb("link", r.check ? "Counterexample found. " : "Instance found. ", "XML: " + result.get(i));
+                        rep.cb("", r.label + (r.check ? " is invalid" : " is consistent"));
+                        if (r.expects == 0)
+                            rep.cb("", ", contrary to expectation");
+                        else if (r.expects == 1)
+                            rep.cb("", ", as expected");
+                    } else if (result.get(i).endsWith(".core")) {
+                        rep.cb("", "   #" + (i + 1) + ": ");
+                        rep.cb("link", r.check ? "No counterexample found. " : "No instance found. ", "CORE: " + result.get(i));
+                        rep.cb("", r.label + (r.check ? " may be valid" : " may be inconsistent"));
+                        if (r.expects == 1)
+                            rep.cb("", ", contrary to expectation");
+                        else if (r.expects == 0)
+                            rep.cb("", ", as expected");
+                    } else {
+                        if (r.check)
+                            rep.cb("", "   #" + (i + 1) + ": No counterexample found. " + r.label + " may be valid");
+                        else
+                            rep.cb("", "   #" + (i + 1) + ": No instance found. " + r.label + " may be inconsistent");
+                        if (r.expects == 1)
+                            rep.cb("", ", contrary to expectation");
+                        else if (r.expects == 0)
+                            rep.cb("", ", as expected");
+                    }
+                    rep.cb("", ".\n");
+                }
+                rep.cb("", "\n");
+            }
+            if (rep.warn > 1)
+                rep.cb("bold", "Note: There were " + rep.warn + " compilation warnings. Please scroll up to see them.\n");
+            if (rep.warn == 1)
+                rep.cb("bold", "Note: There was 1 compilation warning. Please scroll up to see it.\n");
+        }
+    }
+
+    /** Task that perform a repair by muting mutants expressions (marked with #m#) until all commands returns their expected value. */
+    static final class SimpleTaskRepair1 implements WorkerTask {
+
+        private static final long serialVersionUID = 0;
+        public A4Options          options;
+        public String             tempdir;
+        //public boolean            bundleWarningNonFatal;
+        //public int                bundleIndex;
+        public int                resolutionMode;
+        public Map<String,String> map;
+
+        public SimpleTaskRepair1() {}
+
+        public void cb(WorkerCallback out, Object... objs) throws IOException {
+            out.callback(objs);
+        }
+
+        @Override
+        public void run(WorkerCallback out) throws Exception {
+            cb(out, "S2", "Reparing process...\n\n");
+            final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
+            final Module world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
+            //==========================================
+            final List<Sig> sigs = world.getAllReachableSigs();
+            final ConstList<Command> cmds = world.getAllCommands();
+            //cb(out, "warnings", bundleWarningNonFatal);
+            //if (rep.warn > 0 && !bundleWarningNonFatal)
+            //    return;
+            // Generate and build the mutation manager
+            cb(out, "bold", ((CompModule) world).markedEprsToMutate.size()+  " mutations mark detected Executing \n");
+            cb(out, "", "Generating mutants ... \n\n");
+            ((CompModule) world).updateMarkedExprsToMutate();
+            MutantLab mutantLab = new MutantLab((CompModule) world);
+            cb(out, "", mutantLab.mutantCount() + " mutants generated \n\n");
+            //======================== mutants test cycle ===========
+            List<String> resultmutants = new ArrayList<String>(cmds.size());
+            mutantLab.next();
+            cb(out, "S2", "Mutant: "+mutantLab.getCurrentMutant().original().toString() +" -> \n");
+            cb(out, "S2", "--> "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
+            cb(out, "S2", "Validating mutant for "+cmds.size()+" commands...\n\n");
+            //=============================================
+            List<String> result = new ArrayList<String>(cmds.size());
+            // check all commands
+            for (int i = 0; i < cmds.size(); i++){
+                synchronized (SimpleReporter.class) {
+                    latestModule = world;
+                    latestKodkodSRC = ConstMap.make(map);
+                }
+                final String tempXML = tempdir + File.separatorChar + i + ".cnf.xml";
+                final String tempCNF = tempdir + File.separatorChar + i + ".cnf";
+                final Command cmd = cmds.get(i);
+                rep.tempfile = tempCNF;
+                cb(out, "bold", "Executing \"" + cmd + "\"\n");
+                //@mutation ==>> pass the mutation manager to the translator for mutation
+                A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options,mutantLab);
+                if (ai == null)
+                    result.add(null);
+                else if (ai.satisfiable())
+                    result.add(tempXML);
+                else if (ai.highLevelCore().a.size() > 0)
+                    result.add(tempCNF + ".core");
+                else
+                    result.add("");
+            }
+            (new File(tempdir)).delete(); // In case it was UNSAT, or
+            // canceled...
             if (result.size() > 1) {
                 rep.cb("bold", "" + result.size() + " commands were executed. The results are:\n");
                 for (int i = 0; i < result.size(); i++) {

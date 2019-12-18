@@ -15,84 +15,22 @@
 
 package edu.mit.csail.sdg.parser;
 
-import static edu.mit.csail.sdg.alloy4.Util.asList;
-import static edu.mit.csail.sdg.ast.Attr.AttrType.ABSTRACT;
-import static edu.mit.csail.sdg.ast.Attr.AttrType.ONE;
-import static edu.mit.csail.sdg.ast.Attr.AttrType.PRIVATE;
-import static edu.mit.csail.sdg.ast.Attr.AttrType.SUBSET;
-import static edu.mit.csail.sdg.ast.Attr.AttrType.SUBSIG;
-import static edu.mit.csail.sdg.ast.Attr.AttrType.WHERE;
-import static edu.mit.csail.sdg.ast.Sig.NONE;
-import static edu.mit.csail.sdg.ast.Sig.SEQIDX;
-import static edu.mit.csail.sdg.ast.Sig.SIGINT;
-import static edu.mit.csail.sdg.ast.Sig.STRING;
-import static edu.mit.csail.sdg.ast.Sig.UNIV;
+import ar.edu.unrc.dc.mutation.Mutation;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.alloy4.ConstList.TempList;
+import edu.mit.csail.sdg.ast.Module;
+import edu.mit.csail.sdg.ast.*;
+import edu.mit.csail.sdg.ast.Sig.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
-import ar.edu.unrc.dc.mutation.Mutation;
-import ar.edu.unrc.dc.mutation.Ops;
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.ConstList.TempList;
-import edu.mit.csail.sdg.alloy4.Env;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorFatal;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pair;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.SafeList;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.alloy4.Version;
-import edu.mit.csail.sdg.ast.Attr;
-import edu.mit.csail.sdg.ast.Browsable;
-import edu.mit.csail.sdg.ast.Clause;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.CommandScope;
-import edu.mit.csail.sdg.ast.Decl;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBad;
-import edu.mit.csail.sdg.ast.ExprBadCall;
-import edu.mit.csail.sdg.ast.ExprBadJoin;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprCall;
-import edu.mit.csail.sdg.ast.ExprChoice;
-import edu.mit.csail.sdg.ast.ExprConstant;
-import edu.mit.csail.sdg.ast.ExprHasName;
-import edu.mit.csail.sdg.ast.ExprITE;
-import edu.mit.csail.sdg.ast.ExprLet;
-import edu.mit.csail.sdg.ast.ExprList;
-import edu.mit.csail.sdg.ast.ExprQt;
-import edu.mit.csail.sdg.ast.ExprUnary;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.ast.Func;
-import edu.mit.csail.sdg.ast.Module;
-import edu.mit.csail.sdg.ast.ModuleReference;
-import edu.mit.csail.sdg.ast.Mutant;
-import edu.mit.csail.sdg.ast.Sig;
-import edu.mit.csail.sdg.ast.Sig.Field;
-import edu.mit.csail.sdg.ast.Sig.PrimSig;
-import edu.mit.csail.sdg.ast.Sig.SubsetSig;
-import edu.mit.csail.sdg.ast.Type;
-import edu.mit.csail.sdg.ast.VisitQueryOnce;
-import edu.mit.csail.sdg.ast.VisitReturn;
-import edu.mit.csail.sdg.ast.VisitSearchExpByPos;
+import static edu.mit.csail.sdg.alloy4.Util.asList;
+import static edu.mit.csail.sdg.ast.Attr.AttrType.*;
+import static edu.mit.csail.sdg.ast.Sig.*;
+
+
 
 /**
  * Mutable; this class represents an Alloy module; equals() uses object
@@ -245,7 +183,7 @@ public final class CompModule extends Browsable implements Module {
     /**
      * The list of ( expression to mutate in order to fix )
      */
-    private final List<Mutant>                mutants     = new ArrayList<Mutant>();
+    public final List<Expr>               markedEprsToMutate    = new ArrayList<Expr>();
 
 
     // ============================================================================================================================//
@@ -1935,6 +1873,9 @@ public final class CompModule extends Browsable implements Module {
 
     }
 
+
+
+
     /** Each command now points to a typechecked Expr. */
     private void resolveCommands(Expr globalFacts) throws Err {
         ConstList<Sig> exactSigs = ConstList.make(world.exactSigs);
@@ -2116,7 +2057,7 @@ public final class CompModule extends Browsable implements Module {
      * This method resolves the entire world; NOTE: if it throws an exception, it
      * may leave the world in an inconsistent state!
      */
-    static CompModule resolveAll(final A4Reporter rep, final CompModule root) throws Err {
+    public static CompModule resolveAll(final A4Reporter rep, final CompModule root) throws Err {
         final List<ErrorWarning> warns = new ArrayList<ErrorWarning>();
         for (CompModule m : root.getAllReachableModules())
             root.allModules.add(m);
@@ -2477,42 +2418,51 @@ public final class CompModule extends Browsable implements Module {
             m.setBrowsableParent(this);
     }
 
+    @Override
+    public Object clone() {
+        CompModule clone = new CompModule(this.world, this.modulePos.filename, this.path);
+        //TODO: complete this method, although you shouldn't be using it
+        clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
+        return clone;
+    }
+
 
     //================== Mutants methods ===================
-    /** Add a mutant expression parsed. */
-    void addMutant(Pos p, Expr v) {
-        Mutant m = new Mutant(p, v);
-        mutants.add(m);
+    /** Add a marked Expression to mutate. */
+    void addMarkedExprToMutate(Expr v)  {
+        markedEprsToMutate.add(v);
     }
 
-    /** build mutantions . */
-    public void genMutantions() {
-        for (Mutant m : mutants) {
-            List<Mutation> ms = new LinkedList<>();
-            for (Ops o : Ops.values()) {
-                if (o.isImplemented()) {
-                    Optional<List<Mutation>> opMutations = o.getOperator(this).getMutations(m.exprToMutate);
-                    if (opMutations.isPresent())
-                        ms.addAll(opMutations.get());
-                }
-            }
-            m.mutations = ms;
-        }
-    }
+    /** build mutantions .   */
+//    public void genMutantions () {
+//        for (Mutant m : mutants) {
+//            List<Mutation> ms = new LinkedList<>();
+//            for (Ops o : Ops.values()) {
+//                if (o.isImplemented()) {
+//                    Optional<List<Mutation>> opMutations = o.getOperator(this).getMutations(m.exprToMutate);
+//                    if (opMutations.isPresent())
+//                        ms.addAll(opMutations.get());
+//                }
+//            }
+//            m.mutations = ms;
+//        }
+//    }
 
 
-    /** update mutant references. */
-    public void updateMutantRefs() {
-        for (Mutant m : mutants) {
-            boolean found = false;
-            VisitSearchExpByPos v = new VisitSearchExpByPos(m.exprToMutate.pos);
-            //search in all possible funcs and preds
+
+    /** update mutant references.   */
+    public void updateMarkedExprsToMutate(){
+        for (int i=0; i< markedEprsToMutate.size(); i++) {
+            boolean found=false;
+            VisitSearchExpByPos v=new VisitSearchExpByPos(markedEprsToMutate.get(i).pos);
+             //search in all possible funcs and preds
             for (ArrayList<Func> entry : funcs.values())
                 if (!found) {
                     for (Func ff : entry) {
                         Expr newexpr = ff.getBody().accept(v);
                         if (newexpr != null) {
-                            m.exprToMutate = newexpr;
+                            markedEprsToMutate.set(i,newexpr);
                             found = true;
                             break;
                         }
@@ -2521,11 +2471,11 @@ public final class CompModule extends Browsable implements Module {
                 }
             //search in all possible facs
             if (!found) {
-                for (Pair<String,Expr> f : facts) {
+                for (Pair<String, Expr> f : facts) {
                     Expr newexpr = f.b.accept(v);
                     if (newexpr != null) {
-                        m.exprToMutate = newexpr;
-                        found = true;
+                        markedEprsToMutate.set(i,newexpr);
+                        found=true;
                         break;
                     }
 
@@ -2535,24 +2485,72 @@ public final class CompModule extends Browsable implements Module {
         }
     }
 
-    public Optional<List<Expr>> getExpressionsToMutate() {
-        List<Expr> exprToMutate = new LinkedList<>();
-        if (this.mutants != null && !this.mutants.isEmpty()) {
-            for (Mutant m : this.mutants) {
-                exprToMutate.add(m.exprToMutate);
-            }
+
+    /** Each command now points to a typechecked Expr. */
+    @Deprecated public List<Command> resolveCommandsWithMatation( Mutation mutation) throws Err {
+        List<Command> cmds = new ArrayList<Command>();
+        ConstList<Sig> exactSigs = ConstList.make(world.exactSigs);
+        VisitReplaceExp vr = new VisitReplaceExp(mutation.original(),mutation.mutant());
+        Expr mutatedGlobalFacts = getAllReachableFacts().accept(vr);
+        for (int i = 0; i < commands.size(); i++) {
+            Command cmd = commands.get(i);
+            cmds.add(resolveCommandWithMutation(cmd, exactSigs, mutatedGlobalFacts,mutation));
         }
-        if (exprToMutate.isEmpty())
-            return Optional.empty();
-        return Optional.of(exprToMutate);
+        return cmds;
     }
 
-    @Override
-    public Object clone() {
-        CompModule clone = new CompModule(this.world, this.modulePos.filename, this.path);
-        //TODO: complete this method, although you shouldn't be using it
-        clone.setID(getID());
-        clone.setIDEnv(getIDEnv());
-        return clone;
+    /** Resolve a particular command with mutation. */
+    @Deprecated public Command resolveCommandWithMutation(Command cmd, ConstList<Sig> exactSigs, Expr mutatedGlobalFacts, Mutation mutation) throws Err {
+        // facts are mutated in resolveCommandsWithMutation
+        Command parent = cmd.parent == null ? null : resolveCommand(cmd.parent, exactSigs, mutatedGlobalFacts); //@mutation
+        String cname = cmd.label;
+        Expr e;
+        Clause declaringClause = null;
+        if (cmd.check) {
+            List<Object> m = getRawQS(2, cname); // We prefer assertion in the
+            // topmost module
+            if (m.size() == 0 && cname.indexOf('/') < 0)
+                m = getRawNQS(this, 2, cname);
+            if (m.size() > 1)
+                unique(cmd.pos, cname, m);
+            if (m.size() < 1)
+                throw new ErrorSyntax(cmd.pos, "The assertion \"" + cname + "\" cannot be found.");
+
+            Expr expr = (Expr) (m.get(0));
+            e = expr.not();
+        } else {
+            List<Object> m = getRawQS(4, cname); // We prefer fun/pred in the
+            // topmost module
+            if (m.size() == 0 && cname.indexOf('/') < 0)
+                m = getRawNQS(this, 4, cname);
+            if (m.size() > 1)
+                unique(cmd.pos, cname, m);
+            if (m.size() < 1)
+                throw new ErrorSyntax(cmd.pos, "The predicate/function \"" + cname + "\" cannot be found.");
+            Func f = (Func) (m.get(0));
+            declaringClause = f;
+            // get the mutated func if necessary  @mutation
+            VisitReplaceExp vr = new VisitReplaceExp(mutation.original(),mutation.mutant());
+            e = f.getBody().accept(vr);
+            if (!f.isPred)
+                e = e.in(f.returnDecl);
+            if (f.decls.size() > 0)
+                e = ExprQt.Op.SOME.make(null, null, f.decls, e);
+        }
+        if (e == null)
+            e = ExprConstant.TRUE;
+        TempList<CommandScope> sc = new TempList<CommandScope>(cmd.scope.size());
+        for (CommandScope et : cmd.scope) {
+            Sig s = getRawSIG(et.sig.pos, et.sig.label);
+            if (s == null)
+                throw new ErrorSyntax(et.sig.pos, "The sig \"" + et.sig.label + "\" cannot be found.");
+            sc.add(new CommandScope(null, s, et.isExact, et.startingScope, et.endingScope, et.increment));
+        }
+
+        if (cmd.nameExpr != null) {
+            cmd.nameExpr.setReferenced(declaringClause);
+        }
+        return new Command(cmd.pos, cmd.nameExpr, cmd.label, cmd.check, cmd.overall, cmd.bitwidth, cmd.maxseq, cmd.expects, sc.makeConst(), exactSigs, mutatedGlobalFacts.and(e), parent);
+
     }
 }

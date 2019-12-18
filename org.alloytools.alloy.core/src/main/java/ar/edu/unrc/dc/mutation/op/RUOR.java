@@ -1,15 +1,15 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.ExprUnary;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Relational Unary Operator Replacement

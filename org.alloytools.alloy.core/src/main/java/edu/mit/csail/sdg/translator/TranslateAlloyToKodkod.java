@@ -15,57 +15,12 @@
 
 package edu.mit.csail.sdg.translator;
 
-import static edu.mit.csail.sdg.alloy4.Util.tail;
-import static edu.mit.csail.sdg.ast.Sig.UNIV;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.ConstMap;
-import edu.mit.csail.sdg.alloy4.Env;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorFatal;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.Pair;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.CommandScope;
+import ar.edu.unrc.dc.mutation.MutantLab;
+import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.ast.Decl;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprCall;
-import edu.mit.csail.sdg.ast.ExprConstant;
-import edu.mit.csail.sdg.ast.ExprHasName;
-import edu.mit.csail.sdg.ast.ExprITE;
-import edu.mit.csail.sdg.ast.ExprLet;
-import edu.mit.csail.sdg.ast.ExprList;
-import edu.mit.csail.sdg.ast.ExprQt;
-import edu.mit.csail.sdg.ast.ExprUnary;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.ast.Func;
-import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.Field;
-import edu.mit.csail.sdg.ast.Type;
-import edu.mit.csail.sdg.ast.VisitReturn;
-import kodkod.ast.BinaryExpression;
-import kodkod.ast.Decls;
-import kodkod.ast.ExprToIntCast;
-import kodkod.ast.Expression;
-import kodkod.ast.Formula;
-import kodkod.ast.IntConstant;
-import kodkod.ast.IntExpression;
-import kodkod.ast.IntToExprCast;
-import kodkod.ast.QuantifiedFormula;
-import kodkod.ast.Relation;
-import kodkod.ast.Variable;
+import kodkod.ast.*;
 import kodkod.ast.operator.ExprOperator;
 import kodkod.engine.CapacityExceededException;
 import kodkod.engine.fol2sat.HigherOrderDeclException;
@@ -73,6 +28,11 @@ import kodkod.instance.Tuple;
 import kodkod.instance.TupleFactory;
 import kodkod.instance.TupleSet;
 import kodkod.util.ints.IntVector;
+
+import java.util.*;
+
+import static edu.mit.csail.sdg.alloy4.Util.tail;
+import static edu.mit.csail.sdg.ast.Sig.UNIV;
 
 /**
  * Translate an Alloy AST into Kodkod AST then attempt to solve it using Kodkod.
@@ -130,6 +90,17 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
 
     /** The maximum allowed loop unrolling and recursion. */
     private final int                         unrolls;
+
+
+
+
+    /**
+     * mutation to apply @Mutation
+     */
+    private MutantLab mutantLab;
+    public void setMutation(MutantLab mutantLab) {
+        this.mutantLab = mutantLab;
+    }
 
     /**
      * Construct a translator based on the given list of sigs and the given command.
@@ -596,6 +567,54 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         }
     }
 
+
+    /**
+     * Based on the specified "options", execute one command and return the
+     * resulting A4Solution object.
+     * <p>
+     * Note: it will first test whether the model fits one of the model from the
+     * "Software Abstractions" book; if so, it will use the exact instance that was
+     * in the book.
+     *
+     * @param rep - if nonnull, we'll send compilation diagnostic messages to it
+     * @param sigs - the list of sigs; this list must be complete
+     * @param cmd - the Command to execute
+     * @param opt - the set of options guiding the execution of the command
+     * @return null if the user chose "save to FILE" as the SAT solver, and nonnull
+     *         if the solver finishes the entire solving and is either satisfiable
+     *         or unsatisfiable.
+     *         <p>
+     *         If the return value X is satisfiable, you can call X.next() to get
+     *         the next satisfying solution X2; and you can call X2.next() to get
+     *         the next satisfying solution X3... until you get an unsatisfying
+     *         solution.
+     */
+    public static A4Solution execute_commandFromBookWithMutation(A4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, MutantLab ml) throws Err {
+        if (rep == null)
+            rep = A4Reporter.NOP;
+        TranslateAlloyToKodkod tr = null;
+        try {
+            if (cmd.parent != null || !cmd.getGrowableSigs().isEmpty())
+                return execute_greedyCommand(rep, sigs, cmd, opt);
+            tr = new TranslateAlloyToKodkod(rep, opt, sigs, cmd);
+            tr.setMutation(ml);
+            tr.makeFacts(cmd.formula);
+            return tr.frame.solve(rep, cmd, new Simplifier(), true);
+        } catch (UnsatisfiedLinkError ex) {
+            throw new ErrorFatal("The required JNI library cannot be found: " + ex.toString().trim(), ex);
+        } catch (CapacityExceededException ex) {
+            throw rethrow(ex);
+        } catch (HigherOrderDeclException ex) {
+            Pos p = tr != null ? tr.frame.kv2typepos(ex.decl().variable()).b : Pos.UNKNOWN;
+            throw new ErrorType(p, "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized.");
+        } catch (Throwable ex) {
+            if (ex instanceof Err)
+                throw (Err) ex;
+            else
+                throw new ErrorFatal("Unknown exception occurred: " + ex, ex);
+        }
+    }
+
     /**
      * Translate the Alloy expression into an equivalent Kodkod Expression or
      * IntExpression or Formula object.
@@ -739,6 +758,18 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     }
 
     // ==============================================================================================================//
+
+    /**
+     * This is the start method that begins a traversal over the given expression.
+     * @Mutation added to control the mutation just before the translation
+     */
+    @Override
+    public Object visitThis(Expr x) throws Err {
+        if (mutantLab!=null){
+                return mutantLab.getMutation(x).accept(this);
+        }
+        return x.accept(this);
+    }
 
     /* ============================ */
     /* Evaluates an ExprITE node. */

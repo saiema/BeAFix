@@ -1,15 +1,13 @@
 package ar.edu.unrc.dc.mutation;
 
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
+import edu.mit.csail.sdg.parser.CompModule;
+import edu.mit.csail.sdg.parser.CompUtil;
+
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
-
-import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.parser.CompModule;
-import edu.mit.csail.sdg.parser.CompUtil;
 
 public class TestingMain {
 
@@ -40,23 +38,23 @@ public class TestingMain {
     }
 
     private static void generateMutants(CompModule m, Ops... ops) {
-        m.updateMutantRefs();
+        m.updateMarkedExprsToMutate();
 
         List<Mutation> mutations = new LinkedList<>();
-        Optional<List<Expr>> expressions = m.getExpressionsToMutate();
-
-        if (!expressions.isPresent())
-            System.out.println("No expressions to mutate");
-
-        for (Expr e : m.getExpressionsToMutate().get()) {
-            for (Ops o : ops) {
-                if (o.isImplemented()) {
-                    Optional<List<Mutation>> opMutations = o.getOperator(m).getMutations(e);
-                    if (opMutations.isPresent())
-                        mutations.addAll(opMutations.get());
-                }
-            }
-        }
+//        Optional<List<Expr>> expressions = m.();
+//
+//        if (!expressions.isPresent())
+//            System.out.println("No expressions to mutate");
+//
+//        for (Expr e : m.getExpressionsToMutate().get()) {
+//            for (Ops o : ops) {
+//                if (o.isImplemented()) {
+//                    Optional<List<Mutation>> opMutations = o.getOperator(m).getMutations(e);
+//                    if (opMutations.isPresent())
+//                        mutations.addAll(opMutations.get());
+//                }
+//            }
+//        }
 
         System.out.println(mutations);
     }

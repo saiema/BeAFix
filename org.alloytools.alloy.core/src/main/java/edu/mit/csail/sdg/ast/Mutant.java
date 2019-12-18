@@ -15,18 +15,18 @@
 
 package edu.mit.csail.sdg.ast;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import ar.edu.unrc.dc.mutation.Mutation;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pos;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Mutable; represents an expression that can be mutable for repair.
  */
 
-public class Mutant extends Browsable {
+@Deprecated  public class Mutant extends Browsable {
 
     /**
      * The location in the original file where this mutant mark is declared; never

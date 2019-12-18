@@ -830,9 +830,9 @@ Expr ::= OrExprA:x                    {: RESULT = x;                            
 Expr ::= OrExprB:x                    {: RESULT = x;                                  :};
 Expr ::= Bind:x                       {: RESULT = x;                                  :};
 //-> ------- MUTATION MARK
-Expr ::= MUTABLE:m OrExprA:x                    {: x.mutGenLimit(1);parser.alloymodule.addMutant(m,x);  RESULT = x;                                  :};
-Expr ::= MUTABLE:m OrExprB:x                    {: x.mutGenLimit(1);parser.alloymodule.addMutant(m,x); RESULT = x;                                  :};
-Expr ::= MUTABLE:m Bind:x                       {: x.mutGenLimit(1);parser.alloymodule.addMutant(m,x); RESULT = x;                                  :};
+Expr ::= MUTABLE:m OrExprA:x                    {: x.mutGenLimit(1);parser.alloymodule.addMarkedExprToMutate(x);  RESULT = x;                                  :};
+Expr ::= MUTABLE:m OrExprB:x                    {: x.mutGenLimit(1);parser.alloymodule.addMarkedExprToMutate(x); RESULT = x;                                  :};
+Expr ::= MUTABLE:m Bind:x                       {: x.mutGenLimit(1);parser.alloymodule.addMarkedExprToMutate(x); RESULT = x;                                  :};
 //-> ------- END MUTATION MARK
 Bind ::= LET     Let:x                {: RESULT = x;                                  :};
 Bind ::= ALL2:o  Declp:a SuperOrBar:b {: RESULT = ExprQt.Op.ALL .make(o, null, a, b); :};

@@ -1,5 +1,11 @@
 package ar.edu.unrc.dc.mutation;
 
+import ar.edu.unrc.dc.mutation.op.AORB;
+import ar.edu.unrc.dc.mutation.op.BES;
+import ar.edu.unrc.dc.mutation.op.COR;
+import ar.edu.unrc.dc.mutation.op.ROR;
+import ar.edu.unrc.dc.mutation.op.RUOI;
+import ar.edu.unrc.dc.mutation.op.RUOR;
 import edu.mit.csail.sdg.parser.CompModule;
 
 public enum Ops {
@@ -13,7 +19,7 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) {
-                         return new ar.edu.unrc.dc.mutation.op.AORB(context);
+                         return new AORB(context);
                      }
                  },
                  ROR {
@@ -25,7 +31,7 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) {
-                         return new ar.edu.unrc.dc.mutation.op.ROR(context);
+                         return new ROR(context);
                      }
                  },
                  COR {
@@ -37,7 +43,7 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) {
-                         return new ar.edu.unrc.dc.mutation.op.COR(context);
+                         return new COR(context);
                      }
                  },
                  CUOI {
@@ -62,7 +68,7 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) {
-                         return new ar.edu.unrc.dc.mutation.op.BES(context);
+                         return new BES(context);
                      }
                  },
                  BESOR {
@@ -74,7 +80,7 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) {
-                         return new ar.edu.unrc.dc.mutation.op.BESOR(context);
+                         return new ar.edu.unrc.dc.mutation.op.JER(context);
                      }
                  },
                  JER {
@@ -125,7 +131,7 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) {
-                         return new ar.edu.unrc.dc.mutation.op.RUOR(context);
+                         return new RUOR(context);
                      }
                  },
                  RUOI {
@@ -137,7 +143,7 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) {
-                         return new ar.edu.unrc.dc.mutation.op.RUOI(context);
+                         return new RUOI(context);
                      }
                  },
                  MULTI { //this operator is used when compressing mutations

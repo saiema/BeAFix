@@ -15,22 +15,13 @@
 
 package edu.mit.csail.sdg.ast;
 
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.ast.Sig.PrimSig;
+
+import java.util.*;
+
 import static edu.mit.csail.sdg.ast.ExprUnary.Op.NOOP;
 import static edu.mit.csail.sdg.ast.Type.EMPTY;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.ast.Sig.PrimSig;
 
 /**
  * Immutable; represents a formula or expression.
@@ -63,6 +54,7 @@ public abstract class Expr extends Browsable {
 
     /**
      * Return the type for this node; EMPTY if it is not well-typed.
+     * @return
      */
     public final Type type() {
         return type;

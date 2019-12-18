@@ -15,97 +15,26 @@
 
 package edu.mit.csail.sdg.alloy4whole;
 
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AnalyzerHeight;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AnalyzerWidth;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AnalyzerX;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AnalyzerY;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AntiAlias;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AutoVisualize;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.CoreGranularity;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.CoreMinimization;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.FontName;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.FontSize;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.ImplicitThis;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.InferPartialInstance;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.LAF;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Model0;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Model1;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Model2;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Model3;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.NoOverflow;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.RecordKodkod;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.SkolemDepth;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Solver;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.SubMemory;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.SubStack;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.SyntaxDisabled;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.TabSize;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Unrolls;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.VerbosityPref;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.WarningNonfatal;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.Welcome;
-import static edu.mit.csail.sdg.alloy4.OurUtil.menu;
-import static edu.mit.csail.sdg.alloy4.OurUtil.menuItem;
-import static java.awt.event.KeyEvent.VK_A;
-import static java.awt.event.KeyEvent.VK_ALT;
-import static java.awt.event.KeyEvent.VK_E;
-import static java.awt.event.KeyEvent.VK_PAGE_DOWN;
-import static java.awt.event.KeyEvent.VK_PAGE_UP;
-import static java.awt.event.KeyEvent.VK_SHIFT;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.alloy4.A4Preferences.*;
+import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleCallback1;
+import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask1;
+import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask2;
+import edu.mit.csail.sdg.ast.Module;
+import edu.mit.csail.sdg.ast.*;
+import edu.mit.csail.sdg.ast.Sig.Field;
+import edu.mit.csail.sdg.parser.CompUtil;
+import edu.mit.csail.sdg.sim.SimInstance;
+import edu.mit.csail.sdg.sim.SimTuple;
+import edu.mit.csail.sdg.sim.SimTupleset;
+import edu.mit.csail.sdg.translator.*;
+import edu.mit.csail.sdg.translator.A4Options.SatSolver;
+import kodkod.engine.fol2sat.HigherOrderDeclException;
+import org.alloytools.alloy.core.AlloyCore;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Container;
-import java.awt.Desktop;
-import java.awt.Font;
-import java.awt.GraphicsEnvironment;
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.lang.reflect.Method;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
-
-import javax.swing.Action;
-import javax.swing.Box;
-import javax.swing.Icon;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JEditorPane;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
-import javax.swing.JSplitPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.JTextPane;
-import javax.swing.JToolBar;
-import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.UIManager;
-import javax.swing.WindowConstants;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.ChangeEvent;
@@ -117,64 +46,26 @@ import javax.swing.plaf.FontUIResource;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.io.*;
+import java.lang.reflect.Method;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.*;
 
-import org.alloytools.alloy.core.AlloyCore;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.*;
+import static edu.mit.csail.sdg.alloy4.OurUtil.menu;
+import static edu.mit.csail.sdg.alloy4.OurUtil.menuItem;
+import static java.awt.event.KeyEvent.*;
 
 //import com.apple.eawt.Application;
 //import com.apple.eawt.ApplicationAdapter;
 //import com.apple.eawt.ApplicationEvent;
 //
-
-import edu.mit.csail.sdg.alloy4.A4Preferences;
-import edu.mit.csail.sdg.alloy4.A4Preferences.BooleanPref;
-import edu.mit.csail.sdg.alloy4.A4Preferences.ChoicePref;
-import edu.mit.csail.sdg.alloy4.A4Preferences.Pref;
-import edu.mit.csail.sdg.alloy4.A4Preferences.StringPref;
-import edu.mit.csail.sdg.alloy4.A4Preferences.Verbosity;
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.alloy4.Computer;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorFatal;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.Listener;
-import edu.mit.csail.sdg.alloy4.MailBug;
-import edu.mit.csail.sdg.alloy4.OurAntiAlias;
-import edu.mit.csail.sdg.alloy4.OurBorder;
-import edu.mit.csail.sdg.alloy4.OurCombobox;
-import edu.mit.csail.sdg.alloy4.OurDialog;
-import edu.mit.csail.sdg.alloy4.OurSyntaxWidget;
-import edu.mit.csail.sdg.alloy4.OurTabbedSyntaxWidget;
-import edu.mit.csail.sdg.alloy4.OurTree;
-import edu.mit.csail.sdg.alloy4.OurUtil;
-import edu.mit.csail.sdg.alloy4.Pair;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Runner;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.alloy4.Version;
-import edu.mit.csail.sdg.alloy4.WorkerEngine;
-import edu.mit.csail.sdg.alloy4.XMLNode;
-import edu.mit.csail.sdg.alloy4viz.VizGUI;
-import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleCallback1;
-import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask1;
-import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask2;
-import edu.mit.csail.sdg.ast.Browsable;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.ast.Module;
-import edu.mit.csail.sdg.ast.Sig;
-import edu.mit.csail.sdg.ast.Sig.Field;
-import edu.mit.csail.sdg.parser.CompUtil;
-import edu.mit.csail.sdg.sim.SimInstance;
-import edu.mit.csail.sdg.sim.SimTuple;
-import edu.mit.csail.sdg.sim.SimTupleset;
-import edu.mit.csail.sdg.translator.A4Options;
-import edu.mit.csail.sdg.translator.A4Options.SatSolver;
-import edu.mit.csail.sdg.translator.A4Solution;
-import edu.mit.csail.sdg.translator.A4SolutionReader;
-import edu.mit.csail.sdg.translator.A4Tuple;
-import edu.mit.csail.sdg.translator.A4TupleSet;
-import kodkod.engine.fol2sat.HigherOrderDeclException;
 
 /**
  * Simple graphical interface for accessing various features of the analyzer.
@@ -1124,6 +1015,15 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 runmenu.add(y, 0);
                 runmenu.add(new JSeparator(), 1);
             }
+            //@Mutants
+
+            if (CompUtil.hasMutableExpressions(text.get().getText())){
+                JMenuItem y = new JMenuItem("Repair by mutating marked exprs (#m#)", null);
+                y.addActionListener(doRepair(-1));
+                runmenu.add(new JSeparator(), runmenu.getItemCount());
+                runmenu.add(y, runmenu.getItemCount());
+
+            }
         } finally {
             wrap = false;
         }
@@ -1206,6 +1106,70 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
         return null;
     }
+
+
+    /**
+     * This method executes a reparation on a marked source.
+     */
+    private Runner doRepair(int index) {
+        if (wrap)
+            return wrapMe(index);
+        if (WorkerEngine.isBusy())
+            return null;
+        // To update the accelerator to point to the command actually chosen
+      //  doRefreshRun();
+        OurUtil.enableAll(runmenu);
+        if (commands == null)
+            return null;
+        if (commands.size() == 0 ) {
+            log.logRed("There are no commands for repair validation.\n\n");
+            return null;
+        }
+
+        SimpleCallback1 cb = new SimpleCallback1(this, null, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
+        SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
+        A4Options opt = new A4Options();
+        opt.tempDirectory = alloyHome() + fs + "tmp";
+        opt.solverDirectory = alloyHome() + fs + "binary";
+        opt.recordKodkod = RecordKodkod.get();
+        opt.noOverflow = NoOverflow.get();
+        opt.unrolls = Version.experimental ? Unrolls.get() : (-1);
+        opt.skolemDepth = SkolemDepth.get();
+        opt.coreMinimization = CoreMinimization.get();
+        opt.inferPartialInstance = InferPartialInstance.get();
+        opt.coreGranularity = CoreGranularity.get();
+        opt.originalFilename = Util.canon(text.get().getFilename());
+        opt.solver = Solver.get();
+        //repairtask.bundleIndex = i;
+        //repairtask.bundleWarningNonFatal = WarningNonfatal.get();
+        repair1.map = text.takeSnapshot();
+        repair1.options = opt.dup();
+        repair1.resolutionMode = (Version.experimental && ImplicitThis.get()) ? 2 : 1;
+        repair1.tempdir = maketemp();
+        try {
+            runmenu.setEnabled(false);
+            runbutton.setVisible(false);
+            showbutton.setEnabled(false);
+            stopbutton.setVisible(true);
+            int newmem = SubMemory.get(), newstack = SubStack.get();
+            if (newmem != subMemoryNow || newstack != subStackNow)
+                WorkerEngine.stop();
+            //   if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
+            WorkerEngine.runLocally(repair1, cb);
+            //   else
+            //       WorkerEngine.run(task, newmem, newstack, alloyHome() + fs + "binary", "", cb);
+            subMemoryNow = newmem;
+            subStackNow = newstack;
+        } catch (Throwable ex) {
+            WorkerEngine.stop();
+            log.logBold("Fatal Error: Solver failed due to unknown reason.\n" + "One possible cause is that, in the Options menu, your specified\n" + "memory size is larger than the amount allowed by your OS.\n" + "Also, please make sure \"java\" is in your program path.\n");
+            log.logDivider();
+            log.flush();
+            doStop(2);
+        }
+        return null;
+    }
+
 
     /**
      * This method stops the current run or check (how==0 means DONE, how==1 means
