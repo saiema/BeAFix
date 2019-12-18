@@ -80,7 +80,7 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) {
-                         return new ar.edu.unrc.dc.mutation.op.JER(context);
+                         return new ar.edu.unrc.dc.mutation.op.BESOR(context);
                      }
                  },
                  JER {
