@@ -166,6 +166,7 @@ final class Macro extends ExprCustom {
         Expr bodyClone = (Expr) (this.body != null ? this.body.clone() : null);
         Macro clone = new Macro(this.pos, this.isPrivate, realModuleClone, this.name, paramsClone, argsClone, bodyClone);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

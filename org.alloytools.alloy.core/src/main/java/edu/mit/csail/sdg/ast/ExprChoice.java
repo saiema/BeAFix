@@ -306,6 +306,7 @@ public final class ExprChoice extends Expr {
         }
         ExprChoice clone = new ExprChoice(this.pos, ConstList.make(choicesClone), this.reasons, this.type, this.weight);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 }

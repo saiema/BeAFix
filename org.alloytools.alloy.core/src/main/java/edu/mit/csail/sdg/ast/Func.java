@@ -352,6 +352,7 @@ public final class Func extends Browsable implements Clause {
         Expr bodyClone = (Expr) this.body.clone();
         Func clone = new Func(this.pos, this.label, declsClone, returnDeclClone, bodyClone);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

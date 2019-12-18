@@ -104,6 +104,7 @@ public class Mutant extends Browsable {
         Expr exprToMutateClone = (Expr) this.exprToMutate.clone();
         Mutant clone = new Mutant(this.pos, exprToMutateClone);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

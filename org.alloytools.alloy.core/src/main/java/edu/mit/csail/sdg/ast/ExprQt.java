@@ -409,6 +409,7 @@ public final class ExprQt extends Expr {
         Expr subClone = (Expr) this.sub.clone();
         ExprQt clone = new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(declsClone), subClone, this.ambiguous, this.weight, this.errors);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

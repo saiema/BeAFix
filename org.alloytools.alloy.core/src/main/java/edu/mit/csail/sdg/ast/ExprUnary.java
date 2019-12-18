@@ -527,6 +527,7 @@ public final class ExprUnary extends Expr {
         Expr subClone = (Expr) this.sub.clone();
         ExprUnary clone = new ExprUnary(this.pos, this.op, subClone, this.type, this.weight, this.errors);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 }

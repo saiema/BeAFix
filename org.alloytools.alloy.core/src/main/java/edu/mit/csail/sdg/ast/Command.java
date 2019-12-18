@@ -339,6 +339,7 @@ public final class Command extends Browsable {
         Command parentClone = (Command) this.parent.clone();
         Command clone = new Command(this.pos, nameExprClone, this.label, this.check, this.overall, this.bitwidth, this.maxseq, this.expects, this.scope, ConstList.make(sigsClone), formulaClone, parentClone);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

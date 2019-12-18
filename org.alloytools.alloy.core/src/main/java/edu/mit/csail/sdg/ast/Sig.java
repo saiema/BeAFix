@@ -595,6 +595,7 @@ public abstract class Sig extends Expr implements Clause {
                 throw new IllegalStateException("This instance was not built with neither constructor");
             }
             clone.setID(getID());
+            clone.setIDEnv(getIDEnv());
             copyComponentsToClone(clone);
             return clone;
         }
@@ -699,6 +700,7 @@ public abstract class Sig extends Expr implements Clause {
                 parentsClone.add((Sig) s.clone());
             SubsetSig clone = new SubsetSig(this.label, parentsClone, this.attributes.toArray(new Attr[this.attributes.size()]));
             clone.setID(getID());
+            clone.setIDEnv(getIDEnv());
             copyComponentsToClone(clone);
             return clone;
         }
@@ -832,6 +834,7 @@ public abstract class Sig extends Expr implements Clause {
             Expr boundClone = (Expr) (this.decl != null ? this.decl.expr.clone() : null);
             Field clone = new Field(this.pos, this.isPrivate, this.isMeta, null, null, sigClone, this.label, boundClone);
             clone.setID(getID());
+            clone.setIDEnv(getIDEnv());
             return clone;
         }
 

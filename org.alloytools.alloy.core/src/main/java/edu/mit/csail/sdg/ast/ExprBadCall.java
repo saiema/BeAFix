@@ -186,6 +186,7 @@ public final class ExprBadCall extends Expr {
         }
         ExprBadCall clone = new ExprBadCall(this.pos, this.closingBracket, this.ambiguous, funcClone, ConstList.make(argsClone), this.errors, this.extraWeight, this.weight);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

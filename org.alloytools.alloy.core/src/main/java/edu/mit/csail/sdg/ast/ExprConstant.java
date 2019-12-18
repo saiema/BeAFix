@@ -271,6 +271,7 @@ public final class ExprConstant extends Expr {
     public Object clone() {
         ExprConstant clone = new ExprConstant(this.pos, this.op, this.num, this.string);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 }

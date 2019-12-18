@@ -335,6 +335,7 @@ public final class ExprList extends Expr {
         }
         ExprList clone = new ExprList(this.pos, this.closingBracket, this.op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 }

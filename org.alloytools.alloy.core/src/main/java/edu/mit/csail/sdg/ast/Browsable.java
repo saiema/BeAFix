@@ -44,6 +44,8 @@ public abstract class Browsable {
     private int        mutGenLimit = 0;
     private int        ID          = NEXT_ID++;
     private Browsable  browsableParent;
+    private static int NEXT_ID_Env = 0;
+    private int        ID_Env      = NEXT_ID_Env++;
 
     public void mutGenLimit(int m) {
         if (m < 0)
@@ -69,6 +71,19 @@ public abstract class Browsable {
 
     public void newID() {
         this.ID = NEXT_ID++;
+    }
+
+    public int getIDEnv() {
+        return this.ID_Env;
+    }
+
+    protected void setIDEnv(int id) {
+        this.ID_Env = id;
+    }
+
+    @Override
+    public int hashCode() {
+        return getIDEnv();
     }
 
     public Browsable getBrowsableParent() {
@@ -169,6 +184,7 @@ public abstract class Browsable {
                 }
                 Browsable clone = Browsable.make(pos, span, getHTML(), ConstList.make(subnodes));
                 clone.setID(getID());
+                clone.setIDEnv(getIDEnv());
                 return clone;
             }
 

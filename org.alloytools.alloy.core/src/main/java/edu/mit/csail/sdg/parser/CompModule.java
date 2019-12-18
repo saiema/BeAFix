@@ -2552,6 +2552,7 @@ public final class CompModule extends Browsable implements Module {
         CompModule clone = new CompModule(this.world, this.modulePos.filename, this.path);
         //TODO: complete this method, although you shouldn't be using it
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 }

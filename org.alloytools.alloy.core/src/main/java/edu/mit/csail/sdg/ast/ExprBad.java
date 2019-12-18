@@ -100,6 +100,7 @@ public final class ExprBad extends Expr {
     public Object clone() {
         ExprBad clone = new ExprBad(this.pos, this.originalText, this.errors.get(0));
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 }

@@ -176,6 +176,7 @@ public final class ExprLet extends Expr {
         Expr subClone = (Expr) this.sub.clone();
         ExprLet clone = new ExprLet(this.pos, varClone, exprClone, subClone, this.errors);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

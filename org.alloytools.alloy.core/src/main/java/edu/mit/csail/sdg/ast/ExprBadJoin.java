@@ -138,6 +138,7 @@ public final class ExprBadJoin extends Expr {
         Expr rightClone = (Expr) this.right.clone();
         ExprBadJoin clone = new ExprBadJoin(this.pos, this.closingBracket, leftClone, rightClone, this.errors);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

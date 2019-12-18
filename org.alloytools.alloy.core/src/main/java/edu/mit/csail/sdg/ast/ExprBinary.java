@@ -774,6 +774,7 @@ public final class ExprBinary extends Expr {
         Expr rightClone = (Expr) this.right.clone();
         ExprBinary clone = new ExprBinary(pos, closingBracket, op, leftClone, rightClone, type, errors);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

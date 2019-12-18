@@ -454,6 +454,7 @@ public final class ExprCall extends Expr {
         Func funClone = (Func) this.fun.clone();
         ExprCall clone = new ExprCall(this.pos, this.closingBracket, this.ambiguous, this.type, funClone, ConstList.make(argsClone), this.extraWeight, this.weight, this.errors);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 

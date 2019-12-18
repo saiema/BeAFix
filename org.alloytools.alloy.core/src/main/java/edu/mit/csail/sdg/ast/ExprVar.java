@@ -109,6 +109,7 @@ public final class ExprVar extends ExprHasName implements Clause {
     public Object clone() {
         ExprVar clone = new ExprVar(this.pos, this.label, this.type);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 }

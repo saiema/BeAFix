@@ -220,6 +220,7 @@ public final class ExprITE extends Expr {
         Expr rightClone = (Expr) this.right.clone();
         ExprITE clone = new ExprITE(this.pos, condClone, leftClone, rightClone, this.type, this.errors);
         clone.setID(getID());
+        clone.setIDEnv(getIDEnv());
         return clone;
     }
 
