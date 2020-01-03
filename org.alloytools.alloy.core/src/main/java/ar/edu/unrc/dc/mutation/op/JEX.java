@@ -11,6 +11,7 @@ import ar.edu.unrc.dc.mutation.Mutator;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
+import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.parser.CompModule;
 
 
@@ -55,63 +56,19 @@ public abstract class JEX extends Mutator {
         return false;
     }
 
-    //    @Override
-    //    protected boolean compatibleVariablesChecker(Expr toReplace, Expr replacement, Type replacementType, boolean strictTypeChecking) {
-    //        if (strictTypeChecking)
-    //            return toReplace.type().equals(replacementType);
-    //        Type toReplaceType = toReplace.type();
-    //        ProductType toReplaceTypeFirst = null;
-    //        ProductType toReplaceTypeLast = null;
-    //        ProductType replacementTypeFirst = null;
-    //        ProductType replacementTypeLast = null;
-    //        Iterator<ProductType> trIt = toReplaceType.iterator();
-    //        Iterator<ProductType> rIt = replacementType.iterator();
-    //        while (trIt.hasNext()) {
-    //            ProductType current = trIt.next();
-    //            if (toReplaceTypeFirst == null)
-    //                toReplaceTypeFirst = current;
-    //            toReplaceTypeLast = current;
-    //        }
-    //        while (rIt.hasNext()) {
-    //            ProductType current = rIt.next();
-    //            if (replacementTypeFirst == null)
-    //                replacementTypeFirst = current;
-    //            replacementTypeLast = current;
-    //        }
-    //        if (toReplaceTypeFirst == null || toReplaceTypeLast == null)
-    //            return false;
-    //        if (replacementTypeFirst == null || replacementTypeLast == null)
-    //            return false;
-    //        return toReplaceTypeFirst.equals(replacementTypeFirst) && toReplaceTypeLast.equals(replacementTypeLast);
-    //        Browsable parentRaw = toReplace.getBrowsableParent();
-    //        if (parentRaw instanceof ExprBinary && ((ExprBinary) parentRaw).op.equals(Op.JOIN)) {
-    //            ExprBinary parent = (ExprBinary) toReplace.getBrowsableParent();
-    //            Browsable toReplaceParentsParent = parent.getBrowsableParent();
-    //            Type joinedType = Type.EMPTY;
-    //            boolean left = false, right = false;
-    //            if (toReplace.getID() == parent.left.getID()) {
-    //                left = true;
-    //                joinedType = replacementType.join(parent.right.type());
-    //            } else if (toReplace.getID() == parent.right.getID()) {
-    //                right = true;
-    //                joinedType = parent.left.type().join(replacementType);
-    //            }
-    //            if (emptyOrNone(joinedType))
-    //                return false;
-    //            if (toReplaceParentsParent != null && toReplaceParentsParent instanceof ExprBinary) {
-    //                ExprBinary trppAsBinary = (ExprBinary) toReplaceParentsParent;
-    //                if (trppAsBinary.op.equals(Op.JOIN)) {
-    //                    Type parentJoinedType = Type.EMPTY;
-    //                    if (parent.getID() == trppAsBinary.left.getID() && right) {
-    //                        parentJoinedType = replacementType.join(trppAsBinary.right.type());
-    //                    } else if (parent.getID() == trppAsBinary.right.getID() && left) {
-    //                        parentJoinedType = trppAsBinary.left.type().join(replacementType);
-    //                    }
-    //                    return !emptyOrNone(parentJoinedType);
-    //                }
-    //            }
-    //        }
-    //        throw new IllegalStateException("This method should be called to check a join expression");
-    //    }
+    protected boolean checkJoin(ExprBinary from, Expr replace, Expr with) {
+        Type withType = getType(with);
+        if (from.left.getID() == replace.getID()) {
+            //check with joined from.right
+            Type rightType = getType(from.right);
+            return !emptyOrNone(withType.join(rightType));
+        } else if (from.right.getID() == replace.getID()) {
+            //check from.left joined with
+            Type leftType = getType(from.left);
+            return !emptyOrNone(leftType.join(withType));
+        } else {
+            throw new IllegalArgumentException("replace expression is neither the left nor the right expression of from");
+        }
+    }
 
 }
