@@ -1,10 +1,24 @@
-package edu.mit.csail.sdg.ast;
+package ar.edu.unrc.dc.mutation.visitors;
 
 import java.util.Optional;
 
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.ast.Browsable;
+import edu.mit.csail.sdg.ast.Decl;
+import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.ExprBinary;
+import edu.mit.csail.sdg.ast.ExprCall;
+import edu.mit.csail.sdg.ast.ExprConstant;
+import edu.mit.csail.sdg.ast.ExprITE;
+import edu.mit.csail.sdg.ast.ExprLet;
+import edu.mit.csail.sdg.ast.ExprList;
+import edu.mit.csail.sdg.ast.ExprQt;
+import edu.mit.csail.sdg.ast.ExprUnary;
+import edu.mit.csail.sdg.ast.ExprVar;
+import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.VisitReturn;
 
-public class VisitSearchAndReplace extends VisitReturn<Optional<Expr>> {
+public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
 
     /**
      * position of expression to search
@@ -13,7 +27,7 @@ public class VisitSearchAndReplace extends VisitReturn<Optional<Expr>> {
     private Expr replacement;
 
 
-    public VisitSearchAndReplace(Expr expr, Expr replacement) {
+    public SearchAndReplace(Expr expr, Expr replacement) {
         this.target = expr;
         this.replacement = replacement;
     }
@@ -25,10 +39,10 @@ public class VisitSearchAndReplace extends VisitReturn<Optional<Expr>> {
             return replace(x, replacement);
         } else {
             res = x.left.accept(this);
-            if (res != null)
+            if (res.isPresent())
                 return res;
             res = x.right.accept(this);
-            if (res != null)
+            if (res.isPresent())
                 return res;
         }
         return Optional.empty();
@@ -42,7 +56,7 @@ public class VisitSearchAndReplace extends VisitReturn<Optional<Expr>> {
         } else {
             for (Expr e : x.args) {
                 res = e.accept(this);
-                if (res != null)
+                if (res.isPresent())
                     return res;
             }
         }
@@ -73,13 +87,13 @@ public class VisitSearchAndReplace extends VisitReturn<Optional<Expr>> {
             return replace(x, replacement);
         } else {
             res = x.cond.accept(this);
-            if (res != null)
+            if (res.isPresent())
                 return res;
             res = x.left.accept(this);
-            if (res != null)
+            if (res.isPresent())
                 return res;
             res = x.right.accept(this);
-            if (res != null)
+            if (res.isPresent())
                 return res;
         }
         return Optional.empty();
@@ -89,17 +103,28 @@ public class VisitSearchAndReplace extends VisitReturn<Optional<Expr>> {
     public Optional<Expr> visit(ExprLet x) throws Err {
         if (x.getID() == this.target.getID()) {
             return replace(x, replacement);
-        } else
-            return x.sub.accept(this);
-
+        } else {
+            Optional<Expr> res = x.var.accept(this);
+            if (res.isPresent())
+                return res;
+        }
+        return x.sub.accept(this);
     }
 
     @Override
     public Optional<Expr> visit(ExprQt x) throws Err {
         if (x.getID() == this.target.getID()) {
             return replace(x, replacement);
-        } else
-            return x.sub.accept(this);
+        } else {
+            for (Decl d : x.decls) {
+                for (Expr var : d.names) {
+                    Optional<Expr> res = var.accept(this);
+                    if (res.isPresent())
+                        return res;
+                }
+            }
+        }
+        return x.sub.accept(this);
     }
 
     @Override
@@ -126,7 +151,7 @@ public class VisitSearchAndReplace extends VisitReturn<Optional<Expr>> {
         } else {
             for (Sig.Field f : x.getFields()) {
                 res = f.accept(this);
-                if (res != null)
+                if (res.isPresent())
                     return res;
             }
         }
