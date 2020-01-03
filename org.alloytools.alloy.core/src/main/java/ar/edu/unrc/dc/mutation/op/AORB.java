@@ -29,7 +29,7 @@ public class AORB extends BinOpReplacer {
 
     @Override
     protected boolean canMutate(ExprBinary x) {
-        return isArithmeticExpression(x);
+        return isArithmeticBinaryExpression(x);
     }
 
     @Override

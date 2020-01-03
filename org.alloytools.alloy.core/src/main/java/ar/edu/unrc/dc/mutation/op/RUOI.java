@@ -28,10 +28,6 @@ import edu.mit.csail.sdg.parser.CompModule;
  */
 public class RUOI extends Mutator {
 
-    //    @Override
-    //    public Optional<List<Mutation>> visit(ExprCall x) throws Err {
-    //        return null;
-    //    }
 
     public RUOI(CompModule context) {
         super(context);
@@ -100,15 +96,20 @@ public class RUOI extends Mutator {
         List<Mutation> mutations = new LinkedList<>();
         Type xtype = getType(x);
         if (!emptyOrNone(xtype.transpose()))
-            mutations.add(new Mutation(Ops.RUOI, x, ((Expr) x.clone()).transpose()));
+            mutations.add(new Mutation(whoiam(), x, ((Expr) x.clone()).transpose()));
         if (!emptyOrNone(xtype.closure())) {
-            mutations.add(new Mutation(Ops.RUOI, x, ((Expr) x.clone()).closure()));
-            mutations.add(new Mutation(Ops.RUOI, x, ((Expr) x.clone()).reflexiveClosure()));
+            mutations.add(new Mutation(whoiam(), x, ((Expr) x.clone()).closure()));
+            mutations.add(new Mutation(whoiam(), x, ((Expr) x.clone()).reflexiveClosure()));
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
 
+    }
+
+    @Override
+    protected Ops whoiam() {
+        return Ops.RUOI;
     }
 
 }
