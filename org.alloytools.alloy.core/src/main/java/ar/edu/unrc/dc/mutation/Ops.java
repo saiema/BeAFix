@@ -1,8 +1,12 @@
 package ar.edu.unrc.dc.mutation;
 
+import ar.edu.unrc.dc.mutation.op.AECR;
 import ar.edu.unrc.dc.mutation.op.AORB;
 import ar.edu.unrc.dc.mutation.op.BES;
 import ar.edu.unrc.dc.mutation.op.COR;
+import ar.edu.unrc.dc.mutation.op.MOR;
+import ar.edu.unrc.dc.mutation.op.QTBER;
+import ar.edu.unrc.dc.mutation.op.QTOR;
 import ar.edu.unrc.dc.mutation.op.ROR;
 import ar.edu.unrc.dc.mutation.op.RUOI;
 import ar.edu.unrc.dc.mutation.op.RUOR;
@@ -145,6 +149,56 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new RUOI(context);
                      }
+                 },
+                 MOR {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new MOR(context);
+                     }
+                 },
+                 QTOR {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new QTOR(context);
+                     }
+                 },
+                 QTBER {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new QTBER(context);
+                     }
+
+                 },
+                 AECR {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new AECR(context);
+                     }
+
                  },
                  MULTI { //this operator is used when compressing mutations
 
