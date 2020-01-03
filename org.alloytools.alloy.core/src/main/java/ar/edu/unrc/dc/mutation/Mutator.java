@@ -1,11 +1,14 @@
 package ar.edu.unrc.dc.mutation;
 
+import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -44,6 +47,9 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     protected static final List<Op>                 ARITHMETIC_BINARY_OPS = Arrays.asList(Op.DIV, Op.MUL, Op.REM, Op.IPLUS, Op.IMINUS);
     protected static final List<ExprUnary.Op>       RELATIONAL_UNARY_OPS  = Arrays.asList(ExprUnary.Op.CLOSURE, ExprUnary.Op.RCLOSURE, ExprUnary.Op.TRANSPOSE);
     protected static final List<Op>                 SET_OPERATORS         = Arrays.asList(Op.JOIN, Op.PLUS, Op.MINUS, Op.INTERSECT, Op.IN, Op.PLUSPLUS);
+    protected static final List<ExprUnary.Op>       MULTIPLICITY_OPERATORS = Arrays.asList(ExprUnary.Op.NO, ExprUnary.Op.SOME, ExprUnary.Op.LONE, ExprUnary.Op.ONE);
+    //Comprehension is not yet considered
+    protected static final List<ExprQt.Op>          QUANTIFIER_OPERATORS  = Arrays.asList(ExprQt.Op.ALL, ExprQt.Op.LONE, ExprQt.Op.NO, ExprQt.Op.ONE, ExprQt.Op.SOME);
 
     protected CompModule                            context;
 
@@ -54,6 +60,8 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     public Optional<List<Mutation>> getMutations(Expr e) {
         return this.visitThis(e);
     }
+
+    protected abstract Ops whoiam();
 
     //UTILITIES
 
@@ -70,7 +78,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     }
 
     //for the moment only binary expressions are considered
-    protected final boolean isArithmeticExpression(Expr e) {
+    protected final boolean isArithmeticBinaryExpression(Expr e) {
         if (!(e instanceof ExprBinary))
             return false;
         return ARITHMETIC_BINARY_OPS.contains(((ExprBinary) e).op);
@@ -86,6 +94,12 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (!(e instanceof ExprBinary))
             return false;
         return SET_OPERATORS.contains(((ExprBinary) e).op);
+    }
+
+    protected final boolean isMultiplicityExpression(Expr e) {
+        if (!(e instanceof ExprUnary))
+            return false;
+        return MULTIPLICITY_OPERATORS.contains(((ExprUnary) e).op);
     }
 
     /**
@@ -122,7 +136,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (containerFunc.isPresent()) {
             for (Decl arg : containerFunc.get().decls) {
                 Type argType = arg.expr.type();
-                if (compatibleVariablesChecker(x, arg.expr, argType, strictChecking)) {
+                if (compatibleVariablesChecker(x, argType, strictChecking)) {
                     for (ExprHasName var : arg.names) {
                         funcVariablesFound.put(cleanLabelFromThis(var.label), var);
                     }
@@ -133,7 +147,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         List<Decl> sigDecls = new LinkedList<>();
         for (Sig s : sigs) {
             Type stype = s.type();
-            if (compatibleVariablesChecker(x, s, stype, strictChecking)) {
+            if (compatibleVariablesChecker(x, stype, strictChecking)) {
                 String label = cleanLabelFromThis(s.label);
                 if (!funcVariablesFound.containsKey(label)) { //a funcs argument will hide all other fields
                     variablesFound.put(label, s);
@@ -141,7 +155,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
             }
             for (Decl d : s.getFieldDecls()) {
                 Type dtype = appendTypes(stype, d.expr.type());
-                if (compatibleVariablesChecker(x, d.expr, dtype, strictChecking)) {
+                if (compatibleVariablesChecker(x, dtype, strictChecking)) {
                     for (Expr var : d.names) {
                         String label = "";
                         if (var instanceof Field) {
@@ -169,10 +183,10 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     }
 
     protected final Type getType(Expr e) {
-        if (e instanceof Field) {
-            Field eAsField = (Field) e;
-            return appendTypes(eAsField.sig.type(), e.type());
-        }
+        //        if (e instanceof Field) {
+        //            Field eAsField = (Field) e;
+        //            return appendTypes(eAsField.sig.type(), e.type());
+        //        }
         return e.type();
     }
 
@@ -207,10 +221,13 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         return (binary.left.getID() == expr.getID()) || (binary.right.getID() == expr.getID());
     }
 
-    protected boolean compatibleVariablesChecker(Expr toReplace, Expr replacement, Type replacementType, boolean strictTypeChecking) {
+    protected boolean compatibleVariablesChecker(Expr toReplace, Type replacementType, boolean strictTypeChecking) {
+        return Mutator.compatibleVariablesChecker(toReplace.type(), replacementType, strictTypeChecking);
+    }
+
+    public static boolean compatibleVariablesChecker(Type toReplaceType, Type replacementType, boolean strictTypeChecking) {
         if (strictTypeChecking)
-            return toReplace.type().equals(replacementType);
-        Type toReplaceType = toReplace.type();
+            return toReplaceType.equals(replacementType);
         Optional<Sig> toReplaceFirst = getFirst(toReplaceType);
         Optional<Sig> replacementFirst = getFirst(replacementType);
         Optional<Sig> toReplaceLast = getLast(toReplaceType);
@@ -222,7 +239,86 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         return compatibleTypes(toReplaceFirst.get(), replacementFirst.get()) && compatibleTypes(toReplaceLast.get(), replacementLast.get());
     }
 
-    private Optional<Sig> getFirst(Type t) {
+    //This method should use a cache
+    protected Optional<List<Expr>> getAllTypes(int min, int max) throws CheatingIsBadMkay {
+        List<Expr> result = new LinkedList<>();
+        SafeList<Sig> sigs = this.context.getAllSigs();
+        List<Expr> sigsList = new LinkedList<>();
+        Map<Expr,Type> fields = new HashMap<>();
+        for (Sig s : sigs) {
+            Type stype = s.type();
+            sigsList.add(s);
+            for (Decl d : s.getFieldDecls()) {
+                Type dtype = appendTypes(stype, d.expr.type());
+                for (Expr var : d.names) {
+                    fields.put(var, dtype);
+                }
+            }
+        }
+        combineSigsAndFields(sigsList, fields, result, min, max);
+        if (!result.isEmpty()) {
+            return Optional.of(result);
+        }
+        return Optional.empty();
+    }
+
+    private void combineSigsAndFields(List<Expr> sigs, Map<Expr,Type> fields, List<Expr> output, int min, int max) throws CheatingIsBadMkay {
+        boolean modified = true;
+        List<Map<Expr,Type>> combinations = new LinkedList<>();
+        Map<Expr,Type> firstGeneration = new HashMap<>();
+        for (Expr s : sigs) {
+            Expr sclone = cheatedClone(s);
+            Type stype = s.type();
+            firstGeneration.put(sclone, stype);
+        }
+        firstGeneration.putAll(fields);
+        if (min == 1)
+            output.addAll(firstGeneration.keySet());
+        combinations.add(firstGeneration);
+        int lastGeneratedGen = 1;
+        while (modified && lastGeneratedGen < max) {
+            Map<Expr,Type> from = combinations.get(lastGeneratedGen - 1);
+            Map<Expr,Type> newGeneration = new HashMap<>();
+            modified = false;
+            for (Entry<Expr,Type> comb : from.entrySet()) {
+                Type ctype = comb.getValue();
+                Expr combExpr = comb.getKey();
+                for (Expr s : sigs) {
+                    Type sType = s.type();
+                    Type joinType = ctype.join(sType);
+                    if (!emptyOrNone(joinType)) {
+                        Expr combExprClone = cheatedClone(combExpr, ctype);
+                        Expr sclone = cheatedClone(s);
+                        Expr newCombination = ExprBinary.Op.JOIN.make(combExpr.pos, s.closingBracket, combExprClone, sclone);
+                        Type newCombinationType = getType(newCombination);
+                        newGeneration.put(newCombination, getType(newCombination));
+                        modified = true;
+                    }
+                }
+                for (Entry<Expr,Type> field : fields.entrySet()) {
+                    Type ftype = field.getValue();
+                    Expr f = field.getKey();
+                    Type joinType = ctype.join(ftype);
+                    if (!emptyOrNone(joinType)) {
+                        Expr combExprClone = cheatedClone(combExpr, ctype);
+                        Expr fclone = cheatedClone(f, ftype);
+                        Expr newCombination = ExprBinary.Op.JOIN.make(combExpr.pos, f.closingBracket, combExprClone, fclone);
+                        newGeneration.put(newCombination, getType(newCombination));
+                        modified = true;
+                    }
+                }
+            }
+            if (modified) {
+                lastGeneratedGen++;
+                combinations.add(newGeneration);
+                if (lastGeneratedGen >= min) {
+                    output.addAll(newGeneration.keySet());
+                }
+            }
+        }
+    }
+
+    private static Optional<Sig> getFirst(Type t) {
         if (t.arity() < 1)
             return Optional.empty();
         Iterator<ProductType> it = t.iterator();
@@ -235,7 +331,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         return Optional.of(types[0]);
     }
 
-    private Optional<Sig> getLast(Type t) {
+    private static Optional<Sig> getLast(Type t) {
         if (t.arity() < 1)
             return Optional.empty();
         Iterator<ProductType> it = t.iterator();
@@ -251,7 +347,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         return Optional.of(types[types.length - 1]);
     }
 
-    private boolean compatibleTypes(Sig a, Sig b) {
+    private static boolean compatibleTypes(Sig a, Sig b) {
         return a.isSameOrDescendentOf(b) || b.isSameOrDescendentOf(a);
     }
 
