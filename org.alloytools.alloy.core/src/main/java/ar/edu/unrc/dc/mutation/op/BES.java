@@ -61,13 +61,13 @@ public class BES extends Mutator {
         Type leftType = x.left.type();
         Type rightType = x.right.type();
         List<Mutation> mutants = new LinkedList<>();
-        if (compatibleVariablesChecker(x, x.left, getType(x.left), strictTypeCheck())) {
+        if (compatibleVariablesChecker(x, getType(x.left), strictTypeCheck())) {
             Expr mutant = (Expr) x.left.clone();
-            mutants.add(new Mutation(Ops.BES, x, mutant));
+            mutants.add(new Mutation(whoiam(), x, mutant));
         }
-        if (compatibleVariablesChecker(x, x.right, getType(x.right), strictTypeCheck())) {
+        if (compatibleVariablesChecker(x, getType(x.right), strictTypeCheck())) {
             Expr mutant = (Expr) x.right.clone();
-            mutants.add(new Mutation(Ops.BES, x, mutant));
+            mutants.add(new Mutation(whoiam(), x, mutant));
         }
         if (mutants.isEmpty())
             return EMPTY;
@@ -79,6 +79,11 @@ public class BES extends Mutator {
         if (configValue.isPresent())
             return (Boolean) configValue.get();
         return false;
+    }
+
+    @Override
+    protected Ops whoiam() {
+        return Ops.BES;
     }
 
 }

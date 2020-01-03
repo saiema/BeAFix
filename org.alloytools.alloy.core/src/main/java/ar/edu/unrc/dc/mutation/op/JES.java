@@ -78,7 +78,7 @@ public class JES extends JEX {
             Optional<List<Expr>> replacements = obtainReplacements((ExprBinary) replace);
             if (replacements.isPresent()) {
                 for (Expr r : replacements.get()) {
-                    mutations.add(new Mutation(Ops.JES, replace, r));
+                    mutations.add(new Mutation(whoiam(), replace, r));
                 }
             }
         }
@@ -107,11 +107,16 @@ public class JES extends JEX {
     private boolean typeCheck(Expr exprA, Expr exprB, boolean replace) {
         Type replacementType = getType(exprB);
         if (replace) {
-            return super.compatibleVariablesChecker(exprA, exprB, replacementType, strictTypeCheck());
+            return super.compatibleVariablesChecker(exprA, replacementType, strictTypeCheck());
         } else {
             Type joinedType = getType(exprA).join(replacementType);
             return !emptyOrNone(joinedType);
         }
+    }
+
+    @Override
+    protected Ops whoiam() {
+        return Ops.JES;
     }
 
 }

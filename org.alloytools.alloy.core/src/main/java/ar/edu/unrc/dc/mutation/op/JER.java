@@ -53,13 +53,13 @@ public class JER extends JEX {
                 r = (Expr) r.clone();
                 r.newID();
                 ExprBinary mutant = null;
-                if (original.left.getID() == replace.getID())
+                if (original.left.getID() == replace.getID() && checkJoin(original, replace, r))
                     mutant = original.mutateLeft(r);
-                if (original.right.getID() == replace.getID())
+                if (original.right.getID() == replace.getID() && checkJoin(original, replace, r))
                     mutant = original.mutateRight(r);
                 if (mutant == null || from.toString().equals(mutant.toString()))
                     continue;
-                mutations.add(new Mutation(Ops.JER, from, mutant));
+                mutations.add(new Mutation(whoiam(), from, mutant));
             }
         }
         return mutations.isEmpty() ? Optional.empty() : Optional.of(mutations);
@@ -68,6 +68,11 @@ public class JER extends JEX {
     @Override
     protected boolean isMutable(Expr x) {
         return (x instanceof ExprBinary) && ((ExprBinary) x).op == ExprBinary.Op.JOIN;
+    }
+
+    @Override
+    protected Ops whoiam() {
+        return Ops.JER;
     }
 
 }

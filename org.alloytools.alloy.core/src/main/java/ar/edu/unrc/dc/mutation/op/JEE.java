@@ -100,11 +100,11 @@ public class JEE extends JEX {
                     if (original.left.getID() == replace.getID()) {
                         if (emptyOrNone(getType(r).join(getType(original.right))))
                             continue;
-                        mutations.add(new Mutation(Ops.JEE, original, original.mutateLeft(r)));
+                        mutations.add(new Mutation(whoiam(), original, original.mutateLeft(r)));
                     } else {
                         if (emptyOrNone(getType(original.left).join(getType(r))))
                             continue;
-                        mutations.add(new Mutation(Ops.JEE, original, original.mutateRight(r)));
+                        mutations.add(new Mutation(whoiam(), original, original.mutateRight(r)));
                     }
                 }
             }
@@ -116,7 +116,7 @@ public class JEE extends JEX {
             if (replacements.isPresent()) {
                 for (Expr r : replacements.get()) {
                     if (r instanceof ExprBinary) {
-                        mutations.add(new Mutation(Ops.JEE, original, r));
+                        mutations.add(new Mutation(whoiam(), original, r));
                     } else {
                         throw new IllegalStateException("Oops, there should only be ExprBinary expressions for replacements");
                     }
@@ -165,7 +165,7 @@ public class JEE extends JEX {
     private boolean typeCheck(Expr exprA, Expr exprB, boolean replace) {
         Type replacementType = getType(exprB);
         if (replace) {
-            return super.compatibleVariablesChecker(exprA, exprB, replacementType, strictTypeCheck());
+            return super.compatibleVariablesChecker(exprA, replacementType, strictTypeCheck());
         } else {
             Type joinedType = getType(exprA).join(replacementType);
             return !emptyOrNone(joinedType);
@@ -173,8 +173,13 @@ public class JEE extends JEX {
     }
 
     @Override
-    protected boolean compatibleVariablesChecker(Expr toReplace, Expr replacement, Type replacementType, boolean strictTypeChecking) {
+    protected boolean compatibleVariablesChecker(Expr toReplace, Type replacementType, boolean strictTypeChecking) {
         return true; //we will check types later
+    }
+
+    @Override
+    protected Ops whoiam() {
+        return Ops.JEE;
     }
 
 

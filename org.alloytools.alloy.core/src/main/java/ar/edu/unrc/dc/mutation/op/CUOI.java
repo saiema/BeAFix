@@ -91,9 +91,14 @@ public class CUOI extends Mutator {
 
     private Optional<Mutation> getMutation(Expr x) {
         if (isBooleanExpression(x)) {
-            return Optional.of(new Mutation(Ops.CUOI, x, ExprUnary.Op.NOT.make(x.pos(), (Expr) x.clone())));
+            return Optional.of(new Mutation(whoiam(), x, ExprUnary.Op.NOT.make(x.pos(), (Expr) x.clone())));
         }
         return Optional.empty();
+    }
+
+    @Override
+    protected Ops whoiam() {
+        return Ops.CUOI;
     }
 
 }
