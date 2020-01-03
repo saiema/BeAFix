@@ -16,6 +16,11 @@ public class MutationConfiguration {
                                       public Class< ? > getValueType() {
                                           return Boolean.class;
                                       }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return Boolean.TRUE;
+                                      }
                                   },
 
                                   OPERATOR_JEX_STRICT_TYPE_CHECK
@@ -26,11 +31,48 @@ public class MutationConfiguration {
                                       public Class< ? > getValueType() {
                                           return Boolean.class;
                                       }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return Boolean.TRUE;
+                                      }
+                                  },
+
+                                  OPERATOR_QTBER_BOUND_MAX_GENERATION
+
+                                  {
+
+                                      @Override
+                                      public Class< ? > getValueType() {
+                                          return Integer.class;
+                                      }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return new Integer(3);
+                                      }
+                                  },
+
+                                  OPERATOR_QTBER_BOUND_MIN_GENERATION
+
+                                  {
+
+                                      @Override
+                                      public Class< ? > getValueType() {
+                                          return Integer.class;
+                                      }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return new Integer(1);
+                                      }
                                   }
 
         ;
 
         public abstract Class< ? > getValueType();
+
+        public abstract Object defaultValue();
     }
 
     private static MutationConfiguration instance;
