@@ -1,17 +1,21 @@
 package ar.edu.unrc.dc.mutation;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
+import ar.edu.unrc.dc.mutation.visitors.SearchAndReplace;
+import ar.edu.unrc.dc.mutation.visitors.SearchExpr;
 import edu.mit.csail.sdg.ast.Browsable;
+import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
+import edu.mit.csail.sdg.ast.ExprHasName;
+import edu.mit.csail.sdg.ast.ExprQt;
 import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.ast.Sig;
-import edu.mit.csail.sdg.ast.VisitSearchAndReplace;
-import edu.mit.csail.sdg.ast.VisitSearchExpr;
 import edu.mit.csail.sdg.parser.CompModule;
 
 /**
@@ -92,7 +96,7 @@ public class Mutation {
             return this;
         if (!this.parent.get().parent().isPresent()) {
             //compress this with parent
-            VisitSearchAndReplace replacer = new VisitSearchAndReplace(this.original, this.mutant);
+            SearchAndReplace replacer = new SearchAndReplace(this.original, this.mutant);
             Optional<Expr> newMutant = replacer.visitThis(this.parent.get().mutant);
             if (newMutant.isPresent()) {
                 return new Mutation(Ops.MULTI, this.parent.get().original, newMutant.get());
@@ -108,7 +112,9 @@ public class Mutation {
     }
 
     public static boolean compatible(Mutation from, Mutation mutate) {
-        VisitSearchExpr searcher = new VisitSearchExpr(mutate.original);
+        if (from.operator.equals(Ops.QTBER) || mutate.operator.equals(Ops.QTBER))
+            return false;
+        SearchExpr searcher = new SearchExpr(mutate.original);
         return searcher.visitThis(from.mutant);
     }
 
@@ -144,11 +150,38 @@ public class Mutation {
         sb.append("(");
         sb.append(operator.toString());
         sb.append(", ");
-        sb.append(original.toString());
+        sb.append(toString(original));
         sb.append(", ");
-        sb.append(mutant.toString());
+        sb.append(toString(mutant));
         sb.append(")");
         return sb.toString();
+    }
+
+    private String toString(Expr x) {
+        if (x instanceof ExprQt) {
+            StringBuilder sb = new StringBuilder();
+            ExprQt xAsQt = (ExprQt) x;
+            xAsQt.toString(sb, -1);
+            sb.append(" vars:");
+            Iterator<Decl> dit = xAsQt.decls.iterator();
+            while (dit.hasNext()) {
+                Decl d = dit.next();
+                Iterator< ? extends ExprHasName> varIt = d.names.iterator();
+                while (varIt.hasNext()) {
+                    ExprHasName var = varIt.next();
+                    sb.append(var.toString());
+                    if (varIt.hasNext())
+                        sb.append(", ");
+                    else
+                        sb.append(" : ");
+                }
+                sb.append(d.expr.toString());
+                if (dit.hasNext())
+                    sb.append(";");
+            }
+            return sb.toString();
+        }
+        return x.toString();
     }
 
     //VARIABILIZATION RELATED UTILITIES
@@ -198,14 +231,14 @@ public class Mutation {
                 //search for mutation
                 if (from.getID() == this.original.getID()) {
                     //original is inside mutant
-                    VisitSearchExpr searcher = new VisitSearchExpr(original);
+                    SearchExpr searcher = new SearchExpr(original);
                     if (searcher.visitThis(mutant))
                         return false;
                     //does the left original expression exists in the mutant
-                    searcher = new VisitSearchExpr(asBinExpr.left);
+                    searcher = new SearchExpr(asBinExpr.left);
                     boolean originalLeftIsInMutant = searcher.visitThis(mutant);
                     //does the right original expression exists in the mutant
-                    searcher = new VisitSearchExpr(asBinExpr.right);
+                    searcher = new SearchExpr(asBinExpr.right);
                     boolean originalRightIsInMutant = searcher.visitThis(mutant);
                     if (originalLeftIsInMutant && originalRightIsInMutant) {
                         //mutant changed the operator
@@ -222,7 +255,7 @@ public class Mutation {
                     }
 
                 } else {
-                    VisitSearchExpr searcher = new VisitSearchExpr(original);
+                    SearchExpr searcher = new SearchExpr(original);
                     switch (search) {
                         case BOTH :
                             return searcher.visitThis(asBinExpr.left) || searcher.visitThis(asBinExpr.right);
