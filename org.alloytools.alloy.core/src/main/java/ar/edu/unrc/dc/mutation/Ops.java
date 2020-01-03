@@ -4,6 +4,7 @@ import ar.edu.unrc.dc.mutation.op.AECR;
 import ar.edu.unrc.dc.mutation.op.AORB;
 import ar.edu.unrc.dc.mutation.op.BES;
 import ar.edu.unrc.dc.mutation.op.COR;
+import ar.edu.unrc.dc.mutation.op.EMOR;
 import ar.edu.unrc.dc.mutation.op.MOR;
 import ar.edu.unrc.dc.mutation.op.QTBER;
 import ar.edu.unrc.dc.mutation.op.QTOR;
@@ -197,6 +198,19 @@ public enum Ops {
                      @Override
                      public Mutator getOperator(CompModule context) {
                          return new AECR(context);
+                     }
+
+                 },
+                 EMOR {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new EMOR(context);
                      }
 
                  },
