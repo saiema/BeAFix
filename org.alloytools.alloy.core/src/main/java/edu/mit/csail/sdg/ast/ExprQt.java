@@ -395,6 +395,32 @@ public final class ExprQt extends Expr {
         this.sub.setBrowsableParent(this);
     }
 
+
+    public ExprQt mutateOp(Op op) {
+        return new ExprQt(this.pos, this.closingBracket, op, this.type, this.decls, this.sub, this.ambiguous, this.weight, this.errors);
+    }
+
+    public ExprQt replaceBoundForDecl(Decl target, Expr replacement) {
+        List<Decl> newDecls = new LinkedList<>();
+        for (Decl d : this.decls) {
+
+            List<ExprHasName> dnamesClone = new LinkedList<>();
+            for (Expr dn : d.names)
+                dnamesClone.add((ExprHasName) dn.clone());
+            Expr bound;
+            if (d.equals(target)) {
+                bound = replacement;
+            } else {
+                bound = (Expr) d.expr.clone();
+            }
+
+
+            Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, bound);
+            newDecls.add(dclone);
+        }
+        return new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(newDecls), this.sub, this.ambiguous, this.weight, this.errors);
+    }
+
     @Override
     public Object clone() {
         List<Decl> declsClone = new LinkedList<>();
@@ -412,5 +438,4 @@ public final class ExprQt extends Expr {
         clone.setIDEnv(getIDEnv());
         return clone;
     }
-
 }
