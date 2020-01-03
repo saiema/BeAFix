@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Mutator;
-import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
@@ -41,8 +40,6 @@ public abstract class BinOpReplacer extends Mutator {
     protected abstract boolean canMutate(ExprBinary x);
 
     protected abstract List<Op> getOperators();
-
-    protected abstract Ops whoiam();
 
     protected final Optional<List<Mutation>> mutants(ExprBinary x) {
         List<Mutation> mutants = new LinkedList<>();
