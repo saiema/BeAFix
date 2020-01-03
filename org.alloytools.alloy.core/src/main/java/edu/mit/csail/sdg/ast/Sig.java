@@ -530,7 +530,7 @@ public abstract class Sig extends Expr implements Clause {
             if (this == UNIV || that == NONE)
                 return false;
             for (PrimSig me = this; me != null; me = me.parent)
-                if (me == that)
+                if (me.equals(that)) //CHANGED == for equals
                     return true;
             return false;
         }
@@ -831,7 +831,7 @@ public abstract class Sig extends Expr implements Clause {
         @Override
         public Object clone() {
             Sig sigClone = (Sig) this.sig.clone();
-            Expr boundClone = (Expr) (this.decl != null ? this.decl.expr.clone() : null);
+            Expr boundClone = (Expr) (this.decl != null ? this.decl.expr.clone() : this.type.toExpr());
             Field clone = new Field(this.pos, this.isPrivate, this.isMeta, null, null, sigClone, this.label, boundClone);
             clone.setID(getID());
             clone.setIDEnv(getIDEnv());
