@@ -214,6 +214,14 @@ public enum Ops {
                      }
 
                  },
+                 NESE {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return false;
+                     }
+
+                 },
                  MULTI { //this operator is used when compressing mutations
 
                      @Override
