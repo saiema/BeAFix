@@ -39,3 +39,4 @@ org.alloytools.alloy.application/src/main/java/edu/mit/csail/sdg/alloy4compiler/
 
 gradlew
 gradlew.bat
+/org.alloytools.alloy.core/src/main/java/ar/edu/unrc/dc/mutation/AllTuplesUpToKIterator.java

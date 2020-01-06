@@ -751,8 +751,9 @@ final class SimpleReporter extends A4Reporter {
                 mutantLab.next();
                 cb(out, "", "--------------------------------\n");
                 cb(out, "S2", "Validating mutant "+(mutidx+1)+"/"+mutantLab.mutantCount()+" for " +cmds.size()+" commands...\n\n");
-                cb(out, "S2", "Original: "+mutantLab.getCurrentMutant().original().toString() +"  \n");
-                cb(out, "S2", "Mutant:   "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
+                cb(out, "S2", mutantLab.getCurrentMutationsStr() +"  \n\n");
+                //cb(out, "S2", "Original: "+mutantLab.getMutation().original().toString() +"  \n");
+                //cb(out, "S2", "Mutant:   "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
 
                 //=============================================
                 List<String> result = new ArrayList<String>(cmds.size());
@@ -773,6 +774,9 @@ final class SimpleReporter extends A4Reporter {
                         //@mutation ==>> pass the mutation lab to the translator for mutation
 
                         A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options, mutantLab);
+                        //if the solution is as expected then continue, else break this mutation checks and continue with other mutation
+
+
                         if (ai == null)
                             result.add(null);
                         else if (ai.satisfiable())
@@ -813,6 +817,7 @@ final class SimpleReporter extends A4Reporter {
                     if (!repaired)
                         rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
                     else {
+                        // fix found, break the search
                         rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
                         break;
                     }
