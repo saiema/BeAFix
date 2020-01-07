@@ -5,6 +5,7 @@ import java.util.List;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
+import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.parser.CompModule;
 
 /**
@@ -34,6 +35,26 @@ public class BESOR extends BinOpReplacer {
     @Override
     protected List<Op> getOperators() {
         return SET_OPERATORS;
+    }
+
+    @Override
+    protected boolean validate(ExprBinary original, Op newOperator) {
+        Type left = original.left.type();
+        Type right = original.right.type();
+        switch(newOperator) {
+            case JOIN:
+                return !emptyOrNone(left.join(right));
+            case INTERSECT:
+                return !emptyOrNone(left.intersect(right));
+            case PLUSPLUS:
+            case PLUS:
+                return !emptyOrNone(left.unionWithCommonArity(right));
+            case MINUS:
+                return !emptyOrNone(left.pickCommonArity(right));
+            case IN:
+                return left.hasCommonArity(right);
+            default: throw new IllegalArgumentException("The new operator is not a supported one by this mutator");
+        }
     }
 
     @Override

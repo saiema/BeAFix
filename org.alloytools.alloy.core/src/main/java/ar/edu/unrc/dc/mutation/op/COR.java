@@ -35,6 +35,11 @@ public class COR extends BinOpReplacer {
     }
 
     @Override
+    protected boolean validate(ExprBinary original, Op newOperator) {
+        return true;
+    }
+
+    @Override
     protected Ops whoiam() {
         return Ops.COR;
     }

@@ -23,15 +23,12 @@ public abstract class BinOpReplacer extends Mutator {
         List<Mutation> mutations = new LinkedList<>();
         if (canMutate(x)) {
             Optional<List<Mutation>> mutants = mutants(x);
-            if (mutants.isPresent())
-                mutations.addAll(mutants.get());
+            mutants.ifPresent(mutations::addAll);
         }
         Optional<List<Mutation>> leftMutations = x.left.accept(this);
         Optional<List<Mutation>> rightMutations = x.right.accept(this);
-        if (leftMutations.isPresent())
-            mutations.addAll(leftMutations.get());
-        if (rightMutations.isPresent())
-            mutations.addAll(rightMutations.get());
+        leftMutations.ifPresent(mutations::addAll);
+        rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
@@ -41,10 +38,14 @@ public abstract class BinOpReplacer extends Mutator {
 
     protected abstract List<Op> getOperators();
 
+    protected abstract boolean validate(ExprBinary original, Op newOperator);
+
     protected final Optional<List<Mutation>> mutants(ExprBinary x) {
         List<Mutation> mutants = new LinkedList<>();
         for (Op o : getOperators()) {
             if (x.op.equals(o))
+                continue;
+            if (!validate(x, o))
                 continue;
             ExprBinary mutant = x.mutateOp(o);
             mutants.add(new Mutation(whoiam(), x, mutant));
