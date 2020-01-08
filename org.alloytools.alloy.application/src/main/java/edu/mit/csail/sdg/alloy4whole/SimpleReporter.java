@@ -790,7 +790,7 @@ final class SimpleReporter extends A4Reporter {
                         }
 
                     } catch (Exception e) {
-                        cb(out, "bold", "ERROR! -> Mutation discarted. \n");
+                        cb(out, "bold", "ERROR! -> Mutation discarded. \n");
                         discarted = true;
                         repaired = false; // if the mutantion fails in one command ignore the rest
                     }
