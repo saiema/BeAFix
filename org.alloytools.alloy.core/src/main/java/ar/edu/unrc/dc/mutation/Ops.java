@@ -11,6 +11,7 @@ import ar.edu.unrc.dc.mutation.op.QTOR;
 import ar.edu.unrc.dc.mutation.op.ROR;
 import ar.edu.unrc.dc.mutation.op.RUOI;
 import ar.edu.unrc.dc.mutation.op.RUOR;
+import ar.edu.unrc.dc.mutation.op.NESE;
 import edu.mit.csail.sdg.parser.CompModule;
 
 public enum Ops {
@@ -218,8 +219,11 @@ public enum Ops {
 
                      @Override
                      public boolean isImplemented() {
-                         return false;
+                         return true;
                      }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) { return new NESE(context); }
 
                  },
                  MULTI { //this operator is used when compressing mutations
