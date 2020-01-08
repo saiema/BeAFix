@@ -756,11 +756,11 @@ final class SimpleReporter extends A4Reporter {
                 //cb(out, "S2", "Mutant:   "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
 
                 //=============================================
-                List<String> result = new ArrayList<String>(cmds.size());
+                //List<String> result = new ArrayList<String>(cmds.size());
                 // check all commands
                 boolean discarted = false;
+                boolean repaired = true;
                 for (int i = 0; i < cmds.size(); i++) {
-                    discarted = false;
                     try {
                         synchronized (SimpleReporter.class) {
                             latestModule = world;
@@ -776,43 +776,28 @@ final class SimpleReporter extends A4Reporter {
                         A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options, mutantLab);
                         //if the solution is as expected then continue, else break this mutation checks and continue with other mutation
 
+                        if (ai != null) {
+                            if (ai.satisfiable()) {
+                                if (cmd.expects == 0 || (cmd.expects == -1 && cmd.check) ) {
+                                    repaired = false;
+                                }
+                            }
+                            else {
+                                if (cmd.expects == 1 || (cmd.expects == -1 && !cmd.check) ){
+                                    repaired = false;
+                                }
+                            }
+                        }
 
-                        if (ai == null)
-                            result.add(null);
-                        else if (ai.satisfiable())
-                            result.add(tempXML);
-                        else if (ai.highLevelCore().a.size() > 0)
-                            result.add(tempCNF + ".core");
-                        else
-                            result.add("");
                     } catch (Exception e) {
                         cb(out, "bold", "ERROR! -> Mutation discarded. \n");
                         discarted = true;
+                        repaired = false; // if the mutantion fails in one command ignore the rest
                     }
+                    if (!repaired) break; // if the mutation does not repair for one command of the oracle the ignore the rest of command for it
                 }
                 //=========== check all result to know if is repaired
                 if (!discarted) {
-                    boolean repaired = true;
-                    (new File(tempdir)).delete(); // In case it was UNSAT, or
-                    // canceled...
-
-                    for (int i = 0; i < result.size(); i++) {
-                        Command r = world.getAllCommands().get(i);
-                        if (result.get(i) == null) {
-                            continue;
-                        }
-                        if (result.get(i).endsWith(".xml")) {
-                            if ((r.expects == 0) || (r.expects == -1)) // by default is 0
-                                repaired = false;
-                        } else if (result.get(i).endsWith(".core")) {
-                            if (r.expects == 1)
-                                repaired = false;
-                        } else {
-
-                            if (r.expects == 1)
-                                repaired = false;
-                        }
-                    }
 
                     if (!repaired)
                         rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
@@ -822,7 +807,10 @@ final class SimpleReporter extends A4Reporter {
                         break;
                     }
                 }
+
             }
+            (new File(tempdir)).delete(); // In case it was UNSAT, or
+            // canceled...
 
         }
     }
