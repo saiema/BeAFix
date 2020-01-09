@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public class MutationConfiguration {
 
-    public static enum ConfigKey {
+    public enum ConfigKey {
 
                                   OPERATOR_BES_STRICT_TYPE_CHECK
 
@@ -49,7 +49,7 @@ public class MutationConfiguration {
 
                                       @Override
                                       public Object defaultValue() {
-                                          return new Integer(3);
+                                          return 3;
                                       }
                                   },
 
@@ -64,7 +64,19 @@ public class MutationConfiguration {
 
                                       @Override
                                       public Object defaultValue() {
-                                          return new Integer(1);
+                                          return 1;
+                                      }
+                                  },
+
+                                  OPERATOR_SSE_STRICT_TYPE_CHECK
+
+                                  {
+                                      @Override
+                                      public Class<?> getValueType() { return Boolean.class; }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return Boolean.TRUE;
                                       }
                                   }
 

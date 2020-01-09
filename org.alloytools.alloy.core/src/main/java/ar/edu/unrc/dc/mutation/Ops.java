@@ -1,17 +1,6 @@
 package ar.edu.unrc.dc.mutation;
 
-import ar.edu.unrc.dc.mutation.op.AECR;
-import ar.edu.unrc.dc.mutation.op.AORB;
-import ar.edu.unrc.dc.mutation.op.BES;
-import ar.edu.unrc.dc.mutation.op.COR;
-import ar.edu.unrc.dc.mutation.op.EMOR;
-import ar.edu.unrc.dc.mutation.op.MOR;
-import ar.edu.unrc.dc.mutation.op.QTBER;
-import ar.edu.unrc.dc.mutation.op.QTOR;
-import ar.edu.unrc.dc.mutation.op.ROR;
-import ar.edu.unrc.dc.mutation.op.RUOI;
-import ar.edu.unrc.dc.mutation.op.RUOR;
-import ar.edu.unrc.dc.mutation.op.NESE;
+import ar.edu.unrc.dc.mutation.op.*;
 import edu.mit.csail.sdg.parser.CompModule;
 
 public enum Ops {
@@ -224,6 +213,17 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) { return new NESE(context); }
+
+                 },
+                 SSE {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) { return new SSE(context); }
 
                  },
                  MULTI { //this operator is used when compressing mutations
