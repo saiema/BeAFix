@@ -50,7 +50,6 @@ public class SearchExpr extends VisitReturn<Boolean> {
                     return Boolean.TRUE;
             }
         }
-
         return Boolean.FALSE;
     }
 
@@ -58,6 +57,10 @@ public class SearchExpr extends VisitReturn<Boolean> {
     public Boolean visit(ExprCall x) throws Err {
         if (match(x, this.target)) {
             return Boolean.TRUE;
+        }
+        for (Expr arg : x.args) {
+            if (arg.accept(this))
+                return Boolean.TRUE;
         }
         return Boolean.FALSE;
     }
@@ -92,8 +95,12 @@ public class SearchExpr extends VisitReturn<Boolean> {
         } else {
             if (x.var.accept(this))
                 return Boolean.TRUE;
+            if (x.expr.accept(this))
+                return Boolean.TRUE;
+            if (x.sub.accept(this))
+                return Boolean.TRUE;
         }
-        return x.sub.accept(this);
+        return Boolean.FALSE;
     }
 
     @Override
@@ -107,6 +114,8 @@ public class SearchExpr extends VisitReturn<Boolean> {
                         return Boolean.TRUE;
                     }
                 }
+                if (d.expr.accept(this))
+                    return Boolean.TRUE;
             }
         }
         return x.sub.accept(this);

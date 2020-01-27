@@ -1,9 +1,5 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
@@ -11,6 +7,10 @@ import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Join Expression Shortener
@@ -48,16 +48,12 @@ public class JES extends JEX {
         List<Mutation> mutations = new LinkedList<>();
         if (isMutable(x)) {
             Optional<List<Mutation>> mutants = generateMutants(x, x);
-            if (mutants.isPresent()) {
-                mutations.addAll(mutants.get());
-            }
+            mutants.ifPresent(mutations::addAll);
         }
         Optional<List<Mutation>> leftMutations = x.left.accept(this);
         Optional<List<Mutation>> rightMutations = x.right.accept(this);
-        if (leftMutations.isPresent())
-            mutations.addAll(leftMutations.get());
-        if (rightMutations.isPresent())
-            mutations.addAll(rightMutations.get());
+        leftMutations.ifPresent(mutations::addAll);
+        rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
@@ -89,19 +85,29 @@ public class JES extends JEX {
 
     private Optional<List<Expr>> obtainReplacements(ExprBinary replace) {
         List<Expr> replacements = new LinkedList<>();
-        if (typeCheck(replace, replace.left, true)) {
+        if (typeCheck(replace, replace.left, true) && size(replace.right) == 1) {
             replacements.add(replace.left);
         }
-        if (typeCheck(replace, replace.right, true)) {
+        if (typeCheck(replace, replace.right, true) && size(replace.left) == 1) {
             replacements.add(replace.right);
         }
-        Optional<List<Expr>> simpleReplacementsOp = getCompatibleVariablesFor(replace, strictTypeCheck());
-        if (simpleReplacementsOp.isPresent())
-            replacements.addAll(simpleReplacementsOp.get());
+        if (size(replace) == 2) {
+            Optional<List<Expr>> simpleReplacementsOp = getCompatibleVariablesFor(replace, strictTypeCheck());
+            simpleReplacementsOp.ifPresent(replacements::addAll);
+        }
         if (!replacements.isEmpty()) {
             return Optional.of(replacements);
         }
         return Optional.empty();
+    }
+
+    private int size(Expr x) {
+        if (x instanceof ExprBinary) {
+            ExprBinary xAsBinary = (ExprBinary) x;
+            if (xAsBinary.op.equals(ExprBinary.Op.JOIN))
+                return size(xAsBinary.left) + size(xAsBinary.right);
+        }
+        return 1;
     }
 
     private boolean typeCheck(Expr exprA, Expr exprB, boolean replace) {

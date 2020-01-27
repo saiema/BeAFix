@@ -15,7 +15,8 @@
 
 package edu.mit.csail.sdg.alloy4whole;
 
-import ar.edu.unrc.dc.mutation.MutantLab;
+import ar.edu.unrc.dc.mutation.MutantLabMulti;
+import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerTask;
@@ -31,6 +32,9 @@ import org.alloytools.alloy.core.AlloyCore;
 
 import java.io.*;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 
 /** This helper method is used by SimpleGUI. */
@@ -715,6 +719,22 @@ final class SimpleReporter extends A4Reporter {
     /** Task that perform a repair by muting mutants expressions (marked with #m#) until all commands returns their expected value. */
     static final class SimpleTaskRepair1 implements WorkerTask {
 
+        private static final Logger logger = Logger.getLogger(SimpleTaskRepair1.class.getName());
+
+        static {
+            try {
+                // This block configure the logger with handler and formatter
+                FileHandler fh = new FileHandler("SimpleTaskRepair1.log");
+                logger.addHandler(fh);
+                SimpleFormatter formatter = new SimpleFormatter();
+                fh.setFormatter(formatter);
+            } catch (SecurityException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         private static final long serialVersionUID = 0;
         public A4Options          options;
         public String             tempdir;
@@ -744,21 +764,27 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "bold", ((CompModule) world).markedEprsToMutate.size()+  " mutations mark detected Executing \n");
             cb(out, "", "Generating mutants ... \n\n");
             ((CompModule) world).updateMarkedExprsToMutate();
-            MutantLab mutantLab = new MutantLab((CompModule) world);
-            cb(out, "", mutantLab.mutantCount() + " mutants generated \n\n");
+            Ops[] availableOps = Ops.values();
+            MutantLabMulti mutantLab = new MutantLabMulti((CompModule)world, availableOps);//new MutantLab((CompModule) world);
+            cb(out, "", mutantLab.mutantCount() + " mutations generated \n\n");
             //======================== mutants test cycle ===========
-            for  (int mutidx =0 ; mutidx < mutantLab.mutantCount(); mutidx++){
-                mutantLab.next();
+            while(mutantLab.advance()) {
+            //for  (int mutidx =0 ; mutidx < mutantLab.mutantCount(); mutidx++){
+                //mutantLab.next();
                 cb(out, "", "--------------------------------\n");
-                cb(out, "S2", "Validating mutant "+(mutidx+1)+"/"+mutantLab.mutantCount()+" for " +cmds.size()+" commands...\n\n");
+                //cb(out, "S2", "Validating mutant "+(mutidx+1)+"/"+mutantLab.mutantCount()+" for " +cmds.size()+" commands...\n\n");
+                cb(out, "S2", "Validating mutant for " +cmds.size()+" commands...\n\n");
                 cb(out, "S2", mutantLab.getCurrentMutationsStr() +"  \n\n");
                 //cb(out, "S2", "Original: "+mutantLab.getMutation().original().toString() +"  \n");
                 //cb(out, "S2", "Mutant:   "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
 
+                logger.info("Validating mutant");
+                logger.info(mutantLab.getCurrentMutationsStr());
+
                 //=============================================
                 //List<String> result = new ArrayList<String>(cmds.size());
                 // check all commands
-                boolean discarted = false;
+                boolean discarded = false;
                 boolean repaired = true;
                 for (int i = 0; i < cmds.size(); i++) {
                     try {
@@ -791,19 +817,26 @@ final class SimpleReporter extends A4Reporter {
 
                     } catch (Exception e) {
                         cb(out, "bold", "ERROR! -> Mutation discarded. \n");
-                        discarted = true;
+                        discarded = true;
                         repaired = false; // if the mutantion fails in one command ignore the rest
+                        logger.info("ERROR, mutant discarded");
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsString = sw.toString();
+                        logger.info(exceptionAsString);
                     }
                     if (!repaired) break; // if the mutation does not repair for one command of the oracle the ignore the rest of command for it
                 }
                 //=========== check all result to know if is repaired
-                if (!discarted) {
+                if (!discarded) {
 
-                    if (!repaired)
+                    if (!repaired) {
                         rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
-                    else {
+                        logger.info("Current mutant does not repair the model, some commands do not results as expected");
+                    } else {
                         // fix found, break the search
                         rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
+                        logger.info("Current mutant repair the model, all commands results as expected");
                         break;
                     }
                 }

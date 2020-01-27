@@ -15,22 +15,12 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.ast.Type.EMPTY;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.NoSuchElementException;
-
-import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.ConstList.TempList;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
+
+import java.util.*;
+
+import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 /**
  * Immutable; represents a quantified expression. It can have one of the
@@ -122,13 +112,15 @@ public final class ExprQt extends Expr {
                 out.append('(').append(op).append(' ');
             else
                 out.append('{');
-            for (Decl d : decls)
+            for (Decl d : decls) {
                 for (ExprHasName v : d.names) {
                     if (!first)
                         out.append(',');
                     first = false;
                     out.append(v.label);
                 }
+                out.append(" : ").append(d.expr.toString()).append(" ");
+            }
             if (op != Op.COMPREHENSION || !(sub instanceof ExprConstant) || ((ExprConstant) sub).op != ExprConstant.Op.TRUE) {
                 out.append(" | ");
                 sub.toString(out, -1);
@@ -419,6 +411,19 @@ public final class ExprQt extends Expr {
             newDecls.add(dclone);
         }
         return new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(newDecls), this.sub, this.ambiguous, this.weight, this.errors);
+    }
+
+    public ExprQt replaceFormula(Expr replacement) {
+        List<Decl> declsClone = new LinkedList<>();
+        for (Decl d : this.decls) {
+            List<ExprHasName> dnamesClone = new LinkedList<>();
+            for (Expr dn : d.names)
+                dnamesClone.add((ExprHasName) dn.clone());
+            Expr exprClone = (Expr) d.expr.clone();
+            Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, exprClone);
+            declsClone.add(dclone);
+        }
+        return new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(declsClone), (Expr) replacement.clone(), this.ambiguous, this.weight, this.errors);
     }
 
     @Override

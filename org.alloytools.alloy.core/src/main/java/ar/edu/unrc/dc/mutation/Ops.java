@@ -165,6 +165,19 @@ public enum Ops {
                          return new QTOR(context);
                      }
                  },
+                 QTOI {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new QTOI(context);
+                     }
+
+                 },
                  QTBER {
 
                      @Override

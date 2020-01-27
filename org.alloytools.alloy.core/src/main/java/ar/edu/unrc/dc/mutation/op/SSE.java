@@ -11,6 +11,12 @@ import java.util.Optional;
 
 import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
 
+/**
+ * Simple Set Extender
+ * <p>
+ *     Given an expression {@code x} this will generate {@code x + y} where {@code y} is a compatible set expression comprised by defined Signatures and Fields
+ * </p>
+ */
 public class SSE extends Mutator {
 
     public SSE(CompModule context) {
@@ -18,24 +24,7 @@ public class SSE extends Mutator {
     }
 
     @Override
-    public Optional<List<Mutation>> visit(ExprQt x) throws Err {
-//        System.out.println("Seeing " + x.toString());
-        List<Mutation> mutations = new LinkedList<>();
-        for (Decl d : x.decls) {
-            Optional<List<Mutation>> boundMutations = d.expr.accept(this);
-            boundMutations.ifPresent(mutations::addAll);
-        }
-        Optional<List<Mutation>> formulaMutations = x.sub.accept(this);
-        formulaMutations.ifPresent(mutations::addAll);
-        if (!mutations.isEmpty()) {
-            return Optional.of(mutations);
-        }
-        return EMPTY;
-    }
-
-    @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
-//        System.out.println("Seeing " + x.toString());
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mainMutations = generateMutationsFor(x);
         Optional<List<Mutation>> leftMutations = x.left.accept(this);
@@ -51,7 +40,6 @@ public class SSE extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprCall x) throws Err {
-//        System.out.println("Seeing " + x.toString());
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mainMutations = generateMutationsFor(x);
         mainMutations.ifPresent(mutations::addAll);
@@ -67,7 +55,6 @@ public class SSE extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
-//        System.out.println("Seeing " + x.toString());
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mainMutations = generateMutationsFor(x);
         Optional<List<Mutation>> subMutations = (!x.op.equals(ExprUnary.Op.NOOP))? x.sub.accept(this) : EMPTY;
@@ -81,7 +68,6 @@ public class SSE extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprVar x) throws Err {
-//        System.out.println("Seeing " + x.toString());
         return generateMutationsFor(x);
     }
 

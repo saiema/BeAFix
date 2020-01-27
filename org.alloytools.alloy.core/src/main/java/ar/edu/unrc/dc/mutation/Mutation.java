@@ -1,22 +1,15 @@
 package ar.edu.unrc.dc.mutation;
 
+import ar.edu.unrc.dc.mutation.visitors.SearchAndReplace;
+import ar.edu.unrc.dc.mutation.visitors.SearchExpr;
+import edu.mit.csail.sdg.ast.*;
+import edu.mit.csail.sdg.ast.ExprBinary.Op;
+import edu.mit.csail.sdg.parser.CompModule;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-
-import ar.edu.unrc.dc.mutation.visitors.SearchAndReplace;
-import ar.edu.unrc.dc.mutation.visitors.SearchExpr;
-import edu.mit.csail.sdg.ast.Browsable;
-import edu.mit.csail.sdg.ast.Decl;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprBinary.Op;
-import edu.mit.csail.sdg.ast.ExprHasName;
-import edu.mit.csail.sdg.ast.ExprQt;
-import edu.mit.csail.sdg.ast.Func;
-import edu.mit.csail.sdg.ast.Sig;
-import edu.mit.csail.sdg.parser.CompModule;
 
 /**
  * A mutation is represented by a tuple (operator, original, mutant) where the
@@ -64,6 +57,22 @@ public class Mutation {
         return this.parent;
     }
 
+    public Expr getMayorAffectedExpression() {
+        Browsable current = original;
+        while((current instanceof Expr) && isMinor(current)) {
+            current = current.getBrowsableParent();
+        }
+        if (!(current instanceof Expr)) throw new IllegalStateException("current should be an Expr");
+        return (Expr) current;
+    }
+
+    private boolean isMinor(Browsable b) {
+        if (b.getBrowsableParent() == null) return false;
+        Browsable parent = b.getBrowsableParent();
+        if (!(parent instanceof Expr)) return false;
+        return !(parent instanceof Sig);
+    }
+
     /**
      * Merges the mutation represented by this option with another one
      * <p>
@@ -78,8 +87,10 @@ public class Mutation {
      */
     public Mutation merge(Mutation with) {
         if (compatible(this, with)) {
-            with.setParent(this);
-            return with;
+            Mutation thizClone = (Mutation) clone();
+            Mutation withClone = (Mutation) with.clone();
+            withClone.setParent(thizClone);
+            return withClone;
         } else {
             throw new IllegalArgumentException("Incompatible mutation, call #compatible(Mutation, Mutation) before this method");
         }
@@ -118,6 +129,16 @@ public class Mutation {
         return searcher.visitThis(from.mutant);
     }
 
+    public static boolean incompatible(Mutation from, Mutation mutate) {
+        if (from.operator.equals(Ops.QTBER) || mutate.operator.equals(Ops.QTBER))
+            return true;
+        if (!from.getMayorAffectedExpression().equals(mutate.getMayorAffectedExpression()))
+            return false;
+        if (from.original.equals(mutate.original))
+            return !compatible(from, mutate);
+        return false;
+    }
+
     public static Optional<Integer> depth(Mutation from, Mutation mutate) {
         return depth(from.mutant(), mutate.original().getID(), 0);
     }
@@ -125,8 +146,7 @@ public class Mutation {
     private static Optional<Integer> depth(Browsable root, int id, int currentDepth) {
         if (root.getID() == id)
             return Optional.of(currentDepth);
-        List<Browsable> nodesToVisit = new LinkedList<>();
-        nodesToVisit.addAll(root.getSubnodes());
+        List<Browsable> nodesToVisit = new LinkedList<>(root.getSubnodes());
         while (!nodesToVisit.isEmpty()) {
             List<Browsable> childrens = new LinkedList<>();
             for (Browsable n : nodesToVisit) {
@@ -143,10 +163,30 @@ public class Mutation {
     }
 
     @Override
+    protected Object clone() {
+        Mutation clonedMutation = new Mutation(operator, original, mutant);
+        parent.ifPresent(mutation -> clonedMutation.setParent((Mutation) mutation.clone()));
+        return clonedMutation;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null)
+            return false;
+        if (!(obj instanceof Mutation))
+            return false;
+        Mutation omut = (Mutation) obj;
+        if (!omut.operator().equals(operator))
+            return false;
+        if (omut.original().toString().compareTo(original.toString()) != 0)
+            return false;
+        return omut.mutant().toString().compareTo(mutant.toString()) == 0;
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        if (parent.isPresent())
-            sb.append("FROM ").append(parent.get().toString()).append("\n\t");
+        parent.ifPresent(mutation -> sb.append("FROM ").append(mutation.toString()).append("\n\t"));
         sb.append("(");
         sb.append(operator.toString());
         sb.append(", ");
@@ -190,6 +230,10 @@ public class Mutation {
                          LEFT,
                          RIGHT,
                          BOTH
+    }
+
+    public int line() {
+        return original.pos.y;
     }
 
     public boolean isEqualMutation() {
@@ -245,10 +289,10 @@ public class Mutation {
                         return false;
                     } else if (originalLeftIsInMutant) {
                         //mutant changed the right part
-                        return !search.equals(SEARCH.LEFT) ? true : false;
+                        return !search.equals(SEARCH.LEFT);
                     } else if (originalRightIsInMutant) {
                         //mutant changed the left part
-                        return !search.equals(SEARCH.RIGHT) ? true : false;
+                        return !search.equals(SEARCH.RIGHT);
                     } else {
                         //mutant changed the whole original expression
                         return false;

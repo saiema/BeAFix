@@ -15,21 +15,15 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.ast.Type.EMPTY;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.alloy4.ConstList.TempList;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.ConstList.TempList;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
+import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 /**
  * Immutable; represents disjoint[] or pred/totalOrder[] or (... and ... and ..)
@@ -41,7 +35,7 @@ import edu.mit.csail.sdg.alloy4.Pos;
 public final class ExprList extends Expr {
 
     /** This class contains all possible builtin predicates. */
-    public static enum Op {
+    public enum Op {
                            /**
                             * DISJOINT (meaning the argument relations are all disjoint)
                             */
@@ -164,11 +158,11 @@ public final class ExprList extends Expr {
     public static ExprList make(Pos pos, Pos closingBracket, Op op, List< ? extends Expr> args) {
         boolean ambiguous = false;
         JoinableList<Err> errs = emptyListOfErrors;
-        TempList<Expr> newargs = new TempList<Expr>(args.size());
+        TempList<Expr> newargs = new TempList<>(args.size());
         long weight = 0;
         Type commonArity = null;
-        for (int i = 0; i < args.size(); i++) {
-            Expr a = (op == Op.AND || op == Op.OR) ? args.get(i).typecheck_as_formula() : args.get(i).typecheck_as_set();
+        for (Expr arg : args) {
+            Expr a = (op == Op.AND || op == Op.OR) ? arg.typecheck_as_formula() : arg.typecheck_as_set();
             ambiguous = ambiguous || a.ambiguous;
             weight = weight + a.weight;
             if (a.mult != 0)
@@ -209,7 +203,7 @@ public final class ExprList extends Expr {
 
     /** Generates the expression (arg1 and arg2) */
     public static ExprList makeAND(Pos pos, Pos closingBracket, Expr a, Expr b) {
-        TempList<Expr> list = new TempList<Expr>(2);
+        TempList<Expr> list = new TempList<>(2);
         list.add(a);
         list.add(b);
         return make(pos, closingBracket, Op.AND, list.makeConst());
@@ -217,7 +211,7 @@ public final class ExprList extends Expr {
 
     /** Generates the expression (arg1 || arg2) */
     public static ExprList makeOR(Pos pos, Pos closingBracket, Expr a, Expr b) {
-        TempList<Expr> list = new TempList<Expr>(2);
+        TempList<Expr> list = new TempList<>(2);
         list.add(a);
         list.add(b);
         return make(pos, closingBracket, Op.OR, list.makeConst());
@@ -240,7 +234,7 @@ public final class ExprList extends Expr {
      * additional argument.
      */
     public ExprList addArg(Expr x) {
-        List<Expr> args = new ArrayList<Expr>(this.args);
+        List<Expr> args = new ArrayList<>(this.args);
         args.add(x);
         return make(pos, closingBracket, op, args);
     }
@@ -250,13 +244,12 @@ public final class ExprList extends Expr {
     /** {@inheritDoc} */
     @Override
     public Expr resolve(Type p, Collection<ErrorWarning> warns) {
-        TempList<Expr> newargs = new TempList<Expr>(args.size());
+        TempList<Expr> newargs = new TempList<>(args.size());
         boolean changed = false;
         if (errors.size() > 0)
             return this;
         if (op == Op.AND || op == Op.OR) {
-            for (int i = 0; i < args.size(); i++) {
-                Expr x = args.get(i);
+            for (Expr x : args) {
                 Expr y = x.resolve(Type.FORMULA, warns).typecheck_as_formula();
                 if (x != y)
                     changed = true;
@@ -270,8 +263,7 @@ public final class ExprList extends Expr {
                 else
                     p = p.unionWithCommonArity(args.get(i).type);
             }
-            for (int i = 0; i < args.size(); i++) {
-                Expr x = args.get(i);
+            for (Expr x : args) {
                 Expr y = x.resolve(p, warns).typecheck_as_set();
                 if (x != y)
                     changed = true;
@@ -325,6 +317,31 @@ public final class ExprList extends Expr {
     public void defineParentForComponents() {
         for (Expr a : this.args)
             a.setBrowsableParent(this);
+    }
+
+    /*
+    public ExprBinary mutateOp(Op op) {
+        return new ExprBinary(pos, closingBracket, op, (Expr) left.clone(), (Expr) right.clone(), type, errors);
+    }
+     */
+
+    public ExprList mutateOp(Op op) {
+        List<Expr> argsClone = new LinkedList<>();
+        for (Expr a : this.args) {
+            argsClone.add((Expr) a.clone());
+        }
+        return new ExprList(this.pos, this.closingBracket, op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
+    }
+
+    public ExprList replaceArg(Expr target, Expr replacement) {
+        List<Expr> argsClone = new LinkedList<>();
+        for (Expr a : this.args) {
+            if (a.getID() == target.getID())
+                argsClone.add(replacement);
+            else
+                argsClone.add((Expr) a.clone());
+        }
+        return new ExprList(this.pos, this.closingBracket, this.op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
     }
 
     @Override

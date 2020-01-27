@@ -15,7 +15,7 @@
 
 package edu.mit.csail.sdg.translator;
 
-import ar.edu.unrc.dc.mutation.MutantLab;
+import ar.edu.unrc.dc.mutation.MutantLabMulti;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.*;
@@ -97,8 +97,8 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     /**
      * mutation to apply @Mutation
      */
-    private MutantLab mutantLab;
-    public void setMutation(MutantLab mutantLab) {
+    private MutantLabMulti mutantLab;
+    public void setMutation(MutantLabMulti mutantLab) {
         this.mutantLab = mutantLab;
     }
 
@@ -589,7 +589,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      *         the next satisfying solution X3... until you get an unsatisfying
      *         solution.
      */
-    public static A4Solution execute_commandFromBookWithMutation(A4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, MutantLab ml) throws Err {
+    public static A4Solution execute_commandFromBookWithMutation(A4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, /*MutantLab*/ MutantLabMulti ml) throws Err {
         if (rep == null)
             rep = A4Reporter.NOP;
         TranslateAlloyToKodkod tr = null;
@@ -766,7 +766,9 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     @Override
     public Object visitThis(Expr x) throws Err {
         if (mutantLab!=null){
-                return mutantLab.getMutation(x).accept(this);
+                Optional<Expr> mutant = mutantLab.getMutation(x);
+                if (mutant.isPresent())
+                    return mutant.get().accept(this);
         }
         return x.accept(this);
     }

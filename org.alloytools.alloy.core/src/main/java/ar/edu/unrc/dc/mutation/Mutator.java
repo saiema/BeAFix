@@ -1,42 +1,20 @@
 package ar.edu.unrc.dc.mutation;
 
-import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.SafeList;
-import edu.mit.csail.sdg.ast.Browsable;
-import edu.mit.csail.sdg.ast.Decl;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBinary;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
-import edu.mit.csail.sdg.ast.ExprCall;
-import edu.mit.csail.sdg.ast.ExprConstant;
-import edu.mit.csail.sdg.ast.ExprHasName;
-import edu.mit.csail.sdg.ast.ExprITE;
-import edu.mit.csail.sdg.ast.ExprLet;
-import edu.mit.csail.sdg.ast.ExprList;
-import edu.mit.csail.sdg.ast.ExprQt;
-import edu.mit.csail.sdg.ast.ExprUnary;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.ast.Func;
-import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
-import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.ast.Type.ProductType;
-import edu.mit.csail.sdg.ast.VisitReturn;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
 
 
 public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
@@ -157,7 +135,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
                 Type dtype = appendTypes(stype, d.expr.type());
                 if (compatibleVariablesChecker(x, dtype, strictChecking)) {
                     for (Expr var : d.names) {
-                        String label = "";
+                        String label;
                         if (var instanceof Field) {
                             label = cleanLabelFromThis(((Field) var).label);
                         } else if (var instanceof ExprHasName) {
@@ -165,9 +143,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
                         } else {
                             throw new IllegalStateException("While searching for sig " + s.label + " fields, found " + var.toString() + " which is not a Field nor an ExprHasName, but instead a " + var.getClass().getCanonicalName());
                         }
-                        if (funcVariablesFound.containsKey(label)) {
-                            continue; //a funcs argument will hide all other fields
-                        } else {
+                        if (!funcVariablesFound.containsKey(label)) {
                             variablesFound.put(label, var);
                         }
                     }
@@ -209,10 +185,9 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         });
         List<PrimSig> primSigs = new LinkedList<>();
         rtypes.forEach(prodType -> {
-            for (PrimSig s : prodType.getAll())
-                primSigs.add(s);
+            Collections.addAll(primSigs, prodType.getAll());
         });
-        List<ProductType> rProductTypes = Arrays.asList(new ProductType(primSigs.toArray(new PrimSig[primSigs.size()])));
+        List<ProductType> rProductTypes = Collections.singletonList(new ProductType(primSigs.toArray(new PrimSig[primSigs.size()])));
         ConstList<ProductType> rtypesConstList = ConstList.make(rProductTypes);
         return new Type(false, rtypesConstList, arities.get());
     }
@@ -354,9 +329,8 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     protected final boolean emptyOrNone(Type joinedType) {
         if (joinedType.toString().equals(Type.EMPTY.toString()))
             return true;
-        Iterator<ProductType> it = joinedType.iterator();
-        while (it.hasNext()) {
-            if (it.next().isEmpty())
+        for (ProductType productType : joinedType) {
+            if (productType.isEmpty())
                 return true;
         }
         return false;
@@ -397,16 +371,10 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
-        if (x.left != null) {
-            Optional<List<Mutation>> leftMutations = x.left.accept(this);
-            if (leftMutations.isPresent())
-                mutations.addAll(leftMutations.get());
-        }
-        if (x.right != null) {
-            Optional<List<Mutation>> rightMutations = x.right.accept(this);
-            if (rightMutations.isPresent())
-                mutations.addAll(rightMutations.get());
-        }
+        Optional<List<Mutation>> leftMutations = x.left.accept(this);
+        leftMutations.ifPresent(mutations::addAll);
+        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
@@ -418,8 +386,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (x.args != null) {
             for (Expr e : x.args) {
                 Optional<List<Mutation>> argMutations = e.accept(this);
-                if (argMutations.isPresent())
-                    mutations.addAll(argMutations.get());
+                argMutations.ifPresent(mutations::addAll);
             }
         }
         if (!mutations.isEmpty())
@@ -433,8 +400,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (x.args != null) {
             for (Expr e : x.args) {
                 Optional<List<Mutation>> argMutations = e.accept(this);
-                if (argMutations.isPresent())
-                    mutations.addAll(argMutations.get());
+                argMutations.ifPresent(mutations::addAll);
             }
         }
         if (!mutations.isEmpty())
@@ -453,18 +419,15 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         List<Mutation> mutations = new LinkedList<>();
         if (x.cond != null) {
             Optional<List<Mutation>> condMutations = x.cond.accept(this);
-            if (condMutations.isPresent())
-                mutations.addAll(condMutations.get());
+            condMutations.ifPresent(mutations::addAll);
         }
         if (x.left != null) {
             Optional<List<Mutation>> thenMutations = x.left.accept(this);
-            if (thenMutations.isPresent())
-                mutations.addAll(thenMutations.get());
+            thenMutations.ifPresent(mutations::addAll);
         }
         if (x.right != null) {
             Optional<List<Mutation>> elseMutations = x.right.accept(this);
-            if (elseMutations.isPresent())
-                mutations.addAll(elseMutations.get());
+            elseMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
@@ -476,18 +439,15 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         List<Mutation> mutations = new LinkedList<>();
         if (x.var != null) {
             Optional<List<Mutation>> letVarMutations = x.var.accept(this);
-            if (letVarMutations.isPresent())
-                mutations.addAll(letVarMutations.get());
+            letVarMutations.ifPresent(mutations::addAll);
         }
         if (x.expr != null) {
             Optional<List<Mutation>> letVarBoundedExprMutations = x.expr.accept(this);
-            if (letVarBoundedExprMutations.isPresent())
-                mutations.addAll(letVarBoundedExprMutations.get());
+            letVarBoundedExprMutations.ifPresent(mutations::addAll);
         }
         if (x.sub != null) {
             Optional<List<Mutation>> exprMutations = x.sub.accept(this);
-            if (exprMutations.isPresent())
-                mutations.addAll(exprMutations.get());
+            exprMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
@@ -496,31 +456,11 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
     @Override
     public Optional<List<Mutation>> visit(ExprQt x) throws Err {
-        List<Decl> vars = x.decls;
-        List<Mutation> declMutations = new LinkedList<>();
-        if (vars != null) {
-            for (Decl d : vars) {
-                //only mutate names for now
-                //TODO: maybe add bounds later
-                for (ExprHasName n : d.names) {
-                    Optional<List<Mutation>> nMutations = n.accept(this);
-                    if (nMutations.isPresent())
-                        declMutations.addAll(nMutations.get());
-                }
-            }
-        }
-
-        Expr formula = x.sub;
-        if (formula != null)
-            if (declMutations.isEmpty())
-                return formula.accept(this);
-            else {
-                Optional<List<Mutation>> formulaMutations = formula.accept(this);
-                if (formulaMutations.isPresent()) {
-                    declMutations.addAll(formulaMutations.get());
-                }
-                return Optional.of(declMutations);
-            }
+        List<Mutation> mutations = new LinkedList<>();
+        Optional<List<Mutation>> formulaMutations = x.sub.accept(this);
+        formulaMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
         return EMPTY;
     }
 
