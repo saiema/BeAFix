@@ -1,15 +1,16 @@
 package ar.edu.unrc.dc.mutation;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.Triplet;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import java.util.Map.Entry;
 
 public class MutantLabMulti {
 
@@ -137,6 +138,27 @@ public class MutantLabMulti {
        return candidate.toString();
     }
 
+    /**
+     * Returns a list of triplet (place & OP, orig expr, mutation expr) of the current mutation
+     * @return
+     */
+    public List<Triplet<String,String,String>>  getCurrentMutationsInfo(){
+        if (candidate == null) throw new IllegalStateException("No available candidate (method advance() returned false)");
+        ArrayList<Triplet<String,String,String>> l = new ArrayList<Triplet<String,String,String>>();
+        if (!candidate.isValid) {
+            Triplet t =  new Triplet ("INVALID","","");
+            l.add(t);
+            return l;
+        }
+        else {
+            for (Mutation m : candidate.processedMutations) {
+                Triplet<String, String, String> t = new Triplet("Line "+m.original().pos.y+" <"+ m.operator()+"> ", m.original().toString(),m.mutant().toString());
+                l.add(t);
+            }
+            return l;
+        }
+    }
+
     public Optional<Expr> getMutation(Expr x) {
         if (candidate == null) throw new IllegalStateException("No available candidate (method advance() returned false)");
         return candidate.getMutatedExpr(x);
@@ -196,6 +218,8 @@ public class MutantLabMulti {
             }
             return sb.toString();
         }
+
+
 
         private void processMutations() {
             Map<Expr, List<Mutation>> mutationsToUseByMayorExpr = new HashMap<>();

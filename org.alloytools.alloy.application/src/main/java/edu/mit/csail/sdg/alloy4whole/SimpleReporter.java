@@ -51,6 +51,9 @@ final class SimpleReporter extends A4Reporter {
         private int                     len2     = 0, len3 = 0, verbosity = 0;
         private final String            latestName;
         private final int               latestVersion;
+        //@Atryker - MuAlloy
+        public boolean reparing =false;
+
 
         public SimpleCallback1(SimpleGUI gui, VizGUI viz, SwingLogPanel span, int verbosity, String latestName, int latestVersion) {
             this.gui = gui;
@@ -142,7 +145,46 @@ final class SimpleReporter extends A4Reporter {
             }
             if (!(msg instanceof Object[]))
                 return;
+
             Object[] array = (Object[]) msg;
+            //@Atryker - mualloy - Avoid all callback message from the alloy process and only inform Repair messages
+            if (reparing) {
+                if (array[0].equals("RepairTittle")) {
+                    len3 = len2 = span.getLength();
+                    span.logBold("" + array[1]);
+                }
+                if (array[0].equals("RepairSubTittle")) {
+                    len3 = len2 = span.getLength();
+                    span.log("" + array[1]);
+                }
+
+                if (array[0].equals("RepairExprOrig->Mut")) {
+                    len3 = len2 = span.getLength();
+                    span.log("" + array[1]+":\n");
+                    span.log("|<     ");
+                    span.logGreen(array[2]+"\n");
+                    span.log("|>     ");
+                    span.logBlue (array[3]+"");
+                }
+                if (array[0].equals("RepairResults")) {
+                    len3 = len2 = span.getLength();
+                    span.logBold("Results: [" );
+                    ArrayList<String> l = (ArrayList<String>) array[1];
+                    int i=1;
+                    for (String r:l){
+                        switch (r){
+                            case "E": span.logBlue("E");break;
+                            case "V": span.logGreen("V");break;
+                            case "X": span.logRed("V");break;
+                        }
+                        if (i<l.size()) span.log(",");
+                        i++;
+                    }
+                    span.logBold("]\n\n" );
+                }
+                return;
+            }
+            //-----------
             if (array[0].equals("pop")) {
                 span.setLength(len2);
                 String x = (String) (array[1]);
@@ -160,6 +202,7 @@ final class SimpleReporter extends A4Reporter {
                 span.setLength(len3);
                 span.log("" + array[1]);
             }
+
             if (array[0].equals("link")) {
                 span.logLink((String) (array[1]), (String) (array[2]));
             }
@@ -751,7 +794,7 @@ final class SimpleReporter extends A4Reporter {
 
         @Override
         public void run(WorkerCallback out) throws Exception {
-            cb(out, "S2", "Reparing process...\n\n");
+            cb(out, "RepairTittle", "Reparing process...\n\n");
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final Module world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
             //==========================================
@@ -761,23 +804,27 @@ final class SimpleReporter extends A4Reporter {
             //if (rep.warn > 0 && !bundleWarningNonFatal)
             //    return;
             // Generate and build the mutation manager
-            cb(out, "bold", ((CompModule) world).markedEprsToMutate.size()+  " mutations mark detected Executing \n");
-            cb(out, "", "Generating mutants ... \n\n");
+            cb(out, "RepairSubTittle", ((CompModule) world).markedEprsToMutate.size()+  " mutations mark detected Executing \n");
+            cb(out, "RepairSubTittle", "Generating mutants... ");
             ((CompModule) world).updateMarkedExprsToMutate();
             Ops[] availableOps = Ops.values();
             MutantLabMulti mutantLab = new MutantLabMulti((CompModule)world, availableOps);//new MutantLab((CompModule) world);
-            cb(out, "", mutantLab.mutantCount() + " mutations generated \n\n");
+            cb(out, "RepairSubTittle", mutantLab.mutantCount() + " mutants generated \n\n");
             //======================== mutants test cycle ===========
+            int count =1;
             while(mutantLab.advance()) {
             //for  (int mutidx =0 ; mutidx < mutantLab.mutantCount(); mutidx++){
                 //mutantLab.next();
-                cb(out, "", "--------------------------------\n");
+                //cb(out, "", "--------------------------------\n");
                 //cb(out, "S2", "Validating mutant "+(mutidx+1)+"/"+mutantLab.mutantCount()+" for " +cmds.size()+" commands...\n\n");
-                cb(out, "S2", "Validating mutant for " +cmds.size()+" commands...\n\n");
-                cb(out, "S2", mutantLab.getCurrentMutationsStr() +"  \n\n");
+                //cb(out, "S2", mutantLab.getCurrentMutationsStr() +"  \n\n");
                 //cb(out, "S2", "Original: "+mutantLab.getMutation().original().toString() +"  \n");
                 //cb(out, "S2", "Mutant:   "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
-
+                cb(out, "RepairSubTittle", "Validating mutant "+ count +" for " +cmds.size()+" commands...\n"); count++;
+                //report current mutation
+                for ( Triplet<String,String,String> em: mutantLab.getCurrentMutationsInfo()){
+                    cb(out, "RepairExprOrig->Mut", em.a, em.b , em.c+"  \n");
+                }
                 logger.info("Validating mutant");
                 logger.info(mutantLab.getCurrentMutationsStr());
 
@@ -786,6 +833,7 @@ final class SimpleReporter extends A4Reporter {
                 // check all commands
                 boolean discarded = false;
                 boolean repaired = true;
+                List<String> results = new ArrayList<String>();
                 for (int i = 0; i < cmds.size(); i++) {
                     try {
                         synchronized (SimpleReporter.class) {
@@ -796,7 +844,7 @@ final class SimpleReporter extends A4Reporter {
                         final String tempCNF = tempdir + File.separatorChar + i + ".cnf";
                         final Command cmd = cmds.get(i);
                         rep.tempfile = tempCNF;
-                        cb(out, "bold", "Executing \"" + cmd + "\"\n");
+                        //cb(out, "bold", "Executing \"" + cmd + "\"\n");
                         //@mutation ==>> pass the mutation lab to the translator for mutation
 
                         A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options, mutantLab);
@@ -806,6 +854,7 @@ final class SimpleReporter extends A4Reporter {
                             if (ai.satisfiable()) {
                                 if (cmd.expects == 0 || (cmd.expects == -1 && cmd.check) ) {
                                     repaired = false;
+
                                 }
                             }
                             else {
@@ -814,11 +863,12 @@ final class SimpleReporter extends A4Reporter {
                                 }
                             }
                         }
+                        results.add(repaired ? "V":"X");
 
                     } catch (Exception e) {
-                        cb(out, "bold", "ERROR! -> Mutation discarded. \n");
                         discarded = true;
                         repaired = false; // if the mutantion fails in one command ignore the rest
+                        results.add("E");
                         logger.info("ERROR, mutant discarded");
                         StringWriter sw = new StringWriter();
                         e.printStackTrace(new PrintWriter(sw));
@@ -826,9 +876,11 @@ final class SimpleReporter extends A4Reporter {
                         logger.info(exceptionAsString);
                         mutantLab.reportCurrentAsInvalid();
                     }
+
                     if (!repaired) break; // if the mutation does not repair for one command of the oracle the ignore the rest of command for it
                 }
                 //=========== check all result to know if is repaired
+                cb(out, "RepairResults", results);
                 if (!discarded) {
 
                     if (!repaired) {

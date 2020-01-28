@@ -1020,9 +1020,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 JMenuItem y = new JMenuItem("Repair by mutating marked exprs (#m#)", null);
                 y.addActionListener(doRepair(-1));
+                JMenuItem x = new JMenuItem("Find all repair by mutating marked exprs (#m#)", null);
+                x.addActionListener(doRepair(-1));
                 runmenu.add(new JSeparator(), runmenu.getItemCount());
                 runmenu.add(y, runmenu.getItemCount());
-
+                runmenu.add(x, runmenu.getItemCount());
             }
         } finally {
             wrap = false;
@@ -1127,6 +1129,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
 
         SimpleCallback1 cb = new SimpleCallback1(this, null, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
+        //@Atryker
+        cb.reparing=true;
         SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
         A4Options opt = new A4Options();
         opt.tempDirectory = alloyHome() + fs + "tmp";

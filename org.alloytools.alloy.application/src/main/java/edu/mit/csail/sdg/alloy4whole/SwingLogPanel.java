@@ -15,9 +15,13 @@
 
 package edu.mit.csail.sdg.alloy4whole;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
+import edu.mit.csail.sdg.alloy4.OurAntiAlias;
+import edu.mit.csail.sdg.alloy4.OurUtil;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.text.*;
+import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.MouseEvent;
@@ -25,25 +29,6 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
-
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextPane;
-import javax.swing.border.EmptyBorder;
-import javax.swing.text.AbstractDocument;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.BoxView;
-import javax.swing.text.Element;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledDocument;
-import javax.swing.text.StyledEditorKit;
-import javax.swing.text.View;
-import javax.swing.text.ViewFactory;
-
-import edu.mit.csail.sdg.alloy4.OurAntiAlias;
-import edu.mit.csail.sdg.alloy4.OurUtil;
 
 /**
  * This helper method is used by SimpleGUI; only the AWT Event Thread may call
@@ -58,7 +43,7 @@ final class SwingLogPanel {
      */
     private static void linewrap(StringBuilder sb, String msg) {
         StringTokenizer tokenizer = new StringTokenizer(msg, "\r\n\t ");
-        final int max = 60;
+        final int max = 100;
         int now = 0;
         while (tokenizer.hasMoreTokens()) {
             String x = tokenizer.nextToken();
@@ -100,6 +85,14 @@ final class SwingLogPanel {
 
     /** The style to use when writing red messages. */
     private final Style              styleRed;
+
+    //@Astriker - Mualloy
+    /** The style to use when writing repairing. */
+    private final Style              styleBlue;
+    /** The style to use when writing repairing. */
+    private final Style              styleGreen;
+    //------------------------
+
 
     /**
      * This stores the JLabels used for displaying hyperlinks.
@@ -220,6 +213,12 @@ final class SwingLogPanel {
         StyleConstants.setBold(styleBold, true);
         styleRed = doc.addStyle("red", styleBold);
         StyleConstants.setForeground(styleRed, red);
+        //@Astriker
+        styleBlue = doc.addStyle("blue", styleRegular);
+        StyleConstants.setForeground(styleBlue, new Color(0, 44, 207));
+        styleGreen = doc.addStyle("green", styleRegular);
+        StyleConstants.setForeground(styleGreen, new Color(0, 85, 26));
+        //--------
         parent.setViewportView(log);
         parent.setBackground(background);
     }
@@ -351,6 +350,46 @@ final class SwingLogPanel {
         reallyLog(sb.toString(), styleRed);
     }
 
+    /** Write "msg" in blue style (with automatic line wrap). */
+    public void logBlue(String msg) {
+        if (log == null || msg == null || msg.length() == 0)
+            return;
+        StringBuilder sb = new StringBuilder();
+        while (msg.length() > 0) {
+            int i = msg.indexOf('\n');
+            if (i >= 0) {
+                linewrap(sb, msg.substring(0, i));
+                sb.append('\n');
+                msg = msg.substring(i + 1);
+            } else {
+                linewrap(sb, msg);
+                break;
+            }
+        }
+        clearError();
+        reallyLog(sb.toString(), styleBlue);
+    }
+
+
+    /** Write "msg" in green style (with automatic line wrap). */
+    public void logGreen(String msg) {
+        if (log == null || msg == null || msg.length() == 0)
+            return;
+        StringBuilder sb = new StringBuilder();
+        while (msg.length() > 0) {
+            int i = msg.indexOf('\n');
+            if (i >= 0) {
+                linewrap(sb, msg.substring(0, i));
+                sb.append('\n');
+                msg = msg.substring(i + 1);
+            } else {
+                linewrap(sb, msg);
+                break;
+            }
+        }
+        clearError();
+        reallyLog(sb.toString(), styleGreen);
+    }
     /**
      * Write "msg" in regular style (with automatic line wrap).
      */

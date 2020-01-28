@@ -148,11 +148,15 @@ public class MutantLab {
         return query;
     }
 
-
     public int mutantCount (){return mutationsIndexes.size();}
 
-    public String getCurrentMutationsStr(){
-       return currentMutations2Apply.entrySet().toString();
+    public List<Pair<String,String>> getCurrentMutationsAsList(){
+        List<Pair<String,String>> res = new ArrayList<Pair<String,String>>();
+        for (final Map.Entry<Expr, Expr> pair : currentMutations2Apply.entrySet()){
+            Pair<String,String> r = new Pair(pair.getKey().toString(),pair.getValue().toString());
+            res.add(r);
+        }
+       return res;
     }
 
 };
