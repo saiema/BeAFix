@@ -824,6 +824,7 @@ final class SimpleReporter extends A4Reporter {
                         e.printStackTrace(new PrintWriter(sw));
                         String exceptionAsString = sw.toString();
                         logger.info(exceptionAsString);
+                        mutantLab.reportCurrentAsInvalid();
                     }
                     if (!repaired) break; // if the mutation does not repair for one command of the oracle the ignore the rest of command for it
                 }

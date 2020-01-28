@@ -129,14 +129,21 @@ public class Mutation {
         return searcher.visitThis(from.mutant);
     }
 
-    public static boolean incompatible(Mutation from, Mutation mutate) {
-        if (from.operator.equals(Ops.QTBER) || mutate.operator.equals(Ops.QTBER))
+    public static boolean incompatible(Mutation m1, Mutation m2) {
+        if (m1.operator.equals(Ops.QTBER) || m2.operator.equals(Ops.QTBER))
             return true;
-        if (!from.getMayorAffectedExpression().equals(mutate.getMayorAffectedExpression()))
+        if (!m1.getMayorAffectedExpression().equals(m2.getMayorAffectedExpression()))
             return false;
-        if (from.original.equals(mutate.original))
-            return !compatible(from, mutate);
+        if (m1.original.equals(m2.original))
+            return !compatible(m1, m2) && !compatible(m2, m1);
+        if (isInside(m1.original, m2.original)) return !compatible(m2, m1);
+        if (isInside(m2.original, m1.original)) return !compatible(m1, m2);
         return false;
+    }
+
+    private static boolean isInside(Expr thiz, Expr inThat) {
+        SearchExpr search = new SearchExpr(thiz);
+        return search.visitThis(inThat);
     }
 
     public static Optional<Integer> depth(Mutation from, Mutation mutate) {
@@ -148,7 +155,6 @@ public class Mutation {
             return Optional.of(currentDepth);
         List<Browsable> nodesToVisit = new LinkedList<>(root.getSubnodes());
         while (!nodesToVisit.isEmpty()) {
-            List<Browsable> childrens = new LinkedList<>();
             for (Browsable n : nodesToVisit) {
                 depth(n, id, currentDepth + 1);
             }

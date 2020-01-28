@@ -58,6 +58,7 @@ public class MutantLabMulti {
 
     private Queue<BitSet> combinations;
     private List<BitSet> invalidCombinations;
+    private BitSet current;
     public boolean advance() {
         if (hasNext()) {
             if (combinations == null) {
@@ -65,7 +66,7 @@ public class MutantLabMulti {
                 combinations.add(new BitSet(mutations.size()));
                 invalidCombinations = new LinkedList<>();
             }
-            BitSet current = combinations.poll();
+            current = combinations.poll();
             if (current == null) throw new IllegalStateException("there shouldn't be a null combination in the queue");
             if (invalidCombinations.contains(current)) {
                 logger.info("Skipped invalid combination: " + current.toString());
@@ -106,7 +107,17 @@ public class MutantLabMulti {
             if (hasNext()) return advance();
         }
         candidate = null;
+        current = null;
         return false;
+    }
+
+    public void reportCurrentAsInvalid() {
+        if (current != null && !current.isEmpty()) {
+            if (!invalidCombinations.contains(current)) {
+                invalidCombinations.add(current);
+                logger.info("Current combination " + current.toString() + " reported as invalid by repair task");
+            }
+        }
     }
 
     private boolean isValid(BitSet combination) {
@@ -135,6 +146,7 @@ public class MutantLabMulti {
         List<Mutation> generatedMutations = new LinkedList<>();
         for (Expr original : context.markedEprsToMutate) {
             for (Ops o : ops) {
+                if (!o.isImplemented()) continue;
                 Mutator mutOperator = o.getOperator(context);
                 Optional<List<Mutation>> opMutations = mutOperator.getMutations(original);
                 opMutations.ifPresent(generatedMutations::addAll);
@@ -239,7 +251,10 @@ public class MutantLabMulti {
                             }
                         }
                     }
-                    processedMutations.addAll(muts); //if we didn't merge any mutations, we now add those to the processed mutations
+                    muts.forEach(x -> { //if we didn't merge any mutations, we now add those to the processed mutations
+                        if (!processedMutations.contains(x))
+                            processedMutations.add(x);
+                    });
                 }
             } while(modified);
         }
