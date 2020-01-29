@@ -91,6 +91,8 @@ final class SwingLogPanel {
     private final Style              styleBlue;
     /** The style to use when writing repairing. */
     private final Style              styleGreen;
+    /** The style to use when writing repairing. */
+    private final Style              styleRedAS;
     //------------------------
 
 
@@ -218,6 +220,9 @@ final class SwingLogPanel {
         StyleConstants.setForeground(styleBlue, new Color(0, 44, 207));
         styleGreen = doc.addStyle("green", styleRegular);
         StyleConstants.setForeground(styleGreen, new Color(0, 85, 26));
+        styleRedAS = doc.addStyle("redas", styleRegular);
+        StyleConstants.setForeground(styleRedAS, new Color(142, 11, 10));
+
         //--------
         parent.setViewportView(log);
         parent.setBackground(background);
@@ -351,7 +356,7 @@ final class SwingLogPanel {
     }
 
     /** Write "msg" in blue style (with automatic line wrap). */
-    public void logBlue(String msg) {
+    public void logAstrykerBlue(String msg) {
         if (log == null || msg == null || msg.length() == 0)
             return;
         StringBuilder sb = new StringBuilder();
@@ -370,9 +375,28 @@ final class SwingLogPanel {
         reallyLog(sb.toString(), styleBlue);
     }
 
+    /** Write "msg" in blue style (with automatic line wrap). */
+    public void logAstrykerRed(String msg) {
+        if (log == null || msg == null || msg.length() == 0)
+            return;
+        StringBuilder sb = new StringBuilder();
+        while (msg.length() > 0) {
+            int i = msg.indexOf('\n');
+            if (i >= 0) {
+                linewrap(sb, msg.substring(0, i));
+                sb.append('\n');
+                msg = msg.substring(i + 1);
+            } else {
+                linewrap(sb, msg);
+                break;
+            }
+        }
+        clearError();
+        reallyLog(sb.toString(), styleRedAS);
+    }
 
     /** Write "msg" in green style (with automatic line wrap). */
-    public void logGreen(String msg) {
+    public void logAStrykerGreen(String msg) {
         if (log == null || msg == null || msg.length() == 0)
             return;
         StringBuilder sb = new StringBuilder();

@@ -162,9 +162,9 @@ final class SimpleReporter extends A4Reporter {
                     len3 = len2 = span.getLength();
                     span.log("" + array[1]+":\n");
                     span.log("|<     ");
-                    span.logGreen(array[2]+"\n");
+                    span.logAStrykerGreen(array[2]+"\n");
                     span.log("|>     ");
-                    span.logBlue (array[3]+"");
+                    span.logAstrykerBlue(array[3]+"");
                 }
                 if (array[0].equals("RepairResults")) {
                     len3 = len2 = span.getLength();
@@ -173,9 +173,10 @@ final class SimpleReporter extends A4Reporter {
                     int i=1;
                     for (String r:l){
                         switch (r){
-                            case "E": span.logBlue("E");break;
-                            case "V": span.logGreen("V");break;
-                            case "X": span.logRed("V");break;
+                            case "E": span.logAstrykerBlue("E");break;
+                            case "V": span.logAStrykerGreen("V");break;
+                            case "X": span.logAstrykerRed("X");break;
+                            default:break;
                         }
                         if (i<l.size()) span.log(",");
                         i++;
