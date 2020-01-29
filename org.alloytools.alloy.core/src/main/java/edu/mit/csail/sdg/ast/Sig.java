@@ -15,25 +15,16 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.alloy4.TableView.clean;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.alloy4.ConstList.TempList;
+import edu.mit.csail.sdg.ast.Attr.AttrType;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.ConstList.TempList;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorFatal;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.SafeList;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.alloy4.Version;
-import edu.mit.csail.sdg.ast.Attr.AttrType;
+import static edu.mit.csail.sdg.alloy4.TableView.clean;
 
 /** Mutable; represents a signature. */
 
@@ -70,7 +61,9 @@ public abstract class Sig extends Expr implements Clause {
      */
     @Override
     public final String toString() {
-        return label;
+        //return label;
+        //@AStryker
+        return label.replace("this/","");
     }
 
     public String toExtendedString() {
@@ -116,7 +109,9 @@ public abstract class Sig extends Expr implements Clause {
     @Override
     public final void toString(StringBuilder out, int indent) {
         if (indent < 0) {
-            out.append(label);
+            //@AStryker
+            //out.append(label);
+            out.append(label.replace("this/","") );
         } else {
             for (int i = 0; i < indent; i++) {
                 out.append(' ');
@@ -758,14 +753,18 @@ public abstract class Sig extends Expr implements Clause {
             if (sig.label.length() == 0)
                 return label;
             else
-                return "field (" + sig + " <: " + label + ")";
+               // return "field (" + sig + " <: " + label + ")";
+               //@AStryker
+                return  label ;
         }
 
         /** {@inheritDoc} */
         @Override
         public void toString(StringBuilder out, int indent) {
             if (indent < 0) {
-                out.append("(").append(sig.label).append(" <: ").append(label).append(")");
+                //out.append("(").append(sig.label).append(" <: ").append(label).append(")");
+                //@AStryker
+                out.append(label);
             } else {
                 for (int i = 0; i < indent; i++) {
                     out.append(' ');

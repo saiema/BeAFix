@@ -15,22 +15,16 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.ast.Type.EMPTY;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.ast.Sig.Field;
+import edu.mit.csail.sdg.ast.Sig.PrimSig;
+import edu.mit.csail.sdg.ast.Type.ProductType;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.ast.Sig.Field;
-import edu.mit.csail.sdg.ast.Sig.PrimSig;
-import edu.mit.csail.sdg.ast.Type.ProductType;
+import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 /**
  * Immutable; represents an expression of the form (x OP y).
@@ -145,10 +139,12 @@ public final class ExprBinary extends Expr {
             if (op == Op.ISSEQ_ARROW_LONE)
                 out.append("seq ");
             else {
+                out.append('('); //@AStryker
                 left.toString(out, -1);
                 out.append(' ').append(op).append(' ');
             }
             right.toString(out, -1);
+            out.append(')');//@AStryker
         } else {
             for (int i = 0; i < indent; i++) {
                 out.append(' ');
