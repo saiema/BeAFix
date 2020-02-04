@@ -16,6 +16,12 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new AORB(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 2;
+                     }
+
                  },
                  ROR {
 
@@ -28,6 +34,12 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new ROR(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 1;
+                     }
+
                  },
                  COR {
 
@@ -40,6 +52,12 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new COR(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 1;
+                     }
+
                  },
                  CUOI {
 
@@ -51,6 +69,11 @@ public enum Ops {
                      @Override
                      public Mutator getOperator(CompModule context) {
                          return new ar.edu.unrc.dc.mutation.op.CUOI(context);
+                     }
+
+                     @Override
+                     public int getComplexity() {
+                         return 1;
                      }
 
                  },
@@ -65,6 +88,12 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new BES(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 1;
+                     }
+
                  },
                  BESOR {
 
@@ -77,6 +106,12 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new ar.edu.unrc.dc.mutation.op.BESOR(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 2;
+                     }
+
                  },
                  JER {
 
@@ -88,6 +123,11 @@ public enum Ops {
                      @Override
                      public Mutator getOperator(CompModule context) {
                          return new ar.edu.unrc.dc.mutation.op.JER(context);
+                     }
+
+                     @Override
+                     public int getComplexity() {
+                         return 3;
                      }
 
                  },
@@ -103,6 +143,11 @@ public enum Ops {
                          return new ar.edu.unrc.dc.mutation.op.JES(context);
                      }
 
+                     @Override
+                     public int getComplexity() {
+                         return 3;
+                     }
+
                  },
                  JEE {
 
@@ -114,6 +159,11 @@ public enum Ops {
                      @Override
                      public Mutator getOperator(CompModule context) {
                          return new ar.edu.unrc.dc.mutation.op.JEE(context);
+                     }
+
+                     @Override
+                     public int getComplexity() {
+                         return 3;
                      }
 
                  },
@@ -128,6 +178,11 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new RUOR(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 2;
+                     }
                  },
                  RUOI {
 
@@ -140,6 +195,12 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new RUOI(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 2;
+                     }
+
                  },
                  MOR {
 
@@ -152,6 +213,12 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new MOR(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 2;
+                     }
+
                  },
                  QTOR {
 
@@ -164,6 +231,12 @@ public enum Ops {
                      public Mutator getOperator(CompModule context) {
                          return new QTOR(context);
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 2;
+                     }
+
                  },
                  QTOI {
 
@@ -175,6 +248,11 @@ public enum Ops {
                      @Override
                      public Mutator getOperator(CompModule context) {
                          return new QTOI(context);
+                     }
+
+                     @Override
+                     public int getComplexity() {
+                         return 2;
                      }
 
                  },
@@ -190,6 +268,11 @@ public enum Ops {
                          return new QTBER(context);
                      }
 
+                     @Override
+                     public int getComplexity() {
+                         return 4;
+                     }
+
                  },
                  AECR {
 
@@ -201,6 +284,11 @@ public enum Ops {
                      @Override
                      public Mutator getOperator(CompModule context) {
                          return new AECR(context);
+                     }
+
+                     @Override
+                     public int getComplexity() {
+                         return 2;
                      }
 
                  },
@@ -216,6 +304,11 @@ public enum Ops {
                          return new EMOR(context);
                      }
 
+                     @Override
+                     public int getComplexity() {
+                         return 2;
+                     }
+
                  },
                  NESE {
 
@@ -226,6 +319,11 @@ public enum Ops {
 
                      @Override
                      public Mutator getOperator(CompModule context) { return new NESE(context); }
+
+                     @Override
+                     public int getComplexity() {
+                         return 4;
+                     }
 
                  },
                  SSE {
@@ -238,6 +336,11 @@ public enum Ops {
                      @Override
                      public Mutator getOperator(CompModule context) { return new SSE(context); }
 
+                     @Override
+                     public int getComplexity() {
+                         return 5;
+                     }
+
                  },
                  MULTI { //this operator is used when compressing mutations
 
@@ -245,6 +348,12 @@ public enum Ops {
                      public boolean isImplemented() {
                          return false;
                      }
+
+                     @Override
+                     public int getComplexity() {
+                         return 10;
+                     }
+
                  };
 
     public abstract boolean isImplemented();
@@ -252,5 +361,7 @@ public enum Ops {
     public Mutator getOperator(CompModule context) {
         throw new UnsupportedOperationException("Operator not implemented");
     }
+
+    public abstract int getComplexity();
 
 }

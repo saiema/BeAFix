@@ -1,5 +1,6 @@
 package ar.edu.unrc.dc.mutation;
 
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import ar.edu.unrc.dc.mutation.visitors.SearchAndReplace;
 import ar.edu.unrc.dc.mutation.visitors.SearchExpr;
 import edu.mit.csail.sdg.ast.*;
@@ -58,19 +59,7 @@ public class Mutation {
     }
 
     public Expr getMayorAffectedExpression() {
-        Browsable current = original;
-        while((current instanceof Expr) && isMinor(current)) {
-            current = current.getBrowsableParent();
-        }
-        if (!(current instanceof Expr)) throw new IllegalStateException("current should be an Expr");
-        return (Expr) current;
-    }
-
-    private boolean isMinor(Browsable b) {
-        if (b.getBrowsableParent() == null) return false;
-        Browsable parent = b.getBrowsableParent();
-        if (!(parent instanceof Expr)) return false;
-        return !(parent instanceof Sig);
+        return TypeChecking.getMayorExpression(original);
     }
 
     /**

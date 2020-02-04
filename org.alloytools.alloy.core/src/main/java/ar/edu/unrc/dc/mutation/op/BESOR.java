@@ -1,12 +1,14 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import java.util.List;
-
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.List;
+
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.emptyOrNone;
 
 /**
  * Binary Expression Set Operator Replacer

@@ -5,12 +5,14 @@ import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+
+import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getCompatibleVariablesFor;
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.canReplace;
 
 /**
  * Join Expression Shortener
@@ -85,10 +87,10 @@ public class JES extends JEX {
 
     private Optional<List<Expr>> obtainReplacements(ExprBinary replace) {
         List<Expr> replacements = new LinkedList<>();
-        if (typeCheck(replace, replace.left, true) && size(replace.right) == 1) {
+        if (size(replace.right) == 1 && canReplace(replace, replace.left,strictTypeCheck())) {
             replacements.add(replace.left);
         }
-        if (typeCheck(replace, replace.right, true) && size(replace.left) == 1) {
+        if (size(replace.left) == 1 && canReplace(replace, replace.right, strictTypeCheck())) {
             replacements.add(replace.right);
         }
         if (size(replace) == 2) {
@@ -108,16 +110,6 @@ public class JES extends JEX {
                 return size(xAsBinary.left) + size(xAsBinary.right);
         }
         return 1;
-    }
-
-    private boolean typeCheck(Expr exprA, Expr exprB, boolean replace) {
-        Type replacementType = getType(exprB);
-        if (replace) {
-            return super.compatibleVariablesChecker(exprA, replacementType, strictTypeCheck());
-        } else {
-            Type joinedType = getType(exprA).join(replacementType);
-            return !emptyOrNone(joinedType);
-        }
     }
 
     @Override

@@ -1,15 +1,15 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.ExprQt;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Quantifier Operator Replacer
@@ -39,11 +39,9 @@ public class QTOR extends Mutator {
         if (QUANTIFIER_OPERATORS.contains(x.op)) {
             List<Mutation> mutations = new LinkedList<>();
             Optional<List<Mutation>> mutants = mutants(x);
-            if (mutants.isPresent())
-                mutations.addAll(mutants.get());
+            mutants.ifPresent(mutations::addAll);
             Optional<List<Mutation>> subMutations = x.sub != null ? x.sub.accept(this) : EMPTY;
-            if (subMutations.isPresent())
-                mutations.addAll(subMutations.get());
+            subMutations.ifPresent(mutations::addAll);
             if (!mutations.isEmpty())
                 return Optional.of(mutations);
         }

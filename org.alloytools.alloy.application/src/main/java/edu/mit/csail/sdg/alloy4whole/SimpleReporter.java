@@ -17,6 +17,7 @@ package edu.mit.csail.sdg.alloy4whole;
 
 import ar.edu.unrc.dc.mutation.MutantLabMulti;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerTask;
@@ -808,6 +809,7 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "RepairSubTittle", ((CompModule) world).markedEprsToMutate.size()+  " mutations mark detected Executing \n");
             cb(out, "RepairSubTittle", "Generating mutants... ");
             ((CompModule) world).updateMarkedExprsToMutate();
+            ContextExpressionExtractor.initialize((CompModule)world);
             Ops[] availableOps = Ops.values();
             MutantLabMulti mutantLab = new MutantLabMulti((CompModule)world, availableOps);//new MutantLab((CompModule) world);
             cb(out, "RepairSubTittle", mutantLab.mutantCount() + " mutants generated \n\n");
@@ -891,6 +893,7 @@ final class SimpleReporter extends A4Reporter {
                         // fix found, break the search
                         rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
                         logger.info("Current mutant repair the model, all commands results as expected");
+                        logger.info("MODEL REPAIRED!");
                         break;
                     }
                 }

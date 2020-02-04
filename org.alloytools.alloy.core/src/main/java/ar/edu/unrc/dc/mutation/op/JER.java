@@ -1,14 +1,16 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+
+import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getCompatibleVariablesFor;
 
 /**
  * Join Expression Replacement

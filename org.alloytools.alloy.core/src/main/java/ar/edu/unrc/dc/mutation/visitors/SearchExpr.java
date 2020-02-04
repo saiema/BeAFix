@@ -27,6 +27,10 @@ public class SearchExpr extends VisitReturn<Boolean> {
         this.target = expr;
     }
 
+    public void setTarget(Expr newTarget) {
+        target = newTarget;
+    }
+
     @Override
     public Boolean visit(ExprBinary x) throws Err {
         if (match(x, this.target)) {

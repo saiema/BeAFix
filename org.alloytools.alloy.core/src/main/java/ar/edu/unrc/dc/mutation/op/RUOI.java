@@ -1,20 +1,18 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprCall;
-import edu.mit.csail.sdg.ast.ExprUnary;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.ast.Type;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.emptyOrNone;
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.getType;
 
 /**
  * Relational Unary Operator Insertion
@@ -37,13 +35,10 @@ public class RUOI extends Mutator {
     public Optional<List<Mutation>> visit(ExprCall x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mutants = mutate(x);
-        if (mutants.isPresent()) {
-            mutations.addAll(mutants.get());
-        }
+        mutants.ifPresent(mutations::addAll);
         for (Expr arg : x.args) {
             Optional<List<Mutation>> argMutations = arg.accept(this);
-            if (argMutations.isPresent())
-                mutations.addAll(argMutations.get());
+            argMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
@@ -54,11 +49,9 @@ public class RUOI extends Mutator {
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mutants = mutate(x);
-        if (mutants.isPresent())
-            mutations.addAll(mutants.get());
+        mutants.ifPresent(mutations::addAll);
         Optional<List<Mutation>> subExprMutations = x.sub.accept(this);
-        if (subExprMutations.isPresent())
-            mutations.addAll(subExprMutations.get());
+        subExprMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
@@ -68,14 +61,11 @@ public class RUOI extends Mutator {
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mutants = mutate(x);
-        if (mutants.isPresent())
-            mutations.addAll(mutants.get());
+        mutants.ifPresent(mutations::addAll);
         Optional<List<Mutation>> leftMutations = x.left.accept(this);
         Optional<List<Mutation>> rightMutations = x.right.accept(this);
-        if (leftMutations.isPresent())
-            mutations.addAll(leftMutations.get());
-        if (rightMutations.isPresent())
-            mutations.addAll(rightMutations.get());
+        leftMutations.ifPresent(mutations::addAll);
+        rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
@@ -85,8 +75,7 @@ public class RUOI extends Mutator {
     public Optional<List<Mutation>> visit(ExprVar x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mutants = mutate(x);
-        if (mutants.isPresent())
-            mutations.addAll(mutants.get());
+        mutants.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;

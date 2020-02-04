@@ -32,7 +32,7 @@ public class MutantLabMulti {
     private CompModule context; //Source that the Mutant Laboratory is associated to.
     //Iterator that iterates over a all possible combinations of mutations
     private Candidate candidate;
-    private Ops[] ops;
+    private SortedSet<Ops> ops;
     private ConstList<Mutation> mutations;
     private long candidateCount;
     private int maxCombinations;
@@ -51,7 +51,13 @@ public class MutantLabMulti {
         if (ops == null) throw new IllegalArgumentException("ops can't be null");
         if (maxCombinations <= 0) throw new IllegalArgumentException("maxCombinations must be a positive value");
         this.context = context;
-        this.ops = ops;
+        this.ops = new TreeSet<>((o1, o2) -> {
+            if (o1.getComplexity() == o2.getComplexity()) {
+                return Integer.compare(o1.ordinal(), o2.ordinal());
+            } else {
+                return Integer.compare(o1.getComplexity(), o2.getComplexity());
+            }
+        });
         this.maxCombinations = maxCombinations;
         generateMutations();
         candidateCount = mutations.size();

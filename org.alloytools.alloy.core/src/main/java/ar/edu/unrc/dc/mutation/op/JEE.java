@@ -1,19 +1,21 @@
 package ar.edu.unrc.dc.mutation.op;
 
+import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
+import ar.edu.unrc.dc.mutation.Mutation;
+import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
+import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.ast.*;
+import edu.mit.csail.sdg.parser.CompModule;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
-import ar.edu.unrc.dc.mutation.Mutation;
-import ar.edu.unrc.dc.mutation.Ops;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprCall;
-import edu.mit.csail.sdg.ast.ExprUnary;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.ast.Type;
-import edu.mit.csail.sdg.parser.CompModule;
+import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
+import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getCompatibleVariablesFor;
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.emptyOrNone;
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.getType;
 
 /**
  * Join Expression Extender
@@ -50,11 +52,9 @@ public class JEE extends JEX {
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> unaryMutations = generateMutants(x, x);
-        if (unaryMutations.isPresent())
-            mutations.addAll(unaryMutations.get());
+        unaryMutations.ifPresent(mutations::addAll);
         Optional<List<Mutation>> subMutations = x.sub.accept(this);
-        if (subMutations.isPresent())
-            mutations.addAll(subMutations.get());
+        subMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
@@ -69,12 +69,10 @@ public class JEE extends JEX {
     public Optional<List<Mutation>> visit(ExprCall x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> callMutations = generateMutants(x, x);
-        if (callMutations.isPresent())
-            mutations.addAll(callMutations.get());
+        callMutations.ifPresent(mutations::addAll);
         for (Expr arg : x.args) {
             Optional<List<Mutation>> argMutations = arg.accept(this);
-            if (argMutations.isPresent())
-                mutations.addAll(argMutations.get());
+            argMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
@@ -87,14 +85,19 @@ public class JEE extends JEX {
     }
 
     @Override
-    protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) {
+    protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         if (from instanceof ExprBinary) {
             //replace one subexpression of size 0 with one of size 1 (in terms of joins)
             ExprBinary original = (ExprBinary) from;
             if (!isMemberOfBinaryExpression(original, replace))
                 throw new IllegalArgumentException("The expression to replace does not belongs to the from expression");
-            Optional<List<Expr>> replacements = obtainReplacements(replace, false);
+            Optional<List<Expr>> replacements;
+            try {
+                replacements = obtainReplacements(replace, false);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem obtaining mutations", e);
+            }
             if (replacements.isPresent()) {
                 for (Expr r : replacements.get()) {
                     if (original.left.getID() == replace.getID()) {
@@ -109,14 +112,18 @@ public class JEE extends JEX {
                 }
             }
         } else if (from instanceof ExprUnary || from instanceof ExprVar || from instanceof ExprCall) {
-            Expr original = from;
-            if (original.getID() != replace.getID())
+            if (from.getID() != replace.getID())
                 throw new IllegalArgumentException("The replace expression for Expr(Unary,HasName,Var,Call) must be the same as the from expression");
-            Optional<List<Expr>> replacements = obtainReplacements(replace, true);
+            Optional<List<Expr>> replacements;
+            try {
+                replacements = obtainReplacements(replace, true);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem obtaining mutations", e);
+            }
             if (replacements.isPresent()) {
                 for (Expr r : replacements.get()) {
                     if (r instanceof ExprBinary) {
-                        mutations.add(new Mutation(whoiam(), original, r));
+                        mutations.add(new Mutation(whoiam(), from, r));
                     } else {
                         throw new IllegalStateException("Oops, there should only be ExprBinary expressions for replacements");
                     }
@@ -128,30 +135,28 @@ public class JEE extends JEX {
         return Optional.empty();
     }
 
-    private Optional<List<Expr>> obtainReplacements(Expr replace, boolean onlyBinary) {
+    private Optional<List<Expr>> obtainReplacements(Expr replace, boolean onlyBinary) throws CheatingIsBadMkay {
         List<Expr> replacements = new LinkedList<>();
         List<Expr> simpleReplacements = new LinkedList<>();
         Optional<List<Expr>> simpleReplacementsOp = getCompatibleVariablesFor(replace, strictTypeCheck());
-        if (simpleReplacementsOp.isPresent())
-            simpleReplacements.addAll(simpleReplacementsOp.get());
+        simpleReplacementsOp.ifPresent(simpleReplacements::addAll);
         simpleReplacements.add(replace);
         //type check and filter simple replacements
         if (!simpleReplacements.isEmpty()) {
             for (Expr r : simpleReplacements) {
                 boolean isOriginal = r.getID() == replace.getID();
-                r = (Expr) r.clone();
+                r = cheatedClone(r);
                 r.newID();
-                if (!isOriginal && !onlyBinary && typeCheck(replace, r, true)) {
+                if (!isOriginal && !onlyBinary) {
                     replacements.add(r);
                 }
                 for (Expr r2 : simpleReplacements) {
-                    r2 = (Expr) r2.clone();
+                    r2 = cheatedClone(r2);
                     r2.newID();
-                    if (typeCheck(r, r2, false)) {
-                        ExprBinary joinReplacement = (ExprBinary) r.join(r2);
-                        if (typeCheck(replace, joinReplacement, true)) {
-                            replacements.add(joinReplacement);
-                        }
+                    ExprBinary joinReplacement = (ExprBinary) r.join(r2);
+                    Type joinReplacementType = joinReplacement.type();
+                    if (TypeChecking.canReplace(replace, joinReplacementType, strictTypeCheck())) {
+                        replacements.add(joinReplacement);
                     }
                 }
             }
@@ -160,21 +165,6 @@ public class JEE extends JEX {
             return Optional.of(replacements);
         }
         return Optional.empty();
-    }
-
-    private boolean typeCheck(Expr exprA, Expr exprB, boolean replace) {
-        Type replacementType = getType(exprB);
-        if (replace) {
-            return super.compatibleVariablesChecker(exprA, replacementType, strictTypeCheck());
-        } else {
-            Type joinedType = getType(exprA).join(replacementType);
-            return !emptyOrNone(joinedType);
-        }
-    }
-
-    @Override
-    protected boolean compatibleVariablesChecker(Expr toReplace, Type replacementType, boolean strictTypeChecking) {
-        return true; //we will check types later
     }
 
     @Override

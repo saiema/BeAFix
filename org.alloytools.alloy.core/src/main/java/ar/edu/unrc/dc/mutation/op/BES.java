@@ -1,9 +1,5 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
@@ -14,6 +10,12 @@ import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.Type;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.*;
 
 /**
  * Binary Expression Simplifier
@@ -42,30 +44,24 @@ public class BES extends Mutator {
         List<Mutation> mutations = new LinkedList<>();
         if (!binaryExpressionType.equals(Type.EMPTY) && !leftType.equals(Type.EMPTY) && !rightType.equals(Type.EMPTY)) {
             Optional<List<Mutation>> mutants = mutants(x);
-            if (mutants.isPresent())
-                mutations.addAll(mutants.get());
+            mutants.ifPresent(mutations::addAll);
         }
         Optional<List<Mutation>> leftMutations = x.left.accept(this);
         Optional<List<Mutation>> rightMutations = x.right.accept(this);
-        if (leftMutations.isPresent())
-            mutations.addAll(leftMutations.get());
-        if (rightMutations.isPresent())
-            mutations.addAll(rightMutations.get());
+        leftMutations.ifPresent(mutations::addAll);
+        rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
     }
 
     private Optional<List<Mutation>> mutants(ExprBinary x) throws Err {
-        Type binaryExpressionType = x.type();
-        Type leftType = x.left.type();
-        Type rightType = x.right.type();
         List<Mutation> mutants = new LinkedList<>();
-        if (compatibleVariablesChecker(x, getType(x.left), strictTypeCheck())) {
+        if (canReplace(x, getType(x.left), strictTypeCheck())) {
             Expr mutant = (Expr) x.left.clone();
             mutants.add(new Mutation(whoiam(), x, mutant));
         }
-        if (compatibleVariablesChecker(x, getType(x.right), strictTypeCheck())) {
+        if (canReplace(x, getType(x.right), strictTypeCheck())) {
             Expr mutant = (Expr) x.right.clone();
             mutants.add(new Mutation(whoiam(), x, mutant));
         }
@@ -76,9 +72,7 @@ public class BES extends Mutator {
 
     private boolean strictTypeCheck() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.OPERATOR_BES_STRICT_TYPE_CHECK);
-        if (configValue.isPresent())
-            return (Boolean) configValue.get();
-        return false;
+        return configValue.map(o -> (Boolean) o).orElse((Boolean)ConfigKey.OPERATOR_BES_STRICT_TYPE_CHECK.defaultValue());
     }
 
     @Override

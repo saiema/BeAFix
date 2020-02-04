@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
+import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.*;
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.*;
 
 /**
  * Simple Set Extender
