@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
+import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getAllVariablesFor;
 import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getCompatibleVariablesFor;
 import static ar.edu.unrc.dc.mutation.util.TypeChecking.emptyOrNone;
 import static ar.edu.unrc.dc.mutation.util.TypeChecking.getType;
@@ -137,22 +138,21 @@ public class JEE extends JEX {
 
     private Optional<List<Expr>> obtainReplacements(Expr replace, boolean onlyBinary) throws CheatingIsBadMkay {
         List<Expr> replacements = new LinkedList<>();
-        List<Expr> simpleReplacements = new LinkedList<>();
-        Optional<List<Expr>> simpleReplacementsOp = getCompatibleVariablesFor(replace, strictTypeCheck());
-        simpleReplacementsOp.ifPresent(simpleReplacements::addAll);
-        simpleReplacements.add(replace);
+        if (!onlyBinary) {
+            Optional<List<Expr>> simpleReplacementsOp = getCompatibleVariablesFor(replace, strictTypeCheck());
+            simpleReplacementsOp.ifPresent(replacements::addAll);
+        }
+        Optional<List<Expr>> allVariables = getAllVariablesFor(replace);
         //type check and filter simple replacements
-        if (!simpleReplacements.isEmpty()) {
-            for (Expr r : simpleReplacements) {
-                boolean isOriginal = r.getID() == replace.getID();
+        if (allVariables.isPresent() && !allVariables.get().isEmpty()) {
+            for (Expr r : allVariables.get()) {
                 r = cheatedClone(r);
                 r.newID();
-                if (!isOriginal && !onlyBinary) {
-                    replacements.add(r);
-                }
-                for (Expr r2 : simpleReplacements) {
+                for (Expr r2 : allVariables.get()) {
                     r2 = cheatedClone(r2);
                     r2.newID();
+                    if (emptyOrNone(r.type().join(r2.type())))
+                        continue;
                     ExprBinary joinReplacement = (ExprBinary) r.join(r2);
                     Type joinReplacementType = joinReplacement.type();
                     if (TypeChecking.canReplace(replace, joinReplacementType, strictTypeCheck())) {

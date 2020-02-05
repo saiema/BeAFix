@@ -767,8 +767,10 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     public Object visitThis(Expr x) throws Err {
         if (mutantLab!=null){
                 Optional<Expr> mutant = mutantLab.getMutation(x);
-                if (mutant.isPresent())
+                if (mutant.isPresent()) {
+                    mutantLab.markAsAlreadyMutated(x);
                     return mutant.get().accept(this);
+                }
         }
         return x.accept(this);
     }

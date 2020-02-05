@@ -188,12 +188,19 @@ public class MutantLabMulti {
         return combinations == null || !combinations.isEmpty();
     }
 
+    public void markAsAlreadyMutated(Expr x) {
+        if (candidate == null)
+            throw new IllegalStateException("There is no current candidate");
+        candidate.markedAsAlreadyMutated(x);
+    }
+
     private static class Candidate {
 
         private BitSet activeMutations;
         private ConstList<Mutation> mutations;
         private List<Mutation> processedMutations;
         private Map<Expr, Expr> originalToMutant;
+        private Map<Expr, Boolean> isAlreadyMutated;
         private boolean isValid;
 
         public Candidate(ConstList<Mutation> mutations, BitSet activeMutations) {
@@ -209,10 +216,17 @@ public class MutantLabMulti {
         }
 
         public Optional<Expr> getMutatedExpr(Expr x) {
-            if (originalToMutant.containsKey(x)) {
+            if (originalToMutant.containsKey(x) && !isAlreadyMutated.get(x)) {
                 return Optional.of(originalToMutant.get(x));
             }
             return Optional.empty();
+        }
+
+        public void markedAsAlreadyMutated(Expr x) {
+            if (isAlreadyMutated.containsKey(x))
+                isAlreadyMutated.put(x, Boolean.TRUE);
+            else
+                throw new IllegalArgumentException("This expression has no mutation associated");
         }
 
         @Override
@@ -292,8 +306,10 @@ public class MutantLabMulti {
 
         private void createMapping() {
             originalToMutant = new HashMap<>();
+            isAlreadyMutated = new HashMap<>();
             for (Mutation m : processedMutations) {
                 originalToMutant.put(m.original(), m.mutant());
+                isAlreadyMutated.put(m.original(), Boolean.FALSE);
             }
         }
 

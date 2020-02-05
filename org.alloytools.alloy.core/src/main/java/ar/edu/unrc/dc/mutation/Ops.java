@@ -63,7 +63,7 @@ public enum Ops {
 
                      @Override
                      public boolean isImplemented() {
-                         return false;
+                         return true;
                      }
 
                      @Override

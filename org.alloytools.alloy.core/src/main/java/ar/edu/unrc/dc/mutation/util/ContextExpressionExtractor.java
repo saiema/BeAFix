@@ -20,6 +20,7 @@ public final class ContextExpressionExtractor {
     private static Map<Integer, Optional<Func>> functions;
     private static Map<Integer, Optional<List<Expr>>> localVariables;
     private static Map<Integer, Optional<List<Expr>>> compatibleVariablesFor;
+    private static Map<Integer, Optional<List<Expr>>> allVariablesFor;
     private static Optional<List<Expr>> sigsAndDecls;
     private static Optional<List<Expr>> combinedSigAndDecls;
 
@@ -32,6 +33,7 @@ public final class ContextExpressionExtractor {
         functions = new HashMap<>();
         localVariables = new HashMap<>();
         compatibleVariablesFor = new HashMap<>();
+        allVariablesFor = new HashMap<>();
         sigsAndDecls = null;
         combinedSigAndDecls = null;
     }
@@ -45,16 +47,25 @@ public final class ContextExpressionExtractor {
         return context != null;
     }
 
+    public static Optional<List<Expr>> getAllVariablesFor(Expr target) {
+        return getCompatibleVariablesFor(target, false, false);
+    }
 
     public static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean strictTypeCheck) {
-        if (compatibleVariablesFor.containsKey(target.getID()))
+        return getCompatibleVariablesFor(target, true, strictTypeCheck);
+    }
+
+    private static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean typeCheck, boolean strictTypeCheck) {
+        if (!typeCheck && allVariablesFor.containsKey(target.getID()))
+            return allVariablesFor.get(target.getID());
+        if (typeCheck && compatibleVariablesFor.containsKey(target.getID()))
             return compatibleVariablesFor.get(target.getID());
         Set<Expr> result = new TreeSet<>((Comparator.comparing(Expr::toString)));
         Optional<Func> containerFunc = getContainerFunc(target);
         if (containerFunc.isPresent()) {
             for (Decl formalArg : containerFunc.get().decls) {
                 Type argsType = formalArg.expr.type();
-                if (TypeChecking.canReplace(target, argsType, strictTypeCheck))
+                if (!typeCheck || TypeChecking.canReplace(target, argsType, strictTypeCheck))
                     result.addAll(formalArg.names);
             }
         }
@@ -62,7 +73,7 @@ public final class ContextExpressionExtractor {
         if (localVariables.isPresent()) {
             for (Expr localVar : localVariables.get()) {
                 Type localVarType = localVar.type();
-                if (TypeChecking.canReplace(target, localVarType, strictTypeCheck)) {
+                if (!typeCheck || TypeChecking.canReplace(target, localVarType, strictTypeCheck)) {
                     result.add(localVar);
                 }
             }
@@ -71,14 +82,17 @@ public final class ContextExpressionExtractor {
         if (sigsAndDecls.isPresent()) {
             for (Expr sigOrField : sigsAndDecls.get()) {
                 Type sigOrFieldType = sigOrField.type();
-                if (TypeChecking.canReplace(target, sigOrFieldType, strictTypeCheck)) {
+                if (!typeCheck || TypeChecking.canReplace(target, sigOrFieldType, strictTypeCheck)) {
                     result.add(sigOrField);
                 }
             }
         }
         List<Expr> resultAsList = new LinkedList<>(result);
-        compatibleVariablesFor.put(target.getID(), result.isEmpty()?Optional.empty():Optional.of(resultAsList));
-        return compatibleVariablesFor.get(target.getID());
+        if (typeCheck)
+            compatibleVariablesFor.put(target.getID(), result.isEmpty()?Optional.empty():Optional.of(resultAsList));
+        else
+            allVariablesFor.put(target.getID(), result.isEmpty()?Optional.empty():Optional.of(resultAsList));
+        return typeCheck?compatibleVariablesFor.get(target.getID()):allVariablesFor.get(target.getID());
     }
 
 

@@ -60,10 +60,12 @@ public class QTOI extends Mutator {
 
     private List<Expr> generateMutants(Expr x) throws CheatingIsBadMkay {
         List<Expr> mutants = new LinkedList<>();
-        mutants.add(ExprUnary.Op.NO.make(x.pos, Cheats.cheatedClone(x)));
-        mutants.add(ExprUnary.Op.SOME.make(x.pos, Cheats.cheatedClone(x)));
-        mutants.add(ExprUnary.Op.LONE.make(x.pos, Cheats.cheatedClone(x)));
-        mutants.add(ExprUnary.Op.ONE.make(x.pos, Cheats.cheatedClone(x)));
+        if (x.type().is_small_int() || x.type().is_int() || x.type().size() > 0) {
+            mutants.add(ExprUnary.Op.NO.make(x.pos, Cheats.cheatedClone(x)));
+            mutants.add(ExprUnary.Op.SOME.make(x.pos, Cheats.cheatedClone(x)));
+            mutants.add(ExprUnary.Op.LONE.make(x.pos, Cheats.cheatedClone(x)));
+            mutants.add(ExprUnary.Op.ONE.make(x.pos, Cheats.cheatedClone(x)));
+        }
         return mutants;
     }
 
