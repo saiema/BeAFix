@@ -58,6 +58,7 @@ public class MutantLabMulti {
                 return Integer.compare(o1.getComplexity(), o2.getComplexity());
             }
         });
+        this.ops.addAll(Arrays.asList(ops));
         this.maxCombinations = maxCombinations;
         generateMutations();
         candidateCount = mutations.size();
