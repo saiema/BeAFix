@@ -78,7 +78,35 @@ public class MutationConfiguration {
                                       public Object defaultValue() {
                                           return Boolean.TRUE;
                                       }
+                                  },
+
+                                  MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR
+
+                                  {
+                                      @Override
+                                      public Class<?> getValueType() { return Boolean.class; }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return Boolean.TRUE;
+                                      } //should be false by default
+
+                                  },
+
+                                  MUTATION_USE_DEPENDENCY_GRAPH_FOR_CHECKING
+
+                                  {
+
+                                      @Override
+                                      public Class<?> getValueType() { return Boolean.class; }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return Boolean.FALSE;
+                                      }
+
                                   }
+
 
         ;
 

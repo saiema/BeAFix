@@ -43,6 +43,10 @@ public final class ContextExpressionExtractor {
         initialize(context);
     }
 
+    public static void clear() {
+        ContextExpressionExtractor.context = null;
+    }
+
     private static boolean validateInstance() {
         return context != null;
     }

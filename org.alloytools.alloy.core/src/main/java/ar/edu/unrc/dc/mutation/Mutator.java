@@ -1,5 +1,6 @@
 package ar.edu.unrc.dc.mutation;
 
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
@@ -162,18 +163,14 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     @Override
     public Optional<List<Mutation>> visit(ExprLet x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
-        if (x.var != null) {
-            Optional<List<Mutation>> letVarMutations = x.var.accept(this);
-            letVarMutations.ifPresent(mutations::addAll);
-        }
-        if (x.expr != null) {
+//        Optional<List<Mutation>> letVarMutations = x.var.accept(this);
+//        letVarMutations.ifPresent(mutations::addAll);
+        if (allowBoundMutationByAnyOperator()) {
             Optional<List<Mutation>> letVarBoundedExprMutations = x.expr.accept(this);
             letVarBoundedExprMutations.ifPresent(mutations::addAll);
         }
-        if (x.sub != null) {
-            Optional<List<Mutation>> exprMutations = x.sub.accept(this);
-            exprMutations.ifPresent(mutations::addAll);
-        }
+        Optional<List<Mutation>> exprMutations = x.sub.accept(this);
+        exprMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return EMPTY;
@@ -182,6 +179,12 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     @Override
     public Optional<List<Mutation>> visit(ExprQt x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
+        if (allowBoundMutationByAnyOperator()) {
+            for (Decl d : x.decls) {
+                Optional<List<Mutation>> boundMutations = d.expr.accept(this);
+                boundMutations.ifPresent(mutations::addAll);
+            }
+        }
         Optional<List<Mutation>> formulaMutations = x.sub.accept(this);
         formulaMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
@@ -200,6 +203,13 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     @Override
     public Optional<List<Mutation>> visit(ExprVar x) throws Err {
         return EMPTY;
+    }
+
+    //CONFIGURATION METHODS
+
+    private boolean allowBoundMutationByAnyOperator() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR.defaultValue());
     }
 
 }

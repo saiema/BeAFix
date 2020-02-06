@@ -1,8 +1,13 @@
 package ar.edu.unrc.dc.mutation;
 
+import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Triplet;
+import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
@@ -192,6 +197,27 @@ public class MutantLabMulti {
         if (candidate == null)
             throw new IllegalStateException("There is no current candidate");
         candidate.markedAsAlreadyMutated(x);
+    }
+
+    public List<Browsable> getRelatedAssertionsAndFunctions() {
+        if (candidate == null)
+            throw new IllegalStateException("There is no current candidate");
+        List<Browsable> relatedAssertionsAndFunctions = new LinkedList<>();
+        for (Expr x : candidate.originalToMutant.keySet()) {
+            Optional<Func> contFunc = ContextExpressionExtractor.getContainerFunc(x);
+            if (contFunc.isPresent() && !relatedAssertionsAndFunctions.contains(contFunc.get())) {
+                relatedAssertionsAndFunctions.add(contFunc.get());
+            } else {
+                Expr mayorExpr = TypeChecking.getMayorExpression(x);
+                Optional<Pair<String, Expr>> namedAssertion = context.getAllAssertions().stream().filter(na -> {
+                    Expr body = na.b;
+                    return body.toString().compareTo(mayorExpr.toString()) == 0;
+                }).findFirst();
+                if (namedAssertion.isPresent() && !relatedAssertionsAndFunctions.contains(namedAssertion.get().b))
+                    relatedAssertionsAndFunctions.add(namedAssertion.get().b);
+            }
+        }
+        return relatedAssertionsAndFunctions;
     }
 
     private static class Candidate {
