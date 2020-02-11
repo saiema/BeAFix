@@ -13,6 +13,10 @@ import java.util.Optional;
 public final class TypeChecking {
 
     public static boolean canReplace(Expr target, Expr replacement, boolean strictCheck) {
+        if (replacement instanceof ExprBad || replacement instanceof ExprBadCall || replacement instanceof ExprBadJoin)
+            return false;
+        if (replacement.errors != null && !replacement.errors.isEmpty())
+            return false;
         return canReplace(target, replacement.type(), strictCheck);
     }
 

@@ -1,16 +1,19 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
 import ar.edu.unrc.dc.mutation.Mutation;
+import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Equality Membership Operator Replacement
@@ -31,31 +34,38 @@ public class EMOR extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
+        ExprBinary mutant = null;
         switch (x.op) {
             case EQUALS : {
-                ExprBinary mutant = x.mutateOp(Op.IN);
-                return Optional.of(Arrays.asList(new Mutation(whoiam(), x, mutant)));
+                mutant = x.mutateOp(Op.IN);
+                break;
             }
             case IN : {
-                ExprBinary mutant = x.mutateOp(Op.EQUALS);
-                return Optional.of(Arrays.asList(new Mutation(whoiam(), x, mutant)));
+                mutant = x.mutateOp(Op.EQUALS);
+                break;
             }
             case NOT_EQUALS : {
-                ExprBinary mutant = x.mutateOp(Op.NOT_IN);
-                return Optional.of(Arrays.asList(new Mutation(whoiam(), x, mutant)));
+                mutant = x.mutateOp(Op.NOT_IN);
+                break;
             }
             case NOT_IN : {
-                ExprBinary mutant = x.mutateOp(Op.NOT_EQUALS);
-                return Optional.of(Arrays.asList(new Mutation(whoiam(), x, mutant)));
+                mutant = x.mutateOp(Op.NOT_EQUALS);
+                break;
             }
-            default :
-                return EMPTY;
         }
+        if (mutant != null && TypeChecking.canReplace(x, mutant, strictTypeCheck()))
+            return Optional.of(Arrays.asList(new Mutation(whoiam(), x, mutant)));
+        return Optional.empty();
     }
 
     @Override
     protected Ops whoiam() {
         return Ops.EMOR;
+    }
+
+    private boolean strictTypeCheck() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.OPERATOR_EMOR_STRICT_TYPE_CHECK);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean)ConfigKey.OPERATOR_EMOR_STRICT_TYPE_CHECK.defaultValue());
     }
 
 }

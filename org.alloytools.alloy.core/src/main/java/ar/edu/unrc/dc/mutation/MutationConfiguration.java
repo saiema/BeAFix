@@ -80,6 +80,45 @@ public class MutationConfiguration {
                                       }
                                   },
 
+                                  OPERATOR_EMOR_STRICT_TYPE_CHECK
+                                  {
+
+                                      @Override
+                                      public Class<?> getValueType() { return Boolean.class; }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                        return Boolean.TRUE;
+                                    }
+
+                                  },
+
+                                  OPERATOR_BIN_OP_REPLACEMENT_STRICT_TYPE_CHECK
+                                  {
+
+                                      @Override
+                                      public Class<?> getValueType() { return Boolean.class; }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return Boolean.TRUE;
+                                      }
+
+                                  },
+
+                                  MUTATION_STRICT_TYPE_CHECKING
+
+                                  {
+                                      @Override
+                                      public Class<?> getValueType() { return Boolean.class; }
+
+                                      @Override
+                                      public Object defaultValue() {
+                                          return Boolean.FALSE;
+                                      }
+
+                                  },
+
                                   MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR
 
                                   {
@@ -102,7 +141,7 @@ public class MutationConfiguration {
 
                                       @Override
                                       public Object defaultValue() {
-                                          return Boolean.FALSE;
+                                          return Boolean.TRUE;
                                       }
 
                                   }
@@ -126,12 +165,40 @@ public class MutationConfiguration {
 
     private MutationConfiguration() {
         config = new HashMap<>();
+        loadSystemProperties();
+    }
+
+    private void loadSystemProperties() {
+        for (ConfigKey ck : ConfigKey.values()) {
+            String propValue = System.getProperty(ck.toString());
+            if (propValue != null) {
+                if (ck.getValueType().equals(Boolean.class)) {
+                    Boolean configValue = Boolean.valueOf(propValue);
+                    setConfig(ck, configValue);
+                } else if (ck.getValueType().equals(Integer.class)) {
+                    try {
+                        Integer configValue = Integer.parseInt(propValue);
+                        setConfig(ck, configValue);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error while parsing value for property " + ck.toString());
+                    }
+                }
+            }
+        }
     }
 
     public void setConfig(ConfigKey configKey, Object value) {
         if (!configKey.getValueType().isAssignableFrom(value.getClass()))
             throw new IllegalArgumentException("Wrong value type for configuration key " + configKey.toString() + ", expected type is " + configKey.getValueType().getCanonicalName() + ", but got value of type " + value.getClass().getCanonicalName());
-        this.config.put(configKey.toString(), value);
+        if (configKey.equals(ConfigKey.MUTATION_STRICT_TYPE_CHECKING)) {
+            this.config.put(configKey.toString(), value);
+            setConfig(ConfigKey.OPERATOR_BES_STRICT_TYPE_CHECK, value);
+            setConfig(ConfigKey.OPERATOR_BIN_OP_REPLACEMENT_STRICT_TYPE_CHECK, value);
+            setConfig(ConfigKey.OPERATOR_EMOR_STRICT_TYPE_CHECK, value);
+            setConfig(ConfigKey.OPERATOR_JEX_STRICT_TYPE_CHECK, value);
+            setConfig(ConfigKey.OPERATOR_SSE_STRICT_TYPE_CHECK, value);
+        } else
+            this.config.put(configKey.toString(), value);
     }
 
     public Optional<Object> getConfigValue(ConfigKey configKey) {

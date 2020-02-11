@@ -330,14 +330,14 @@ public final class ExprList extends Expr {
         for (Expr a : this.args) {
             argsClone.add((Expr) a.clone());
         }
-        return new ExprList(this.pos, this.closingBracket, op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
+        return make(pos, closingBracket, op, argsClone);
     }
 
     public ExprList replaceArg(Expr target, Expr replacement) {
         List<Expr> argsClone = new LinkedList<>();
         for (Expr a : this.args) {
             if (a.getID() == target.getID())
-                argsClone.add(replacement);
+                argsClone.add((Expr)replacement.clone());
             else
                 argsClone.add((Expr) a.clone());
         }

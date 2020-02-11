@@ -60,13 +60,46 @@ public class QTOI extends Mutator {
 
     private List<Expr> generateMutants(Expr x) throws CheatingIsBadMkay {
         List<Expr> mutants = new LinkedList<>();
-        if (x.type().is_small_int() || x.type().is_int() || x.type().size() > 0) {
+        if (validateTypeAndOperator(x)) {
             mutants.add(ExprUnary.Op.NO.make(x.pos, Cheats.cheatedClone(x)));
             mutants.add(ExprUnary.Op.SOME.make(x.pos, Cheats.cheatedClone(x)));
             mutants.add(ExprUnary.Op.LONE.make(x.pos, Cheats.cheatedClone(x)));
             mutants.add(ExprUnary.Op.ONE.make(x.pos, Cheats.cheatedClone(x)));
         }
         return mutants;
+    }
+
+    private boolean validateTypeAndOperator(Expr x) {
+        if (x.type().is_small_int() || x.type().is_int())
+            return true;
+        if (x.type().is_bool)
+            return false;
+        if (x.type().equals(Type.FORMULA))
+            return false;
+        if (x instanceof ExprUnary) {
+            switch (((ExprUnary)x).op) {
+                case SOMEOF:
+                case LONEOF:
+                case ONEOF:
+                case SETOF:
+                case EXACTLYOF:
+                case NOT:
+                case NO:
+                case SOME:
+                case LONE:
+                case ONE:
+                case CARDINALITY:
+                case CAST2INT:
+                case CAST2SIGINT:
+                case NOOP:
+                    return false;
+                case TRANSPOSE:
+                case RCLOSURE:
+                case CLOSURE:
+                    return true;
+            }
+        }
+        return x.type().size() > 0;
     }
 
     @Override

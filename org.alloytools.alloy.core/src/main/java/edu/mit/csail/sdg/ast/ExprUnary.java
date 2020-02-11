@@ -15,24 +15,17 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.ast.Sig.SIGINT;
-import static edu.mit.csail.sdg.ast.Sig.UNIV;
-import static edu.mit.csail.sdg.ast.Type.EMPTY;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.ast.Sig.PrimSig;
+import edu.mit.csail.sdg.ast.Type.ProductType;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import edu.mit.csail.sdg.alloy4.DirectedGraph;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.ast.Sig.PrimSig;
-import edu.mit.csail.sdg.ast.Type.ProductType;
+import static edu.mit.csail.sdg.ast.Sig.SIGINT;
+import static edu.mit.csail.sdg.ast.Sig.UNIV;
+import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 /**
  * Immutable; represents a unary expression of the form "(OP subexpression)"
@@ -507,14 +500,15 @@ public final class ExprUnary extends Expr {
             return super.referenced();
     }
 
-    public ExprUnary mutateExpression(Expr sub) {
+    public ExprUnary mutateExpression(Expr replacement) {
         if (op == Op.NOOP)
             throw new IllegalArgumentException("Shouldn't be mutating the expression of a unary expression with NOOP");
-        return new ExprUnary(pos, op, sub, type, weight, errors);
+        return new ExprUnary(pos, op, (Expr) replacement.clone(), type, weight, errors);
     }
 
     public ExprUnary mutateOp(Op op) {
-        return new ExprUnary(pos, op, (Expr) sub.clone(), type, weight, errors);
+        Expr subClone = (Expr) sub.clone();
+        return (ExprUnary) op.make(pos, subClone);
     }
 
     @Override

@@ -15,19 +15,14 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.alloy4.TableView.clean;
+import edu.mit.csail.sdg.alloy4.*;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
+import static edu.mit.csail.sdg.alloy4.TableView.clean;
 
 /**
  * Mutable; represents a predicate or function.

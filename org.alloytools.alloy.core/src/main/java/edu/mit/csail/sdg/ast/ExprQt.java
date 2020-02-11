@@ -389,7 +389,17 @@ public final class ExprQt extends Expr {
 
 
     public ExprQt mutateOp(Op op) {
-        return new ExprQt(this.pos, this.closingBracket, op, this.type, this.decls, this.sub, this.ambiguous, this.weight, this.errors);
+        List<Decl> declsClone = new LinkedList<>();
+        for (Decl d : this.decls) {
+            List<ExprHasName> dnamesClone = new LinkedList<>();
+            for (Expr dn : d.names)
+                dnamesClone.add((ExprHasName) dn.clone());
+            Expr exprClone = (Expr) d.expr.clone();
+            Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, exprClone);
+            declsClone.add(dclone);
+        }
+        Expr subClone = (Expr) this.sub.clone();
+        return (ExprQt) op.make(pos, closingBracket, declsClone, subClone);
     }
 
     public ExprQt replaceBoundForDecl(Decl target, Expr replacement) {
@@ -410,7 +420,8 @@ public final class ExprQt extends Expr {
             Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, bound);
             newDecls.add(dclone);
         }
-        return new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(newDecls), this.sub, this.ambiguous, this.weight, this.errors);
+        Expr subClone = (Expr) this.sub.clone();
+        return new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(newDecls), subClone, this.ambiguous, this.weight, this.errors);
     }
 
     public ExprQt replaceFormula(Expr replacement) {

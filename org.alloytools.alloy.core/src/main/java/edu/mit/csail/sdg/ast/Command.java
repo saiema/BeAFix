@@ -320,7 +320,7 @@ public final class Command extends Browsable {
     @Override
     protected void defineParentForComponents() {
         this.nameExpr.setBrowsableParent(this);
-        this.formula.setBrowsableParent(this);
+        //this.formula.setBrowsableParent(this);
     }
 
     @Override

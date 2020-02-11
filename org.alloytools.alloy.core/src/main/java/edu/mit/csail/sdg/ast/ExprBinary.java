@@ -746,16 +746,18 @@ public final class ExprBinary extends Expr {
 
     //methods needed for mutation
 
-    public ExprBinary mutateLeft(Expr left) {
-        return new ExprBinary(pos, closingBracket, op, left, (Expr) right.clone(), type, errors);
+    public ExprBinary mutateLeft(Expr replacement) {
+        return new ExprBinary(pos, closingBracket, op, (Expr) replacement.clone(), (Expr) right.clone(), type, errors);
     }
 
-    public ExprBinary mutateRight(Expr right) {
-        return new ExprBinary(pos, closingBracket, op, (Expr) left.clone(), right, type, errors);
+    public ExprBinary mutateRight(Expr replacement) {
+        return new ExprBinary(pos, closingBracket, op, (Expr) left.clone(), (Expr) replacement.clone(), type, errors);
     }
 
     public ExprBinary mutateOp(Op op) {
-        return new ExprBinary(pos, closingBracket, op, (Expr) left.clone(), (Expr) right.clone(), type, errors);
+        Expr leftClone = (Expr) left.clone();
+        Expr rightClone = (Expr) right.clone();
+        return (ExprBinary) op.make(pos, closingBracket, leftClone, rightClone);
     }
 
     @Override

@@ -15,23 +15,16 @@
 
 package edu.mit.csail.sdg.ast;
 
-import java.awt.BorderLayout;
+import edu.mit.csail.sdg.alloy4.*;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
-import javax.swing.JFrame;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.border.EmptyBorder;
-
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.Listener;
-import edu.mit.csail.sdg.alloy4.OurTree;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
 
 /**
  * This abstract class represents a node that can be browsed in the graphical
@@ -44,6 +37,7 @@ public abstract class Browsable {
     private int        mutGenLimit = 0;
     private int        ID          = NEXT_ID++;
     private Browsable  browsableParent;
+    private static boolean freezeParents = false;
     private static int NEXT_ID_Env = 0;
     private int        ID_Env      = NEXT_ID_Env++;
 
@@ -101,7 +95,16 @@ public abstract class Browsable {
     }
 
     public void setBrowsableParent(Browsable p) {
+        if (freezeParents) return;
         this.browsableParent = p;
+    }
+
+    public static void freezeParents() {
+        freezeParents = true;
+    }
+
+    public static void unfreezeParents() {
+        freezeParents = false;
     }
 
     /**

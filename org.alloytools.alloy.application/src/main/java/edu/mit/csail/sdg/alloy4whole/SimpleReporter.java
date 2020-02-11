@@ -17,20 +17,18 @@ package edu.mit.csail.sdg.alloy4whole;
 
 import ar.edu.unrc.dc.mutation.MutantLabMulti;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
 import ar.edu.unrc.dc.mutation.util.DependencyGraph;
 import ar.edu.unrc.dc.mutation.util.DependencyScanner;
-import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
+import ar.edu.unrc.dc.mutation.visitors.ParentRelationshipFixer;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerTask;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
-import edu.mit.csail.sdg.ast.Browsable;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.Module;
-import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.*;
@@ -802,10 +800,19 @@ final class SimpleReporter extends A4Reporter {
         @Override
         public void run(WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Reparing process...\n\n");
+            MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE); //this line should be later removed
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
             //==========================================
             final List<Sig> sigs = world.getAllReachableSigs();
+            for (Func f : world.getAllFunc()) {
+                ParentRelationshipFixer parentRelationshipFixer = new ParentRelationshipFixer(f);
+                parentRelationshipFixer.fixParentRelation();
+            }
+            for (Pair<String, Expr> namedAssertion : world.getAllAssertions()) {
+                ParentRelationshipFixer parentRelationshipFixer = new ParentRelationshipFixer(namedAssertion.b, world);
+                parentRelationshipFixer.fixParentRelation();
+            }
             DependencyGraph dependencyGraph = useDependencyGraphForChecking()?DependencyScanner.scanDependencies(world):null;
             //final ConstList<Command> cmds = world.getAllCommands();
             //cb(out, "warnings", bundleWarningNonFatal);
@@ -815,7 +822,7 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "RepairSubTittle", world.markedEprsToMutate.size()+  " mutations mark detected Executing \n");
             cb(out, "RepairSubTittle", "Generating mutants... ");
             world.updateMarkedExprsToMutate();
-            ContextExpressionExtractor.initialize(world);
+            ContextExpressionExtractor.reInitialize(world);
             Ops[] availableOps = Ops.values();
             MutantLabMulti mutantLab = new MutantLabMulti(world, availableOps);//new MutantLab((CompModule) world);
             cb(out, "RepairSubTittle", mutantLab.mutantCount() + " mutants generated \n\n");
@@ -852,6 +859,9 @@ final class SimpleReporter extends A4Reporter {
                     cmds = world.getAllCommands();
                 }
                 for (int i = 0; i < cmds.size(); i++) {
+                    if (dependencyGraph != null)
+                        logger.info("Running cmd " + i + " : " + cmds.get(i).toString() + " with complexity " + dependencyGraph.getCommandComplexity(cmds.get(i)));
+                    mutantLab.clearMutatedStatus();
                     try {
                         synchronized (SimpleReporter.class) {
                             latestModule = world;
@@ -863,10 +873,10 @@ final class SimpleReporter extends A4Reporter {
                         rep.tempfile = tempCNF;
                         //cb(out, "bold", "Executing \"" + cmd + "\"\n");
                         //@mutation ==>> pass the mutation lab to the translator for mutation
-
+                        Browsable.freezeParents();
                         A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options, mutantLab);
                         //if the solution is as expected then continue, else break this mutation checks and continue with other mutation
-
+                        Browsable.unfreezeParents();
                         if (ai != null) {
                             if (ai.satisfiable()) {
                                 if (cmd.expects == 0 || (cmd.expects == -1 && cmd.check) ) {
@@ -886,7 +896,7 @@ final class SimpleReporter extends A4Reporter {
                         discarded = true;
                         repaired = false; // if the mutantion fails in one command ignore the rest
                         results.add("E");
-                        logger.info("ERROR, mutant discarded");
+                        logger.info("ERROR, mutant discarded\ncurrent mutant is:\n"+mutantLab.getCurrentMutationsStr());
                         StringWriter sw = new StringWriter();
                         e.printStackTrace(new PrintWriter(sw));
                         String exceptionAsString = sw.toString();
@@ -915,7 +925,6 @@ final class SimpleReporter extends A4Reporter {
             }
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
-            ContextExpressionExtractor.clear();
         }
 
         private boolean useDependencyGraphForChecking() {

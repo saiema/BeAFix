@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
 
 public class MutantLabMulti {
 
@@ -199,6 +200,12 @@ public class MutantLabMulti {
         candidate.markedAsAlreadyMutated(x);
     }
 
+    public void clearMutatedStatus() {
+        if (candidate == null)
+            throw new IllegalStateException("There is no current candidate");
+        candidate.clearMutatedStatus();
+    }
+
     public List<Browsable> getRelatedAssertionsAndFunctions() {
         if (candidate == null)
             throw new IllegalStateException("There is no current candidate");
@@ -253,6 +260,13 @@ public class MutantLabMulti {
                 isAlreadyMutated.put(x, Boolean.TRUE);
             else
                 throw new IllegalArgumentException("This expression has no mutation associated");
+        }
+
+        public void clearMutatedStatus() {
+            Set<Expr> expressions = mutations.stream().map(Mutation::original).collect(Collectors.toSet());
+            for (Expr x : expressions) {
+                isAlreadyMutated.put(x, Boolean.FALSE);
+            }
         }
 
         @Override
