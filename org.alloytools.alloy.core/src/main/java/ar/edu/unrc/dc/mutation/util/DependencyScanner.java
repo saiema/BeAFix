@@ -15,7 +15,7 @@ import java.util.*;
 public class DependencyScanner {
 
     public static DependencyGraph scanDependencies(CompModule module) {
-        TemporalGraph temporalGraph = new TemporalGraph(module.getAllCommands());
+        TemporalGraph temporalGraph = new TemporalGraph(module.getAllCommands(), module);
         scanFunctions(module.getAllFunc(), module.getAllCommands(), temporalGraph);
         scanAsserts(module.getAllAssertions(), module.getAllCommands(), temporalGraph);
         temporalGraph.merge();
@@ -79,7 +79,7 @@ public class DependencyScanner {
                 List<Func> relatedFunctions = new LinkedList<>();
                 arf.forEach(f -> {if (!relatedFunctions.contains(f)) relatedFunctions.add(f);});
                 for (Func rf : arf) {
-                    TemporalGraph.collectRelatedFunctions(rf, relatedFunctions, temporalGraph.funcDependencyGraph);
+                    TemporalGraph.collectRelatedFunctions(rf, relatedFunctions, temporalGraph.funcDependencyGraph, temporalGraph.context);
                 }
                 complexity += relatedFunctions.size();
                 temporalGraph.commandComplexity.put(c, complexity);
@@ -118,14 +118,16 @@ public class DependencyScanner {
         private Map<Func, List<Command>> funcRelatedCommands;
         private Map<Command, Integer> commandComplexity;
         private List<Command> commands;
+        private CompModule context;
 
-        public TemporalGraph(List<Command> commands) {
+        public TemporalGraph(List<Command> commands, CompModule context) {
             funcDependencyGraph = new HashMap<>();
             funcRelatedCommands = new HashMap<>();
             assertRelatedCommands = new HashMap<>();
             assertRelatedFunctions = new HashMap<>();
             commandComplexity = new HashMap<>();
             this.commands = commands;
+            this.context = context;
         }
 
         public void addFuncDependency(Func f1, Func f2) {
@@ -241,10 +243,12 @@ public class DependencyScanner {
         }
 
         private void collectRelatedFunctions(Func f, List<Func> relatedFunctions) {
-            collectRelatedFunctions(f, relatedFunctions, funcDependencyGraph);
+            collectRelatedFunctions(f, relatedFunctions, funcDependencyGraph, context);
         }
 
         private void collectRelatedCommands(Func f, List<Command> relatedCommands) {
+            if (!isFromContext(f, context))
+                return;
             for (Command rc : funcRelatedCommands.get(f)) {
                 if (!relatedCommands.contains(rc))
                     relatedCommands.add(rc);
@@ -254,13 +258,23 @@ public class DependencyScanner {
             }
         }
 
-        protected static void collectRelatedFunctions(Func f, List<Func> relatedFunctions, Map<Func, List<Func>> funcDependencyGraph) {
+        protected static void collectRelatedFunctions(Func f, List<Func> relatedFunctions, Map<Func, List<Func>> funcDependencyGraph, CompModule context) {
+            if (!isFromContext(f, context))
+                return;
             for (Func rf : funcDependencyGraph.get(f)) {
                 if (!relatedFunctions.contains(rf)) {
                     relatedFunctions.add(rf);
-                    collectRelatedFunctions(rf, relatedFunctions, funcDependencyGraph);
+                    collectRelatedFunctions(rf, relatedFunctions, funcDependencyGraph, context);
                 }
             }
+        }
+
+        private static boolean isFromContext(Func f, CompModule context) {
+            for (Func cf : context.getAllFunc()) {
+                if (f.equals(cf))
+                    return true;
+            }
+            return false;
         }
 
     }
