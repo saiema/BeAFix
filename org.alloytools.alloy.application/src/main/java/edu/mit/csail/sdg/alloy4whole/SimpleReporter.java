@@ -902,6 +902,8 @@ final class SimpleReporter extends A4Reporter {
                         String exceptionAsString = sw.toString();
                         logger.info(exceptionAsString);
                         mutantLab.reportCurrentAsInvalid();
+                        Browsable.unfreezeParents();
+                        mutantLab.unlockCandidateGeneration();
                     }
 
                     if (!repaired) break; // if the mutation does not repair for one command of the oracle the ignore the rest of command for it

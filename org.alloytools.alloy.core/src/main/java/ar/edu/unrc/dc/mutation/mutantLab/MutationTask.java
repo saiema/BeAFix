@@ -43,6 +43,7 @@ public class MutationTask implements Runnable {
     public Lock getLock() {
         return lock;
     }
+    private long thresholdRetryTimeout = 10000L;
 
     public MutationTask(SortedSet<Ops> ops, BlockingCollection<Candidate> inputChannel, BlockingCollection<Candidate> outputChannel) {
         this(ops, inputChannel, outputChannel, DEFAULT_OUTPUT_MIN_THRESHOLD);
@@ -94,7 +95,7 @@ public class MutationTask implements Runnable {
         logger.info("Checking threshold");
         while (outputChannel.size() > outputMinThreshold) {
             synchronized (thresholdLock) {
-                thresholdLock.wait();
+                thresholdLock.wait(thresholdRetryTimeout);
             }
         }
         logger.info("Threshold reached");
@@ -128,9 +129,10 @@ public class MutationTask implements Runnable {
                     newCandidates.add(newCandidate);
             }));
         }
-        outputChannel.insertBulk(newCandidates);
         if (!astMutator.undoMutations())
             outputChannel.insert(Candidate.INVALID);
+        else
+            outputChannel.insertBulk(newCandidates);
     }
 
 

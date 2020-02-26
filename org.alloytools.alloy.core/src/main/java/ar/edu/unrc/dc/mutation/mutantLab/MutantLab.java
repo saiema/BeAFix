@@ -73,6 +73,12 @@ public class MutantLab {
             if (!current.isPresent()) {
                 logger.info("Got empty current candidate");
                 return false;
+            } else if (current.get() == Candidate.INVALID) {
+                logger.info("Received INVALID candidate, something went wrong on the generation process, stopping search");
+                return false;
+            } else if (!current.get().isValid()) {
+                logger.info("Received invalid candidate, skipping candidate");
+                return advance();
             } else if (current.get().mutations() < maxDepth) {
                 logger.info("Inserting current to mutation task input channel");
                 input.insert(current.get());
@@ -92,11 +98,15 @@ public class MutantLab {
     }
 
     public void lockCandidateGeneration() {
+        logger.info("locking candidate generation...");
         mutationTask.getLock().lock();
+        logger.info("...candidate generation locked");
     }
 
     public void unlockCandidateGeneration() {
+        logger.info("unlocking candidate generation...");
         mutationTask.getLock().unlock();
+        logger.info("...candidate generation unlocked");
     }
 
     public Optional<Candidate> getCurrentCandidate() {
