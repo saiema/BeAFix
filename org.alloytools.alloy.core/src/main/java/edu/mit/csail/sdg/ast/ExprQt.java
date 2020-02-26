@@ -399,13 +399,14 @@ public final class ExprQt extends Expr {
             declsClone.add(dclone);
         }
         Expr subClone = (Expr) this.sub.clone();
-        return (ExprQt) op.make(pos, closingBracket, declsClone, subClone);
+        ExprQt mutant = (ExprQt) op.make(pos, closingBracket, declsClone, subClone);
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
     public ExprQt replaceBoundForDecl(Decl target, Expr replacement) {
         List<Decl> newDecls = new LinkedList<>();
         for (Decl d : this.decls) {
-
             List<ExprHasName> dnamesClone = new LinkedList<>();
             for (Expr dn : d.names)
                 dnamesClone.add((ExprHasName) dn.clone());
@@ -415,13 +416,13 @@ public final class ExprQt extends Expr {
             } else {
                 bound = (Expr) d.expr.clone();
             }
-
-
             Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, bound);
             newDecls.add(dclone);
         }
         Expr subClone = (Expr) this.sub.clone();
-        return new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(newDecls), subClone, this.ambiguous, this.weight, this.errors);
+        ExprQt mutant = (ExprQt) op.make(pos, closingBracket, ConstList.make(newDecls), subClone);
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
     public ExprQt replaceFormula(Expr replacement) {
@@ -434,7 +435,9 @@ public final class ExprQt extends Expr {
             Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, exprClone);
             declsClone.add(dclone);
         }
-        return new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(declsClone), (Expr) replacement.clone(), this.ambiguous, this.weight, this.errors);
+        ExprQt mutant = (ExprQt) op.make(pos, closingBracket, ConstList.make(declsClone), (Expr) replacement.clone());
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
     @Override
@@ -452,6 +455,7 @@ public final class ExprQt extends Expr {
         ExprQt clone = new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(declsClone), subClone, this.ambiguous, this.weight, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(mutGenLimit());
         return clone;
     }
 }

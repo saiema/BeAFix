@@ -747,17 +747,23 @@ public final class ExprBinary extends Expr {
     //methods needed for mutation
 
     public ExprBinary mutateLeft(Expr replacement) {
-        return new ExprBinary(pos, closingBracket, op, (Expr) replacement.clone(), (Expr) right.clone(), type, errors);
+        ExprBinary mutant = (ExprBinary) op.make(pos, closingBracket, (Expr) replacement.clone(), (Expr) right.clone());
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
     public ExprBinary mutateRight(Expr replacement) {
-        return new ExprBinary(pos, closingBracket, op, (Expr) left.clone(), (Expr) replacement.clone(), type, errors);
+        ExprBinary mutant = (ExprBinary) op.make(pos, closingBracket, (Expr) left.clone(), (Expr) replacement.clone());
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
-    public ExprBinary mutateOp(Op op) {
+    public Expr mutateOp(Op op) {
         Expr leftClone = (Expr) left.clone();
         Expr rightClone = (Expr) right.clone();
-        return (ExprBinary) op.make(pos, closingBracket, leftClone, rightClone);
+        Expr mutant =op.make (pos, closingBracket, leftClone, rightClone);
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
     @Override
@@ -773,6 +779,7 @@ public final class ExprBinary extends Expr {
         ExprBinary clone = new ExprBinary(pos, closingBracket, op, leftClone, rightClone, type, errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(mutGenLimit());
         return clone;
     }
 

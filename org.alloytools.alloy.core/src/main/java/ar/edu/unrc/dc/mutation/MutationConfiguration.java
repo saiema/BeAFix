@@ -8,154 +8,230 @@ public class MutationConfiguration {
 
     public enum ConfigKey {
 
-                                  OPERATOR_BES_STRICT_TYPE_CHECK
+        OPERATOR_BES_STRICT_TYPE_CHECK {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                  {
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
+        },
 
-                                      @Override
-                                      public Class< ? > getValueType() {
-                                          return Boolean.class;
-                                      }
+        OPERATOR_JEX_STRICT_TYPE_CHECK {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return Boolean.TRUE;
-                                      }
-                                  },
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
+        },
 
-                                  OPERATOR_JEX_STRICT_TYPE_CHECK
+        OPERATOR_QTBER_BOUND_MAX_GENERATION {
+            @Override
+            public Class<?> getValueType() {
+                return Integer.class;
+            }
 
-                                  {
+            @Override
+            public Object defaultValue() {
+                return 3;
+            }
+        },
 
-                                      @Override
-                                      public Class< ? > getValueType() {
-                                          return Boolean.class;
-                                      }
+        OPERATOR_QTBER_BOUND_MIN_GENERATION {
+            @Override
+            public Class<?> getValueType() {
+                return Integer.class;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return Boolean.TRUE;
-                                      }
-                                  },
+            @Override
+            public Object defaultValue() {
+                return 1;
+            }
+        },
 
-                                  OPERATOR_QTBER_BOUND_MAX_GENERATION
+        OPERATOR_SSE_STRICT_TYPE_CHECK {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                  {
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
+        },
 
-                                      @Override
-                                      public Class< ? > getValueType() {
-                                          return Integer.class;
-                                      }
+        OPERATOR_EMOR_STRICT_TYPE_CHECK {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return 3;
-                                      }
-                                  },
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
 
-                                  OPERATOR_QTBER_BOUND_MIN_GENERATION
+        },
 
-                                  {
+        OPERATOR_RUOD_STRICT_TYPE_CHECK {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                      @Override
-                                      public Class< ? > getValueType() {
-                                          return Integer.class;
-                                      }
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return 1;
-                                      }
-                                  },
+        },
 
-                                  OPERATOR_SSE_STRICT_TYPE_CHECK
+        OPERATOR_BIN_OP_REPLACEMENT_STRICT_TYPE_CHECK {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                  {
-                                      @Override
-                                      public Class<?> getValueType() { return Boolean.class; }
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return Boolean.TRUE;
-                                      }
-                                  },
+        },
 
-                                  OPERATOR_EMOR_STRICT_TYPE_CHECK
-                                  {
+        OPERATOR_QTOI_STRICT_TYPE_CHECK {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                      @Override
-                                      public Class<?> getValueType() { return Boolean.class; }
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                        return Boolean.TRUE;
-                                    }
+        },
 
-                                  },
+        MUTATION_STRICT_TYPE_CHECKING {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                  OPERATOR_BIN_OP_REPLACEMENT_STRICT_TYPE_CHECK
-                                  {
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
 
-                                      @Override
-                                      public Class<?> getValueType() { return Boolean.class; }
+        },
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return Boolean.TRUE;
-                                      }
+        MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                  },
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
 
-                                  MUTATION_STRICT_TYPE_CHECKING
+        },
 
-                                  {
-                                      @Override
-                                      public Class<?> getValueType() { return Boolean.class; }
+        MUTATION_TOSTRING_FULL {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return Boolean.FALSE;
-                                      }
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
 
-                                  },
+        },
 
-                                  MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR
+        REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-                                  {
-                                      @Override
-                                      public Class<?> getValueType() { return Boolean.class; }
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return Boolean.TRUE;
-                                      } //should be false by default
+        },
 
-                                  },
+        REPAIR_MAX_MUTATIONS {
+            @Override
+            public Class<?> getValueType() {
+                return Integer.class;
+            }
 
-                                  MUTATION_USE_DEPENDENCY_GRAPH_FOR_CHECKING
+            @Override
+            public Object defaultValue() {
+                return Integer.MAX_VALUE;
+            }
 
-                                  {
+        },
 
-                                      @Override
-                                      public Class<?> getValueType() { return Boolean.class; }
+        REPAIR_GENERATOR_TRIGGER_THRESHOLD {
+            @Override
+            public Class<?> getValueType() {
+                return Integer.class;
+            }
 
-                                      @Override
-                                      public Object defaultValue() {
-                                          return Boolean.TRUE;
-                                      }
+            @Override
+            public Object defaultValue() {
+                return 5;
+            }
 
-                                  }
+        },
 
+        REPAIR_DEBUG_SKIP_VERIFICATION {
 
-        ;
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
 
-        public abstract Class< ? > getValueType();
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
+        },
+
+        REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT {
+            @Override
+            public Class<?> getValueType() {
+                return Long.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return 5000L;
+            }
+
+        };
+
+        public abstract Class<?> getValueType();
 
         public abstract Object defaultValue();
     }
 
     private static MutationConfiguration instance;
-    private Map<String,Object>           config;
+    private Map<String, Object> config;
 
     public static MutationConfiguration getInstance() {
         if (instance == null)
@@ -197,6 +273,8 @@ public class MutationConfiguration {
             setConfig(ConfigKey.OPERATOR_EMOR_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_JEX_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_SSE_STRICT_TYPE_CHECK, value);
+            setConfig(ConfigKey.OPERATOR_QTOI_STRICT_TYPE_CHECK, value);
+            setConfig(ConfigKey.OPERATOR_RUOD_STRICT_TYPE_CHECK, value);
         } else
             this.config.put(configKey.toString(), value);
     }

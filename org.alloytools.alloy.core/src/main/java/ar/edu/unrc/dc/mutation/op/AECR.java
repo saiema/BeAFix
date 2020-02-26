@@ -1,23 +1,19 @@
 package ar.edu.unrc.dc.mutation.op;
 
-import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
-
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-
 import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprConstant;
-import edu.mit.csail.sdg.ast.ExprQt;
-import edu.mit.csail.sdg.ast.ExprUnary;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+
+import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
 
 /**
  * Arithmetic Expression Constant Replacement based in
@@ -45,52 +41,60 @@ public class AECR extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
-        if (isArithmeticBinaryExpression(x)) {
-            return mutations(x);
-        }
-        return EMPTY;
+        List<Mutation> mutations = mutations(x).orElse(new LinkedList<>());
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        leftMutations.ifPresent(mutations::addAll);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
+        rightMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return Optional.empty();
     }
 
 
 
     @Override
     public Optional<List<Mutation>> visit(ExprConstant x) throws Err {
-        if (x.op.equals(ExprConstant.Op.NUMBER)) {
-            return mutations(x);
-        }
-        return EMPTY;
+        return mutations(x);
     }
 
 
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
-        if (isArithmeticUnaryExpression(x)) {
-            return mutations(x);
-        }
-        return EMPTY;
+        List<Mutation> mutations = mutations(x).orElse(new LinkedList<>());
+        Optional<List<Mutation>> subMutations = visitThis(x.sub);
+        subMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprQt x) throws Err {
-        if (x.op.equals(ExprQt.Op.SUM)) {
-            return mutations(x);
-        }
-        return EMPTY;
+        List<Mutation> mutations = mutations(x).orElse(new LinkedList<>());
+        Optional<List<Mutation>> subMutations = visitThis(x.sub);
+        subMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return Optional.empty();
     }
 
-    private boolean isArithmeticUnaryExpression(ExprUnary x) {
-        switch (x.op) {
-            case CARDINALITY :
-            case CAST2INT :
-            case CAST2SIGINT :
-                return true;
-            default :
-                return false;
-        }
+    private boolean canMutate(Expr x) {
+        if (x instanceof ExprBinary)
+            return isArithmeticBinaryExpression(x);
+        else if (x instanceof ExprConstant)
+            return ((ExprConstant) x).op.equals(ExprConstant.Op.NUMBER);
+        else if (x instanceof ExprUnary)
+            return isArithmeticUnaryExpression(x);
+        else if (x instanceof ExprQt)
+            return ((ExprQt)x).op.equals(ExprQt.Op.SUM);
+        return false;
     }
 
     private Optional<List<Mutation>> mutations(Expr x) throws Err {
+        if (!mutGenLimitCheck(x) || !canMutate(x))
+            return Optional.empty();
         List<Mutation> mutations;
         try {
             mutations = generateMutants(x);
@@ -100,7 +104,7 @@ public class AECR extends Mutator {
         } catch (CheatingIsBadMkay e) {
             throw new Error("There was a problem obtaining mutations", e);
         }
-        return EMPTY;
+        return Optional.empty();
     }
 
     private List<Mutation> generateMutants(Expr x) throws CheatingIsBadMkay {

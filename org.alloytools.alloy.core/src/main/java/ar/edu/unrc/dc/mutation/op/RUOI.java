@@ -37,12 +37,12 @@ public class RUOI extends Mutator {
         Optional<List<Mutation>> mutants = mutate(x);
         mutants.ifPresent(mutations::addAll);
         for (Expr arg : x.args) {
-            Optional<List<Mutation>> argMutations = arg.accept(this);
+            Optional<List<Mutation>> argMutations = visitThis(arg);
             argMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -50,11 +50,11 @@ public class RUOI extends Mutator {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mutants = mutate(x);
         mutants.ifPresent(mutations::addAll);
-        Optional<List<Mutation>> subExprMutations = x.sub.accept(this);
+        Optional<List<Mutation>> subExprMutations = visitThis(x.sub);
         subExprMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -62,13 +62,13 @@ public class RUOI extends Mutator {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mutants = mutate(x);
         mutants.ifPresent(mutations::addAll);
-        Optional<List<Mutation>> leftMutations = x.left.accept(this);
-        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
         leftMutations.ifPresent(mutations::addAll);
         rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -78,10 +78,12 @@ public class RUOI extends Mutator {
         mutants.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     private Optional<List<Mutation>> mutate(Expr x) {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
         List<Mutation> mutations = new LinkedList<>();
         Type xtype = getType(x);
         if (!emptyOrNone(xtype.transpose()))
@@ -92,7 +94,7 @@ public class RUOI extends Mutator {
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
 
     }
 

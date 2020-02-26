@@ -33,12 +33,12 @@ public class CUOI extends Mutator {
         Optional<Mutation> mutation = getMutation(x);
         mutation.ifPresent(mutations::add);
         for (Expr arg : x.args) {
-            Optional<List<Mutation>> argMutations = arg.accept(this);
+            Optional<List<Mutation>> argMutations = visitThis(arg);
             argMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -46,11 +46,11 @@ public class CUOI extends Mutator {
         List<Mutation> mutations = new LinkedList<>();
         Optional<Mutation> mutation = getMutation(x);
         mutation.ifPresent(mutations::add);
-        Optional<List<Mutation>> subMutations = x.sub.accept(this);
+        Optional<List<Mutation>> subMutations = visitThis(x.sub);
         subMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -58,19 +58,19 @@ public class CUOI extends Mutator {
         List<Mutation> mutations = new LinkedList<>();
         Optional<Mutation> mutation = getMutation(x);
         mutation.ifPresent(mutations::add);
-        Optional<List<Mutation>> leftMutations = x.left.accept(this);
-        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
         leftMutations.ifPresent(mutations::addAll);
         rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprVar x) throws Err {
         Optional<Mutation> mutant = getMutation(x);
-        return mutant.map(mutation -> Optional.of(Arrays.asList(mutation))).orElse(EMPTY);
+        return mutant.map(mutation -> Optional.of(Arrays.asList(mutation))).orElse(Optional.empty());
     }
 
     private boolean isBooleanExpression(Expr x) {
@@ -78,6 +78,8 @@ public class CUOI extends Mutator {
     }
 
     private Optional<Mutation> getMutation(Expr x) {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
         if (isBooleanExpression(x)) {
             return Optional.of(new Mutation(whoiam(), x, ExprUnary.Op.NOT.make(x.pos(), (Expr) x.clone())));
         }

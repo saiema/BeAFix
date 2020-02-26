@@ -1,6 +1,7 @@
 package ar.edu.unrc.dc.mutation;
 
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
+import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
@@ -15,7 +16,6 @@ import java.util.Optional;
 
 public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
-    protected static final Optional<List<Mutation>> EMPTY                 = Optional.empty();
     protected static final List<Op>                 RELATIONAL_OPS        = Arrays.asList(Op.EQUALS, Op.GT, Op.GTE, Op.LT, Op.LTE, Op.NOT_EQUALS, Op.NOT_GT, Op.NOT_GTE, Op.NOT_LT, Op.NOT_LTE);
     protected static final List<Op>                 CONDITIONAL_OPS       = Arrays.asList(Op.AND, Op.OR, Op.IMPLIES, Op.IFF);
     protected static final List<Op>                 ARITHMETIC_BINARY_OPS = Arrays.asList(Op.DIV, Op.MUL, Op.REM, Op.IPLUS, Op.IMINUS);
@@ -26,16 +26,57 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     protected static final List<ExprQt.Op>          QUANTIFIER_OPERATORS  = Arrays.asList(ExprQt.Op.ALL, ExprQt.Op.LONE, ExprQt.Op.NO, ExprQt.Op.ONE, ExprQt.Op.SOME);
 
     protected CompModule                            context;
+    private Candidate                               candidate;
+    private boolean                                 useMutGenLimit;
 
     protected Mutator(CompModule context) {
         this.context = context;
+        useMutGenLimit = false;
     }
 
+    public Optional<List<Mutation>> getMutationsFrom(Expr e, Candidate candidate) {
+        if (candidate == null)
+            throw new IllegalArgumentException("candidate can't be null");
+        this.candidate = candidate;
+        Optional<List<Mutation>> mutations = visitThis(e);
+        candidate.clearMutatedStatus();
+        return mutations;
+    }
     public Optional<List<Mutation>> getMutations(Expr e) {
-        return this.visitThis(e);
+        return visitThis(e);
+    }
+
+    public Optional<List<Mutation>> getMutations() {
+        useMutGenLimit = true;
+        List<Mutation> mutations = new LinkedList<>();
+        context.getAllFunc().forEach(f -> {
+            visitThis(f.getBody()).ifPresent(mutations::addAll);
+        });
+        context.getAllAssertions().forEach(namedAssertion -> {
+            visitThis(namedAssertion.b).ifPresent(mutations::addAll);
+        });
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<List<Mutation>> visitThis(Expr x) throws Err {
+        if (candidate != null) {
+            Optional<Expr> mutant = candidate.getMutatedExpr(x);
+            mutant.ifPresent(expr -> {
+                candidate.markAsAlreadyMutated(x);
+                visitThis(mutant.get());
+            });
+        }
+        return x.accept(this);
     }
 
     protected abstract Ops whoiam();
+
+    protected boolean mutGenLimitCheck(Expr x) {
+        return !useMutGenLimit || x.hasMutGenLimit();
+    }
 
     //UTILITIES
 
@@ -56,6 +97,20 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         if (!(e instanceof ExprBinary))
             return false;
         return ARITHMETIC_BINARY_OPS.contains(((ExprBinary) e).op);
+    }
+
+    protected final boolean isArithmeticUnaryExpression(Expr x) {
+        if (!(x instanceof ExprUnary))
+            return false;
+        ExprUnary xAsUnary = (ExprUnary) x;
+        switch (xAsUnary.op) {
+            case CARDINALITY :
+            case CAST2INT :
+            case CAST2SIGINT :
+                return true;
+            default :
+                return false;
+        }
     }
 
     protected final boolean isUnaryRelationalExpression(Expr e) {
@@ -85,25 +140,25 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     @Override
     public Optional<List<Mutation>> visit(Sig x) throws Err {
         //TODO: need help with this
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(Field x) throws Err {
         //TODO: should visit the decl
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
-        Optional<List<Mutation>> leftMutations = x.left.accept(this);
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
         leftMutations.ifPresent(mutations::addAll);
-        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
         rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -111,13 +166,13 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         List<Mutation> mutations = new LinkedList<>();
         if (x.args != null) {
             for (Expr e : x.args) {
-                Optional<List<Mutation>> argMutations = e.accept(this);
+                Optional<List<Mutation>> argMutations = visitThis(e);
                 argMutations.ifPresent(mutations::addAll);
             }
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -125,39 +180,39 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         List<Mutation> mutations = new LinkedList<>();
         if (x.args != null) {
             for (Expr e : x.args) {
-                Optional<List<Mutation>> argMutations = e.accept(this);
+                Optional<List<Mutation>> argMutations = visitThis(e);
                 argMutations.ifPresent(mutations::addAll);
             }
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprConstant x) throws Err {
         //this expressions are TRUE, FALSE, and numbers
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprITE x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         if (x.cond != null) {
-            Optional<List<Mutation>> condMutations = x.cond.accept(this);
+            Optional<List<Mutation>> condMutations = visitThis(x.cond);
             condMutations.ifPresent(mutations::addAll);
         }
         if (x.left != null) {
-            Optional<List<Mutation>> thenMutations = x.left.accept(this);
+            Optional<List<Mutation>> thenMutations = visitThis(x.left);
             thenMutations.ifPresent(mutations::addAll);
         }
         if (x.right != null) {
-            Optional<List<Mutation>> elseMutations = x.right.accept(this);
+            Optional<List<Mutation>> elseMutations = visitThis(x.right);
             elseMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -166,14 +221,14 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 //        Optional<List<Mutation>> letVarMutations = x.var.accept(this);
 //        letVarMutations.ifPresent(mutations::addAll);
         if (allowBoundMutationByAnyOperator()) {
-            Optional<List<Mutation>> letVarBoundedExprMutations = x.expr.accept(this);
+            Optional<List<Mutation>> letVarBoundedExprMutations = visitThis(x.expr);
             letVarBoundedExprMutations.ifPresent(mutations::addAll);
         }
-        Optional<List<Mutation>> exprMutations = x.sub.accept(this);
+        Optional<List<Mutation>> exprMutations = visitThis(x.sub);
         exprMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -181,28 +236,28 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         List<Mutation> mutations = new LinkedList<>();
         if (allowBoundMutationByAnyOperator()) {
             for (Decl d : x.decls) {
-                Optional<List<Mutation>> boundMutations = d.expr.accept(this);
+                Optional<List<Mutation>> boundMutations = visitThis(d.expr);
                 boundMutations.ifPresent(mutations::addAll);
             }
         }
-        Optional<List<Mutation>> formulaMutations = x.sub.accept(this);
+        Optional<List<Mutation>> formulaMutations = visitThis(x.sub);
         formulaMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
         Expr sub = x.sub;
         if (sub != null)
-            return sub.accept(this);
-        return EMPTY;
+            return visitThis(sub);
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprVar x) throws Err {
-        return EMPTY;
+        return Optional.empty();
     }
 
     //CONFIGURATION METHODS

@@ -15,10 +15,12 @@
 
 package edu.mit.csail.sdg.alloy4whole;
 
-import ar.edu.unrc.dc.mutation.MutantLabMulti;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.mutantLab.ASTMutator;
+import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
+import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
 import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
 import ar.edu.unrc.dc.mutation.util.DependencyGraph;
 import ar.edu.unrc.dc.mutation.util.DependencyScanner;
@@ -776,9 +778,7 @@ final class SimpleReporter extends A4Reporter {
                 logger.addHandler(fh);
                 SimpleFormatter formatter = new SimpleFormatter();
                 fh.setFormatter(formatter);
-            } catch (SecurityException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+            } catch (SecurityException | IOException e) {
                 e.printStackTrace();
             }
         }
@@ -800,11 +800,16 @@ final class SimpleReporter extends A4Reporter {
         @Override
         public void run(WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Reparing process...\n\n");
-            MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE); //this line should be later removed
+            logger.info("Starting repair on model: " + options.originalFilename);
+            MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
+            MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.TRUE);                      //+
+            MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR, Boolean.TRUE);     //+
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);  //ONLY FOR DEBUGGING MUTATION GENERATION
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
+            ASTMutator.startInstance(world);
             //==========================================
-            final List<Sig> sigs = world.getAllReachableSigs();
             for (Func f : world.getAllFunc()) {
                 ParentRelationshipFixer parentRelationshipFixer = new ParentRelationshipFixer(f);
                 parentRelationshipFixer.fixParentRelation();
@@ -813,55 +818,46 @@ final class SimpleReporter extends A4Reporter {
                 ParentRelationshipFixer parentRelationshipFixer = new ParentRelationshipFixer(namedAssertion.b, world);
                 parentRelationshipFixer.fixParentRelation();
             }
-            DependencyGraph dependencyGraph = useDependencyGraphForChecking()?DependencyScanner.scanDependencies(world):null;
-            //final ConstList<Command> cmds = world.getAllCommands();
-            //cb(out, "warnings", bundleWarningNonFatal);
-            //if (rep.warn > 0 && !bundleWarningNonFatal)
-            //    return;
+            DependencyGraph dependencyGraph = DependencyScanner.scanDependencies(world);
             // Generate and build the mutation manager
             cb(out, "RepairSubTittle", world.markedEprsToMutate.size()+  " mutations mark detected Executing \n");
             cb(out, "RepairSubTittle", "Generating mutants... ");
             world.updateMarkedExprsToMutate();
             ContextExpressionExtractor.reInitialize(world);
             Ops[] availableOps = Ops.values();
-            MutantLabMulti mutantLab = new MutantLabMulti(world, availableOps);//new MutantLab((CompModule) world);
-            cb(out, "RepairSubTittle", mutantLab.mutantCount() + " mutants generated \n\n");
+            //MutantLabMulti mutantLab = new MutantLabMulti(world, availableOps);//new MutantLab((CompModule) world);
+            MutantLab mutantLab = new MutantLab(world, maxMutationsForRepair(), availableOps);
+            //cb(out, "RepairSubTittle", mutantLab.mutantCount() + " mutants generated \n\n");
             //======================== mutants test cycle ===========
             int count =1;
             while(mutantLab.advance()) {
-            //for  (int mutidx =0 ; mutidx < mutantLab.mutantCount(); mutidx++){
-                //mutantLab.next();
-                //cb(out, "", "--------------------------------\n");
-                //cb(out, "S2", "Validating mutant "+(mutidx+1)+"/"+mutantLab.mutantCount()+" for " +cmds.size()+" commands...\n\n");
-                //cb(out, "S2", mutantLab.getCurrentMutationsStr() +"  \n\n");
-                //cb(out, "S2", "Original: "+mutantLab.getMutation().original().toString() +"  \n");
-                //cb(out, "S2", "Mutant:   "+mutantLab.getCurrentMutant().mutant().toString() +" \n\n");
                 cb(out, "RepairSubTittle", "Validating mutant "+ count +" for " +world.getAllCommands().size()+" commands...\n"); count++;
                 //report current mutation
-                for ( Triplet<String,String,String> em: mutantLab.getCurrentMutationsInfo()){
+                Optional<Candidate> current = mutantLab.getCurrentCandidate();
+                if (!current.isPresent())
+                    break;
+                for ( Triplet<String,String,String> em: current.get().getCurrentMutationsInfo()){
                     cb(out, "RepairExprOrig->Mut", em.a, em.b , em.c+"  \n");
                 }
                 logger.info("Validating mutant");
-                logger.info(mutantLab.getCurrentMutationsStr());
+                logger.info(mutantLab.getCurrentCandidate().toString());
 
                 //=============================================
-                //List<String> result = new ArrayList<String>(cmds.size());
                 // check all commands
                 boolean discarded = false;
                 boolean repaired = true;
-                List<String> results = new ArrayList<String>();
+                List<String> results = new ArrayList<>();
                 List<Command> cmds;
                 if (useDependencyGraphForChecking()) {
-                    List<Browsable> relatedAssertionsAndFunctions = mutantLab.getRelatedAssertionsAndFunctions();
+                    List<Browsable> relatedAssertionsAndFunctions = current.get().getRelatedAssertionsAndFunctions();
                     cmds = new LinkedList<>(dependencyGraph.getPriorityCommands(relatedAssertionsAndFunctions));
                     cmds.addAll(dependencyGraph.getNonPriorityCommands(relatedAssertionsAndFunctions));
                 } else {
                     cmds = world.getAllCommands();
                 }
                 for (int i = 0; i < cmds.size(); i++) {
-                    if (dependencyGraph != null)
-                        logger.info("Running cmd " + i + " : " + cmds.get(i).toString() + " with complexity " + dependencyGraph.getCommandComplexity(cmds.get(i)));
-                    mutantLab.clearMutatedStatus();
+                    logger.info("Running cmd " +  cmds.get(i).toString() + " with complexity " + dependencyGraph.getCommandComplexity(cmds.get(i)));
+                    current.get().clearMutatedStatus();
                     try {
                         synchronized (SimpleReporter.class) {
                             latestModule = world;
@@ -873,10 +869,12 @@ final class SimpleReporter extends A4Reporter {
                         rep.tempfile = tempCNF;
                         //cb(out, "bold", "Executing \"" + cmd + "\"\n");
                         //@mutation ==>> pass the mutation lab to the translator for mutation
+                        mutantLab.lockCandidateGeneration();
                         Browsable.freezeParents();
-                        A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options, mutantLab);
+                        A4Solution ai = skipVerification()?null:TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, world.getAllReachableSigs(), cmd, options, current.get());
                         //if the solution is as expected then continue, else break this mutation checks and continue with other mutation
                         Browsable.unfreezeParents();
+                        mutantLab.unlockCandidateGeneration();
                         if (ai != null) {
                             if (ai.satisfiable()) {
                                 if (cmd.expects == 0 || (cmd.expects == -1 && cmd.check) ) {
@@ -889,14 +887,16 @@ final class SimpleReporter extends A4Reporter {
                                     repaired = false;
                                 }
                             }
+                        } else {
+                            repaired = false;
                         }
                         results.add(repaired ? "V":"X");
 
                     } catch (Exception e) {
                         discarded = true;
-                        repaired = false; // if the mutantion fails in one command ignore the rest
+                        repaired = false; // if the mutation fails in one command ignore the rest
                         results.add("E");
-                        logger.info("ERROR, mutant discarded\ncurrent mutant is:\n"+mutantLab.getCurrentMutationsStr());
+                        logger.info("ERROR, mutant discarded\ncurrent mutant is:\n"+current.get().toString());
                         StringWriter sw = new StringWriter();
                         e.printStackTrace(new PrintWriter(sw));
                         String exceptionAsString = sw.toString();
@@ -918,6 +918,7 @@ final class SimpleReporter extends A4Reporter {
                         rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
                         logger.info("Current mutant repair the model, all commands results as expected");
                         logger.info("MODEL REPAIRED!");
+                        mutantLab.stopSearch();
                         break;
                     }
                 }
@@ -928,8 +929,18 @@ final class SimpleReporter extends A4Reporter {
         }
 
         private boolean useDependencyGraphForChecking() {
-            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.MUTATION_USE_DEPENDENCY_GRAPH_FOR_CHECKING);
-            return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.MUTATION_USE_DEPENDENCY_GRAPH_FOR_CHECKING.defaultValue());
+            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING);
+            return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING.defaultValue());
+        }
+
+        private boolean skipVerification() {
+            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION);
+            return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION.defaultValue());
+        }
+
+        private int maxMutationsForRepair() {
+            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_MAX_MUTATIONS);
+            return configValue.map(o -> (Integer) o).orElse((Integer) ConfigKey.REPAIR_MAX_MUTATIONS.defaultValue());
         }
 
     }

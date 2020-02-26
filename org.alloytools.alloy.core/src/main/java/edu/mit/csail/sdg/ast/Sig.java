@@ -591,7 +591,8 @@ public abstract class Sig extends Expr implements Clause {
             }
             clone.setID(getID());
             clone.setIDEnv(getIDEnv());
-            copyComponentsToClone(clone);
+            clone.mutGenLimit(mutGenLimit());
+            //copyComponentsToClone(clone);
             return clone;
         }
 
@@ -1041,28 +1042,22 @@ public abstract class Sig extends Expr implements Clause {
     }
 
     protected void copyComponentsToClone(Sig clone) {
-        if (this.facts != null) {
-            for (Expr f : this.facts) {
-                clone.addFact(f);
-            }
+        for (Expr f : this.facts) {
+            clone.addFact(f);
         }
-        if (this.fields != null) {
-            for (Decl field : this.fields) {
-                if (field.names.size() > 1) {
-                    List<String> names = new LinkedList<>();
-                    for (ExprHasName n : field.names) {
-                        names.add(n.label);
-                    }
-                    clone.addTrickyField(field.names.get(0).pos, field.isPrivate, field.disjoint, field.disjoint2, ((Field) field.names.get(0)).isMeta, names.toArray(new String[names.size()]), field.expr);
-                } else {
-                    clone.addField(field.names.get(0).label, field.expr);
+        for (Decl field : this.fields) {
+            if (field.names.size() > 1) {
+                List<String> names = new LinkedList<>();
+                for (ExprHasName n : field.names) {
+                    names.add(n.label);
                 }
+                clone.addTrickyField(field.names.get(0).pos, field.isPrivate, field.disjoint, field.disjoint2, ((Field) field.names.get(0)).isMeta, names.toArray(new String[names.size()]), field.expr);
+            } else {
+                clone.addField(field.names.get(0).label, field.expr);
             }
         }
-        if (this.realFields != null) {
-            for (Field rfield : this.realFields) {
-                clone.addField(rfield.label, rfield.type().toExpr());
-            }
+        for (Field rfield : this.realFields) {
+            clone.addField(rfield.label, rfield.type().toExpr());
         }
     }
 

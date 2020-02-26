@@ -15,15 +15,15 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.ast.Sig.UNIV;
+import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.ErrorWarning;
+import edu.mit.csail.sdg.alloy4.Pos;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.Pos;
+import static edu.mit.csail.sdg.ast.Sig.UNIV;
 
 /** Immutable; represents a constant in the AST. */
 
@@ -272,6 +272,7 @@ public final class ExprConstant extends Expr {
         ExprConstant clone = new ExprConstant(this.pos, this.op, this.num, this.string);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(mutGenLimit());
         return clone;
     }
 }

@@ -13,11 +13,7 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
     private Expr target;
     private Expr replacement;
 
-    /**
-     * mutant to modify
-     */
-    private Expr mutant;
-
+    private Expr initialExpression;
 
     public SearchAndReplace(Expr expr, Expr replacement) {
         this.target = expr;
@@ -26,7 +22,7 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
 
     @Override
     public Optional<Expr> visitThis(Expr x) throws Err {
-        mutant = x;
+        initialExpression = x;
         return x.accept(this);
     }
 
@@ -106,35 +102,31 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
     public Optional<Expr> visit(ExprLet x) throws Err {
         if (x.getID() == this.target.getID()) {
             return replace(x, replacement);
-        } else {
-            Optional<Expr> res = x.var.accept(this);
-            if (res.isPresent())
-                return res;
-            res = x.expr.accept(this);
-            if (res.isPresent())
-                return res;
-            res = x.sub.accept(this);
-            if (res.isPresent())
-                return res;
         }
-        return x.sub.accept(this);
+        Optional<Expr> res = x.var.accept(this);
+        if (res.isPresent())
+            return res;
+        res = x.expr.accept(this);
+        if (res.isPresent())
+            return res;
+        res = x.sub.accept(this);
+        return res;
     }
 
     @Override
     public Optional<Expr> visit(ExprQt x) throws Err {
         if (x.getID() == this.target.getID()) {
             return replace(x, replacement);
-        } else {
-            for (Decl d : x.decls) {
-                for (Expr var : d.names) {
-                    Optional<Expr> res = var.accept(this);
-                    if (res.isPresent())
-                        return res;
-                }
-                Optional<Expr> res = d.expr.accept(this);
+        }
+        for (Decl d : x.decls) {
+            for (Expr var : d.names) {
+                Optional<Expr> res = var.accept(this);
                 if (res.isPresent())
                     return res;
             }
+            Optional<Expr> res = d.expr.accept(this);
+            if (res.isPresent())
+                return res;
         }
         return x.sub.accept(this);
     }
@@ -143,8 +135,8 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
     public Optional<Expr> visit(ExprUnary x) throws Err {
         if (x.getID() == this.target.getID()) {
             return replace(x, replacement);
-        } else
-            return x.sub.accept(this);
+        }
+        return x.sub.accept(this);
     }
 
     @Override
@@ -160,12 +152,11 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
         Optional<Expr> res;
         if (x.getID() == this.target.getID()) {
             return replace(x, replacement);
-        } else {
-            for (Sig.Field f : x.getFields()) {
-                res = f.accept(this);
-                if (res.isPresent())
-                    return res;
-            }
+        }
+        for (Sig.Field f : x.getFields()) {
+            res = f.accept(this);
+            if (res.isPresent())
+                return res;
         }
         return Optional.empty();
     }
@@ -179,7 +170,7 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
     }
 
     private Optional<Expr> replace(Expr original, Expr replacement) {
-        if (original.getID() == mutant.getID())
+        if (original.getID() == initialExpression.getID())
             return Optional.of(replacement);
         Browsable originalParent = original.getBrowsableParent();
         Expr modifiedParent = null;
@@ -189,42 +180,34 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
                 ExprBinary oParentAsBinary = (ExprBinary) originalParent;
                 if (oParentAsBinary.left.getID() == original.getID()) {
                     modifiedParent = oParentAsBinary.mutateLeft(replacement);
-                    //return Optional.of(modifiedParent);
                 } else if (oParentAsBinary.right.getID() == original.getID()) {
                     modifiedParent = oParentAsBinary.mutateRight(replacement);
-                    //return Optional.of(modifiedParent);
-                } /*else {
-                    return Optional.empty();
-                }*/
+                }
             } else if (originalParent instanceof ExprUnary) {
                 ExprUnary oParentAsUnary = (ExprUnary) originalParent;
                 //replacement should be the subexpression
                 if (oParentAsUnary.sub.getID() == original.getID()) {
                     modifiedParent = oParentAsUnary.mutateExpression(replacement);
-                    //return Optional.of(modifiedParent);
-                } /*else {
-                    return Optional.empty();
-                }*/
+                }
             } else if (originalParent instanceof ExprQt) {
                 ExprQt oParentAsQt = (ExprQt) originalParent;
                 //check if replacement is in a bound expression
                 for (Decl d : oParentAsQt.decls) {
                     if (d.expr.getID() == original.getID()) {
                         modifiedParent = oParentAsQt.replaceBoundForDecl(d, replacement);
-                        //return Optional.of(modifiedParent);
+                        break;
                     }
                 }
                 //check if replacement is in formula
                 if (oParentAsQt.sub.getID() == original.getID())
                     modifiedParent = oParentAsQt.replaceFormula(replacement);
-                //return Optional.empty();
             } else if (originalParent instanceof  ExprList) {
                 ExprList oParentAsList = (ExprList) originalParent;
                 //replacement should be an arg, not the operator
                 for (Expr arg : oParentAsList.args) {
                     if (arg.getID() == original.getID()) {
                         modifiedParent = oParentAsList.replaceArg(original, replacement);
-                        //return Optional.of(modifiedParent);
+                        break;
                     }
                 }
             } else {
@@ -235,7 +218,7 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
             if (modifiedParent != null) {
                 target = (Expr) originalParent;
                 this.replacement = modifiedParent;
-                return visitThis(mutant);
+                return visitThis(initialExpression);
             }
             return Optional.empty();
         }

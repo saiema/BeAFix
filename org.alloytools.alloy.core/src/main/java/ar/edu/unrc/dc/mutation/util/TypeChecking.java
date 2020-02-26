@@ -252,7 +252,10 @@ public final class TypeChecking {
         switch (op) {
             case NOT :
                 return replacementType.is_bool;
-            case NOOP :
+            case NOOP : {
+                Optional<Expr> opParent = getContext(x);
+                return opParent.map(o -> canReplace(o, replacementType, strictCheck)).orElse(true);
+            }
             case LONE :
             case NO :
             case ONE :

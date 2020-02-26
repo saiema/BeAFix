@@ -36,6 +36,9 @@ public class QTBER extends Mutator {
         List<Mutation> mutations = new LinkedList<>();
         List<Decl> decls = x.decls;
         Expr formula = x.sub;
+        if (!mutGenLimitCheck(x)) {
+            return visitThis(x.sub);
+        }
         Optional<List<Expr>> replacements;
         try {
             replacements = getCombinedSigAndDecls(minGeneration(), maxGeneration());
@@ -54,9 +57,11 @@ public class QTBER extends Mutator {
                 }
             }
         }
+        Optional<List<Mutation>> subMutations = visitThis(x.sub);
+        subMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     private boolean checkReplacement(Decl d, Expr replacement, Expr formula) {

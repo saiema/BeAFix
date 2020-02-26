@@ -24,11 +24,11 @@ public abstract class UnaryOpReplacer extends Mutator {
             Optional<List<Mutation>> mutants = mutants(x);
             mutants.ifPresent(mutations::addAll);
         }
-        Optional<List<Mutation>> subMutations = x.sub != null ? x.sub.accept(this) : EMPTY;
+        Optional<List<Mutation>> subMutations = visitThis(x.sub);
         subMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     protected abstract boolean canMutate(ExprUnary x);
@@ -36,6 +36,8 @@ public abstract class UnaryOpReplacer extends Mutator {
     protected abstract List<ExprUnary.Op> getOperators();
 
     private Optional<List<Mutation>> mutants(ExprUnary x) {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
         List<Mutation> mutants = new LinkedList<>();
         for (ExprUnary.Op o : getOperators()) {
             if (x.op.equals(o))
@@ -43,7 +45,9 @@ public abstract class UnaryOpReplacer extends Mutator {
             ExprUnary mutant = x.mutateOp(o);
             mutants.add(new Mutation(whoiam(), x, mutant));
         }
-        return Optional.of(mutants);
+        if (!mutants.isEmpty())
+            return Optional.of(mutants);
+        return Optional.empty();
     }
 
 }

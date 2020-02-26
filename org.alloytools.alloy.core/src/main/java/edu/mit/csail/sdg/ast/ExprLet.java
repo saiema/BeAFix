@@ -15,16 +15,10 @@
 
 package edu.mit.csail.sdg.ast;
 
+import edu.mit.csail.sdg.alloy4.*;
+
 import java.util.Collection;
 import java.util.List;
-
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
 
 /**
  * Immutable; represents an expression of the form (let a=b | x).
@@ -177,6 +171,7 @@ public final class ExprLet extends Expr {
         ExprLet clone = new ExprLet(this.pos, varClone, exprClone, subClone, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(mutGenLimit());
         return clone;
     }
 

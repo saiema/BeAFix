@@ -2,16 +2,17 @@ package ar.edu.unrc.dc.mutation.op;
 
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.util.TypeChecking;
-import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
 import edu.mit.csail.sdg.parser.CompModule;
 
-import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,27 +35,37 @@ public class EMOR extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
-        ExprBinary mutant = null;
-        switch (x.op) {
-            case EQUALS : {
-                mutant = x.mutateOp(Op.IN);
-                break;
-            }
-            case IN : {
-                mutant = x.mutateOp(Op.EQUALS);
-                break;
-            }
-            case NOT_EQUALS : {
-                mutant = x.mutateOp(Op.NOT_IN);
-                break;
-            }
-            case NOT_IN : {
-                mutant = x.mutateOp(Op.NOT_EQUALS);
-                break;
+        List<Mutation> mutations = new LinkedList<>();
+        Expr mutant = null;
+        if (mutGenLimitCheck(x)) {
+            switch (x.op) {
+                case EQUALS: {
+                    mutant = x.mutateOp(Op.IN);
+                    break;
+                }
+                case IN: {
+                    mutant = x.mutateOp(Op.EQUALS);
+                    break;
+                }
+                case NOT_EQUALS: {
+                    mutant = x.mutateOp(Op.NOT_IN);
+                    break;
+                }
+                case NOT_IN: {
+                    mutant = x.mutateOp(Op.NOT_EQUALS);
+                    break;
+                }
             }
         }
-        if (mutant != null && TypeChecking.canReplace(x, mutant, strictTypeCheck()))
-            return Optional.of(Arrays.asList(new Mutation(whoiam(), x, mutant)));
+        if (mutant != null && TypeChecking.canReplace(x, mutant, strictTypeCheck())) {
+            mutations.add(new Mutation(whoiam(), x, mutant));
+        }
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        leftMutations.ifPresent(mutations::addAll);
+        Optional<List<Mutation>> rightMutations = visitThis(x.left);
+        rightMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
         return Optional.empty();
     }
 

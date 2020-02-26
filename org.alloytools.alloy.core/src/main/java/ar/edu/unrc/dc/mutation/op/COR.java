@@ -33,16 +33,18 @@ public class COR extends BinOpReplacer {
     @Override
     public Optional<List<Mutation>> visit(ExprList x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
-        switch (x.op) {
-            case AND: {
-                ExprList mutant = x.mutateOp(ExprList.Op.OR);
-                mutations.add(new Mutation(whoiam(), x, mutant));
-                break;
-            }
-            case OR: {
-                ExprList mutant = x.mutateOp(ExprList.Op.AND);
-                mutations.add(new Mutation(whoiam(), x, mutant));
-                break;
+        if (mutGenLimitCheck(x)) {
+            switch (x.op) {
+                case AND: {
+                    ExprList mutant = x.mutateOp(ExprList.Op.OR);
+                    mutations.add(new Mutation(whoiam(), x, mutant));
+                    break;
+                }
+                case OR: {
+                    ExprList mutant = x.mutateOp(ExprList.Op.AND);
+                    mutations.add(new Mutation(whoiam(), x, mutant));
+                    break;
+                }
             }
         }
         for (Expr arg : x.args) {
@@ -51,7 +53,7 @@ public class COR extends BinOpReplacer {
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override

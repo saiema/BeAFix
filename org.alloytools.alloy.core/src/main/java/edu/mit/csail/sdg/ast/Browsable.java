@@ -48,11 +48,22 @@ public abstract class Browsable {
     }
 
     public int mutGenLimit() {
-        return this.mutGenLimit;
+        Browsable current = this;
+        while (current != null) {
+            if (current.mutGenLimit > 0)
+                return current.mutGenLimit;
+            Browsable parent = current.getBrowsableParent();
+            if (parent != null) {
+                if (parent instanceof Sig || parent instanceof Sig.Field)
+                    return 0;
+            }
+            current = parent;
+        }
+        return 0;
     }
 
     public boolean hasMutGenLimit() {
-        return mutGenLimit > 0;
+        return mutGenLimit() > 0;
     }
 
     public int getID() {
@@ -198,6 +209,7 @@ public abstract class Browsable {
                 Browsable clone = Browsable.make(pos, span, getHTML(), ConstList.make(subnodes));
                 clone.setID(getID());
                 clone.setIDEnv(getIDEnv());
+                mutGenLimit(mutGenLimit());
                 return clone;
             }
 

@@ -52,13 +52,13 @@ public class JES extends JEX {
             Optional<List<Mutation>> mutants = generateMutants(x, x);
             mutants.ifPresent(mutations::addAll);
         }
-        Optional<List<Mutation>> leftMutations = x.left.accept(this);
-        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
         leftMutations.ifPresent(mutations::addAll);
         rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -68,6 +68,8 @@ public class JES extends JEX {
 
     @Override
     protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) {
+        if (!mutGenLimitCheck(from))
+            return Optional.empty();
         //from and replace must be the same
         if (from.getID() != replace.getID())
             throw new IllegalArgumentException("from and replace must be the same");

@@ -202,6 +202,24 @@ public enum Ops {
                      }
 
                  },
+                 RUOD {
+
+                     @Override
+                     public boolean isImplemented() {
+                        return true;
+                    }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                        return new RUOD(context);
+                    }
+
+                     @Override
+                     public int getComplexity() {
+                        return 1;
+                    }
+
+                 },
                  MOR {
 
                      @Override

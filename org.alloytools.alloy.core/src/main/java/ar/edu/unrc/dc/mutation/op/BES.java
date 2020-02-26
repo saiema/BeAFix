@@ -46,16 +46,18 @@ public class BES extends Mutator {
             Optional<List<Mutation>> mutants = mutants(x);
             mutants.ifPresent(mutations::addAll);
         }
-        Optional<List<Mutation>> leftMutations = x.left.accept(this);
-        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
         leftMutations.ifPresent(mutations::addAll);
         rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     private Optional<List<Mutation>> mutants(ExprBinary x) throws Err {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
         List<Mutation> mutants = new LinkedList<>();
         if (canReplace(x, getType(x.left), strictTypeCheck())) {
             Expr mutant = (Expr) x.left.clone();
@@ -66,7 +68,7 @@ public class BES extends Mutator {
             mutants.add(new Mutation(whoiam(), x, mutant));
         }
         if (mutants.isEmpty())
-            return EMPTY;
+            return Optional.empty();
         return Optional.of(mutants);
     }
 

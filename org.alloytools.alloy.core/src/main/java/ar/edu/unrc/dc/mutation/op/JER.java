@@ -45,6 +45,8 @@ public class JER extends JEX {
 
     @Override
     protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) {
+        if (!mutGenLimitCheck(from))
+            return Optional.empty();
         List<Mutation> mutations = new LinkedList<>();
         ExprBinary original = (ExprBinary) from;
         if (!isMemberOfBinaryExpression(original, replace))

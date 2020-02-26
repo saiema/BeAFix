@@ -29,13 +29,13 @@ public abstract class JEX extends Mutator {
             mutantsLeft.ifPresent(mutations::addAll);
             mutantsRight.ifPresent(mutations::addAll);
         }
-        Optional<List<Mutation>> leftMutations = x.left.accept(this);
-        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
         leftMutations.ifPresent(mutations::addAll);
         rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     protected abstract boolean isMutable(Expr x);

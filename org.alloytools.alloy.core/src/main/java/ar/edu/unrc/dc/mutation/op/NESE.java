@@ -60,6 +60,8 @@ public class NESE extends Mutator {
     }
 
     private Optional<List<Mutation>> generateMutation(Expr x) throws Err {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
         try {
             Optional<Expr> mutant = generateMutant(x);
             if (mutant.isPresent())
@@ -67,7 +69,7 @@ public class NESE extends Mutator {
         } catch (CheatingIsBadMkay e) {
             throw new Error("There was a problem obtaining replacement types", e);
         }
-        return EMPTY;
+        return Optional.empty();
     }
 
     private Optional<Expr> generateMutant(Expr x) throws CheatingIsBadMkay {

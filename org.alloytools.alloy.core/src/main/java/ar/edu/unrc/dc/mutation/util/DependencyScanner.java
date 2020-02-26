@@ -215,6 +215,8 @@ public class DependencyScanner {
             for (Expr a : assertRelatedFunctions.keySet()) {
                 List<Command> collectedCommands = new LinkedList<>();
                 for (Func rf : assertRelatedFunctions.get(a)) {
+                    if (!isFromContext(rf, context))
+                        continue;
                     for (Command c : funcRelatedCommands.get(rf)) {
                         if (!collectedCommands.contains(c))
                             collectedCommands.add(c);
@@ -232,6 +234,8 @@ public class DependencyScanner {
             Set<Expr> asserts = assertRelatedCommands.keySet();
             for (Expr a : asserts) {
                 for (Func arf : assertRelatedFunctions.get(a)) {
+                    if (!isFromContext(arf, context))
+                        return;
                     List<Command> arfCommands = funcRelatedCommands.get(arf);
                     for (Command aCommands : assertRelatedCommands.get(a)) {
                         if (!arfCommands.contains(aCommands)) {

@@ -15,7 +15,7 @@
 
 package edu.mit.csail.sdg.translator;
 
-import ar.edu.unrc.dc.mutation.MutantLabMulti;
+import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.*;
@@ -97,9 +97,9 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     /**
      * mutation to apply @Mutation
      */
-    private MutantLabMulti mutantLab;
-    public void setMutation(MutantLabMulti mutantLab) {
-        this.mutantLab = mutantLab;
+    private Candidate currentCandidate;
+    public void setMutation(Candidate currentCandidate) {
+        this.currentCandidate = currentCandidate;
     }
 
     /**
@@ -589,7 +589,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      *         the next satisfying solution X3... until you get an unsatisfying
      *         solution.
      */
-    public static A4Solution execute_commandFromBookWithMutation(A4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, /*MutantLab*/ MutantLabMulti ml) throws Err {
+    public static A4Solution execute_commandFromBookWithMutation(A4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Candidate currentCandidate) throws Err {
         if (rep == null)
             rep = A4Reporter.NOP;
         TranslateAlloyToKodkod tr = null;
@@ -597,7 +597,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
             if (cmd.parent != null || !cmd.getGrowableSigs().isEmpty())
                 return execute_greedyCommand(rep, sigs, cmd, opt);
             tr = new TranslateAlloyToKodkod(rep, opt, sigs, cmd);
-            tr.setMutation(ml);
+            tr.setMutation(currentCandidate);
             tr.makeFacts(cmd.formula);
             return tr.frame.solve(rep, cmd, new Simplifier(), true);
         } catch (UnsatisfiedLinkError ex) {
@@ -765,10 +765,10 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      */
     @Override
     public Object visitThis(Expr x) throws Err {
-        if (mutantLab!=null){
-                Optional<Expr> mutant = mutantLab.getMutation(x);
+        if (currentCandidate!=null){
+                Optional<Expr> mutant = currentCandidate.getMutatedExpr(x);
                 if (mutant.isPresent()) {
-                    mutantLab.markAsAlreadyMutated(x);
+                    currentCandidate.markAsAlreadyMutated(x);
                     return mutant.get().accept(this);
                 }
         }

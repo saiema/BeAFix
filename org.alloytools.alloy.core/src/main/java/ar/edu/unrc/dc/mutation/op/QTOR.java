@@ -36,19 +36,21 @@ public class QTOR extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprQt x) throws Err {
+        List<Mutation> mutations = new LinkedList<>();
         if (QUANTIFIER_OPERATORS.contains(x.op)) {
-            List<Mutation> mutations = new LinkedList<>();
             Optional<List<Mutation>> mutants = mutants(x);
             mutants.ifPresent(mutations::addAll);
-            Optional<List<Mutation>> subMutations = x.sub != null ? x.sub.accept(this) : EMPTY;
-            subMutations.ifPresent(mutations::addAll);
-            if (!mutations.isEmpty())
-                return Optional.of(mutations);
         }
-        return EMPTY;
+        Optional<List<Mutation>> subMutations = visitThis(x.sub);
+        subMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return Optional.empty();
     }
 
     private Optional<List<Mutation>> mutants(ExprQt x) {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
         List<Mutation> mutants = new LinkedList<>();
         for (ExprQt.Op o : QUANTIFIER_OPERATORS) {
             if (x.op.equals(o))

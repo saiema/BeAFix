@@ -29,15 +29,15 @@ public class SSE extends Mutator {
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mainMutations = generateMutationsFor(x);
-        Optional<List<Mutation>> leftMutations = x.left.accept(this);
-        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
         mainMutations.ifPresent(mutations::addAll);
         leftMutations.ifPresent(mutations::addAll);
         rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty()) {
             return Optional.of(mutations);
         }
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -46,26 +46,26 @@ public class SSE extends Mutator {
         Optional<List<Mutation>> mainMutations = generateMutationsFor(x);
         mainMutations.ifPresent(mutations::addAll);
         for (Expr arg : x.args) {
-            Optional<List<Mutation>> argMutations = arg.accept(this);
+            Optional<List<Mutation>> argMutations = visitThis(arg);
             argMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty()) {
             return Optional.of(mutations);
         }
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> mainMutations = generateMutationsFor(x);
-        Optional<List<Mutation>> subMutations = (!x.op.equals(ExprUnary.Op.NOOP))? x.sub.accept(this) : EMPTY;
+        Optional<List<Mutation>> subMutations = visitThis(x.sub); //(!x.op.equals(ExprUnary.Op.NOOP))? visitThis(x.sub) : Optional.empty();
         mainMutations.ifPresent(mutations::addAll);
         subMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty()) {
             return Optional.of(mutations);
         }
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -74,6 +74,10 @@ public class SSE extends Mutator {
     }
 
     private Optional<List<Mutation>> generateMutationsFor(Expr x) throws Err {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
+        if (x instanceof ExprUnary && ((ExprUnary)x).op.equals(ExprUnary.Op.NOOP))
+            return Optional.empty();
         try {
             List<Mutation> mutations = new LinkedList<>();
             Optional<List<Expr>> mutants = generateMutants(x);

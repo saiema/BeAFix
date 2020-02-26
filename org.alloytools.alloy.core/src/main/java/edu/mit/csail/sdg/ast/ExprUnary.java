@@ -501,14 +501,20 @@ public final class ExprUnary extends Expr {
     }
 
     public ExprUnary mutateExpression(Expr replacement) {
-        if (op == Op.NOOP)
-            throw new IllegalArgumentException("Shouldn't be mutating the expression of a unary expression with NOOP");
-        return new ExprUnary(pos, op, (Expr) replacement.clone(), type, weight, errors);
+//        if (op == Op.NOOP)
+//            throw new IllegalArgumentException("Shouldn't be mutating the expression of a unary expression with NOOP");
+//        return new ExprUnary(pos, op, (Expr) replacement.clone(), type, weight, errors);
+        Expr subExprClone = (Expr) replacement.clone();
+        ExprUnary mutant = (ExprUnary) op.make(pos, subExprClone);
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
     public ExprUnary mutateOp(Op op) {
         Expr subClone = (Expr) sub.clone();
-        return (ExprUnary) op.make(pos, subClone);
+        ExprUnary mutant = (ExprUnary) op.make(pos, subClone);
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
     @Override
@@ -522,6 +528,7 @@ public final class ExprUnary extends Expr {
         ExprUnary clone = new ExprUnary(this.pos, this.op, subClone, this.type, this.weight, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(mutGenLimit());
         return clone;
     }
 }

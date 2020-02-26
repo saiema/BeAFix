@@ -341,7 +341,9 @@ public final class ExprList extends Expr {
             else
                 argsClone.add((Expr) a.clone());
         }
-        return new ExprList(this.pos, this.closingBracket, this.op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
+        ExprList mutant = new ExprList(this.pos, this.closingBracket, this.op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
+        mutant.mutGenLimit(mutGenLimit());
+        return mutant;
     }
 
     @Override
@@ -353,6 +355,7 @@ public final class ExprList extends Expr {
         ExprList clone = new ExprList(this.pos, this.closingBracket, this.op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(mutGenLimit());
         return clone;
     }
 }

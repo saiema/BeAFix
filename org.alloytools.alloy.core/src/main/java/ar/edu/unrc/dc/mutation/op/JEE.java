@@ -15,8 +15,7 @@ import java.util.Optional;
 import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
 import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getAllVariablesFor;
 import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getCompatibleVariablesFor;
-import static ar.edu.unrc.dc.mutation.util.TypeChecking.emptyOrNone;
-import static ar.edu.unrc.dc.mutation.util.TypeChecking.getType;
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.*;
 
 /**
  * Join Expression Extender
@@ -54,11 +53,11 @@ public class JEE extends JEX {
         List<Mutation> mutations = new LinkedList<>();
         Optional<List<Mutation>> unaryMutations = generateMutants(x, x);
         unaryMutations.ifPresent(mutations::addAll);
-        Optional<List<Mutation>> subMutations = x.sub.accept(this);
+        Optional<List<Mutation>> subMutations = visitThis(x.sub);
         subMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     @Override
@@ -72,13 +71,23 @@ public class JEE extends JEX {
         Optional<List<Mutation>> callMutations = generateMutants(x, x);
         callMutations.ifPresent(mutations::addAll);
         for (Expr arg : x.args) {
-            Optional<List<Mutation>> argMutations = arg.accept(this);
+            Optional<List<Mutation>> argMutations = visitThis(arg);
             argMutations.ifPresent(mutations::addAll);
         }
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
+
+//    @Override
+//    public Optional<List<Mutation>> visit(Sig.Field x) throws Err {
+//        return generateMutants(x, x);
+//    }
+//
+//    @Override
+//    public Optional<List<Mutation>> visit(Sig x) throws Err {
+//        return generateMutants(x, x);
+//    }
 
     @Override
     protected boolean isMutable(Expr x) {
@@ -87,6 +96,8 @@ public class JEE extends JEX {
 
     @Override
     protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) throws Err {
+        if (!mutGenLimitCheck(from))
+            return Optional.empty();
         List<Mutation> mutations = new LinkedList<>();
         if (from instanceof ExprBinary) {
             //replace one subexpression of size 0 with one of size 1 (in terms of joins)
@@ -104,11 +115,17 @@ public class JEE extends JEX {
                     if (original.left.getID() == replace.getID()) {
                         if (emptyOrNone(getType(r).join(getType(original.right))))
                             continue;
-                        mutations.add(new Mutation(whoiam(), original, original.mutateLeft(r)));
+                        Expr mutation = original.mutateLeft(r);
+                        if (!canReplace(original, mutation, strictTypeCheck()))
+                            continue;
+                        mutations.add(new Mutation(whoiam(), original, mutation));
                     } else {
                         if (emptyOrNone(getType(original.left).join(getType(r))))
                             continue;
-                        mutations.add(new Mutation(whoiam(), original, original.mutateRight(r)));
+                        Expr mutation = original.mutateRight(r);
+                        if (!canReplace(original, mutation, strictTypeCheck()))
+                            continue;
+                        mutations.add(new Mutation(whoiam(), original, mutation));
                     }
                 }
             }

@@ -2,10 +2,11 @@ package ar.edu.unrc.dc.mutation.op;
 
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Mutator;
 import ar.edu.unrc.dc.mutation.util.TypeChecking;
-import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -28,13 +29,13 @@ public abstract class BinOpReplacer extends Mutator {
             Optional<List<Mutation>> mutants = mutants(x);
             mutants.ifPresent(mutations::addAll);
         }
-        Optional<List<Mutation>> leftMutations = x.left.accept(this);
-        Optional<List<Mutation>> rightMutations = x.right.accept(this);
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
         leftMutations.ifPresent(mutations::addAll);
         rightMutations.ifPresent(mutations::addAll);
         if (!mutations.isEmpty())
             return Optional.of(mutations);
-        return EMPTY;
+        return Optional.empty();
     }
 
     protected abstract boolean canMutate(ExprBinary x);
@@ -44,13 +45,15 @@ public abstract class BinOpReplacer extends Mutator {
     protected abstract boolean validate(ExprBinary original, Op newOperator);
 
     protected final Optional<List<Mutation>> mutants(ExprBinary x) {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
         List<Mutation> mutants = new LinkedList<>();
         for (Op o : getOperators()) {
             if (x.op.equals(o))
                 continue;
             if (!validate(x, o))
                 continue;
-            ExprBinary mutant = x.mutateOp(o);
+            Expr mutant = x.mutateOp(o);
             if (TypeChecking.canReplace(x, mutant, strictTypeCheck()))
                 mutants.add(new Mutation(whoiam(), x, mutant));
         }

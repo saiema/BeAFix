@@ -3,6 +3,7 @@ package ar.edu.unrc.dc.mutation;
 import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import ar.edu.unrc.dc.mutation.visitors.SearchAndReplace;
 import ar.edu.unrc.dc.mutation.visitors.SearchExpr;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.ExprBinary.Op;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -40,6 +41,11 @@ public class Mutation {
         this.operator = operator;
         this.original = original;
         this.mutant = mutant;
+        updateMutGenLimit();
+    }
+
+    private void updateMutGenLimit() {
+        mutant.mutGenLimit(original.mutGenLimit());
     }
 
     public Ops operator() {
@@ -189,6 +195,11 @@ public class Mutation {
         sb.append(", ");
         sb.append(toString(mutant));
         sb.append(")");
+        if (useFullToString()) {
+            sb.append("\n");
+            sb.append(" from mayor expression : ");
+            sb.append(getMayorAffectedExpression().toString());
+        }
         return sb.toString();
     }
 
@@ -307,6 +318,11 @@ public class Mutation {
             }
         }
         return isMutationOfBinExpr(from.getBrowsableParent(), op, search);
+    }
+
+    private boolean useFullToString() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.MUTATION_TOSTRING_FULL);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.MUTATION_TOSTRING_FULL.defaultValue());
     }
 
 }

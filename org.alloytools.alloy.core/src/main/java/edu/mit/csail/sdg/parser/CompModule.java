@@ -2432,6 +2432,7 @@ public final class CompModule extends Browsable implements Module {
     /** Add a marked Expression to mutate. */
     void addMarkedExprToMutate(Expr v)  {
         markedEprsToMutate.add(v);
+        v.mutGenLimit(1);
     }
 
     /** build mutantions .   */
@@ -2462,6 +2463,7 @@ public final class CompModule extends Browsable implements Module {
                     for (Func ff : entry) {
                         Expr newexpr = ff.getBody().accept(v);
                         if (newexpr != null) {
+                            newexpr.mutGenLimit(1);
                             markedEprsToMutate.set(i,newexpr);
                             found = true;
                             break;
@@ -2474,6 +2476,7 @@ public final class CompModule extends Browsable implements Module {
                 for (Pair<String, Expr> f : facts) {
                     Expr newexpr = f.b.accept(v);
                     if (newexpr != null) {
+                        newexpr.mutGenLimit(1);
                         markedEprsToMutate.set(i,newexpr);
                         found=true;
                         break;

@@ -1,6 +1,8 @@
 package ar.edu.unrc.dc.mutation.op;
 
 import ar.edu.unrc.dc.mutation.*;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -27,7 +29,14 @@ public class QTOI extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprBinary x) throws Err {
-        return generateMutationsFor(x);
+        List<Mutation> mutations = generateMutationsFor(x).orElse(new LinkedList<>());
+        Optional<List<Mutation>> leftMutations = visitThis(x.left);
+        leftMutations.ifPresent(mutations::addAll);
+        Optional<List<Mutation>> rightMutations = visitThis(x.right);
+        rightMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return Optional.empty();
     }
 
     @Override
@@ -37,7 +46,12 @@ public class QTOI extends Mutator {
 
     @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
-        return generateMutationsFor(x);
+        List<Mutation> mutations = generateMutationsFor(x).orElse(new LinkedList<>());
+        Optional<List<Mutation>> subMutations = visitThis(x.sub);
+        subMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return Optional.empty();
     }
 
     @Override
@@ -46,11 +60,14 @@ public class QTOI extends Mutator {
     }
 
     private Optional<List<Mutation>> generateMutationsFor(Expr x) throws Err {
+        if (!mutGenLimitCheck(x))
+            return Optional.empty();
         try {
             List<Expr> mutants = generateMutants(x);
             List<Mutation> mutations = new LinkedList<>();
             for (Expr m : mutants) {
-                mutations.add(new Mutation(whoiam(), x, m));
+                if (TypeChecking.canReplace(x, m, strictTypeCheck()))
+                    mutations.add(new Mutation(whoiam(), x, m));
             }
             return Optional.of(mutations);
         } catch (CheatingIsBadMkay e) {
@@ -106,4 +123,10 @@ public class QTOI extends Mutator {
     protected Ops whoiam() {
         return Ops.QTOI;
     }
+
+    private boolean strictTypeCheck() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.OPERATOR_QTOI_STRICT_TYPE_CHECK);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean)ConfigKey.OPERATOR_QTOI_STRICT_TYPE_CHECK.defaultValue());
+    }
+
 }
