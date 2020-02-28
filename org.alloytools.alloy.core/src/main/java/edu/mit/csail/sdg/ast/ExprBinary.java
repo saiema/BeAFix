@@ -711,7 +711,10 @@ public final class ExprBinary extends Expr {
         Expr right = this.right.resolve(b, warns);
         if (w != null)
             warns.add(w);
-        return (left == this.left && right == this.right) ? this : op.make(pos, closingBracket, left, right);
+        int mgl = mutGenLimit();
+        Expr resolvedExpr = (left == this.left && right == this.right) ? this : op.make(pos, closingBracket, left, right);
+        resolvedExpr.mutGenLimit(mgl);
+        return resolvedExpr;
     }
 
     // ============================================================================================================//

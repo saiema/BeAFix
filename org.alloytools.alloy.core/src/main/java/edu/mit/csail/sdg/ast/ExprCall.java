@@ -381,7 +381,10 @@ public final class ExprCall extends Expr {
             // +"The argument has type "+y.type+"\nbut the parameter has type
             // "+p));
         }
-        return changed ? make(pos, closingBracket, fun, args.makeConst(), extraWeight) : this;
+        int mgl = mutGenLimit();
+        Expr resolvedExpr = changed ? make(pos, closingBracket, fun, args.makeConst(), extraWeight) : this;
+        resolvedExpr.mutGenLimit(mgl);
+        return resolvedExpr;
     }
 
     // ============================================================================================================//

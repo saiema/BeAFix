@@ -120,7 +120,10 @@ public final class ExprLet extends Expr {
         Expr newSub = sub.resolve(p, warns);
         if (warns != null && !newSub.hasVar(var))
             warns.add(new ErrorWarning(var.pos, "This variable is unused."));
-        return (sub == newSub) ? this : make(pos, var, expr, newSub);
+        int mgl = mutGenLimit();
+        Expr resolvedExpr = (sub == newSub) ? this : make(pos, var, expr, newSub);
+        resolvedExpr.mutGenLimit(mgl);
+        return resolvedExpr;
     }
 
     // =============================================================================================================//

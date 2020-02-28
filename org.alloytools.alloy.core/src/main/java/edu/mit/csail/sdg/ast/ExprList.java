@@ -278,7 +278,10 @@ public final class ExprList extends Expr {
             changed = (a != args.get(0) || b != args.get(1) || c != args.get(2));
             newargs.add(a).add(b).add(c);
         }
-        return changed ? make(pos, closingBracket, op, newargs.makeConst()) : this;
+        int mgl = mutGenLimit();
+        Expr resolvedExpr = changed ? make(pos, closingBracket, op, newargs.makeConst()) : this;
+        resolvedExpr.mutGenLimit(mgl);
+        return resolvedExpr;
     }
 
     // ============================================================================================================//

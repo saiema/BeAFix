@@ -822,7 +822,7 @@ final class SimpleReporter extends A4Reporter {
             // Generate and build the mutation manager
             cb(out, "RepairSubTittle", world.markedEprsToMutate.size()+  " mutations mark detected Executing \n");
             cb(out, "RepairSubTittle", "Generating mutants... ");
-            world.updateMarkedExprsToMutate();
+//            world.updateMarkedExprsToMutate();
             ContextExpressionExtractor.reInitialize(world);
             Ops[] availableOps = Ops.values();
             //MutantLabMulti mutantLab = new MutantLabMulti(world, availableOps);//new MutantLab((CompModule) world);

@@ -56,7 +56,7 @@ public class MutationConfiguration {
             }
         },
 
-        OPERATOR_SSE_STRICT_TYPE_CHECK {
+        OPERATOR_SSX_STRICT_TYPE_CHECK {
             @Override
             public Class<?> getValueType() {
                 return Boolean.class;
@@ -272,7 +272,7 @@ public class MutationConfiguration {
             setConfig(ConfigKey.OPERATOR_BIN_OP_REPLACEMENT_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_EMOR_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_JEX_STRICT_TYPE_CHECK, value);
-            setConfig(ConfigKey.OPERATOR_SSE_STRICT_TYPE_CHECK, value);
+            setConfig(ConfigKey.OPERATOR_SSX_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_QTOI_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_RUOD_STRICT_TYPE_CHECK, value);
         } else

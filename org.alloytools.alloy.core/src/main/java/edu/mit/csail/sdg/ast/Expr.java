@@ -197,7 +197,10 @@ public abstract class Expr extends Browsable {
         if (type.is_small_int())
             return this;
         if (type.is_int()) {
-            return cast2int();
+            int mgl = mutGenLimit();
+            Expr castedExpr = cast2int();
+            castedExpr.mutGenLimit(mgl);
+            return castedExpr;
         }
         // else: error
         String msg = "This must be an integer expression.\nInstead, it has the following possible type(s):\n" + type;
@@ -256,7 +259,10 @@ public abstract class Expr extends Browsable {
      *            null if we wish to ignore warnings
      */
     public final Expr resolve_as_formula(Collection<ErrorWarning> warnings) {
-        return typecheck_as_formula().resolve(Type.FORMULA, warnings).typecheck_as_formula();
+        int mgl = mutGenLimit();
+        Expr resolvedExpr = typecheck_as_formula().resolve(Type.FORMULA, warnings).typecheck_as_formula();
+        resolvedExpr.mutGenLimit(mgl);
+        return resolvedExpr;
     }
 
     /**
@@ -275,7 +281,10 @@ public abstract class Expr extends Browsable {
      *            null if we wish to ignore warnings
      */
     public final Expr resolve_as_int(Collection<ErrorWarning> warnings) {
-        return typecheck_as_int().resolve(Type.smallIntType(), warnings).typecheck_as_int();
+        int mgl = mutGenLimit();
+        Expr resolvedExpr = typecheck_as_int().resolve(Type.smallIntType(), warnings).typecheck_as_int();
+        resolvedExpr.mutGenLimit(mgl);
+        return resolvedExpr;
     }
 
     /**
@@ -296,7 +305,10 @@ public abstract class Expr extends Browsable {
     public final Expr resolve_as_set(Collection<ErrorWarning> warnings) {
         Expr x = typecheck_as_set();
         Type t = x.type;
-        return x.resolve(Type.removesBoolAndInt(t), warnings).typecheck_as_set();
+        int mgl = mutGenLimit();
+        Expr resolvedExpr = x.resolve(Type.removesBoolAndInt(t), warnings).typecheck_as_set();
+        resolvedExpr.mutGenLimit(mgl);
+        return resolvedExpr;
     }
 
     // ================================================================================================================//

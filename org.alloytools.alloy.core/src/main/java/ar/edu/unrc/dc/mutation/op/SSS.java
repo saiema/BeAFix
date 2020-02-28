@@ -10,18 +10,18 @@ import java.util.List;
 import java.util.Optional;
 
 import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
-import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.*;
-import static ar.edu.unrc.dc.mutation.util.TypeChecking.*;
+import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getCompatibleVariablesFor;
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.emptyOrNone;
 
 /**
- * Simple Set Extender
+ * Simple Set Shortener
  * <p>
- *     Given an expression {@code x} this will generate {@code x + y} where {@code y} is a compatible set expression comprised by defined Signatures and Fields
+ *     Given an expression {@code x} this will generate {@code x - y} where {@code y} is a compatible set expression comprised by defined Signatures and Fields
  * </p>
  */
-public class SSE extends Mutator {
+public class SSS extends Mutator {
 
-    public SSE(CompModule context) {
+    public SSS(CompModule context) {
         super(context);
     }
 
@@ -110,7 +110,7 @@ public class SSE extends Mutator {
                 }
                 Expr originalClone = cheatedClone(x);
                 Expr rightClone = cheatedClone(right);
-                Expr mutant = ExprBinary.Op.PLUS.make(originalClone.pos, null, originalClone, rightClone);
+                Expr mutant = ExprBinary.Op.MINUS.make(originalClone.pos, null, originalClone, rightClone);
                 mutants.add(mutant);
             }
         }
@@ -126,7 +126,7 @@ public class SSE extends Mutator {
 
     @Override
     protected Ops whoiam() {
-        return Ops.SSE;
+        return Ops.SSS;
     }
 
 }

@@ -360,6 +360,22 @@ public enum Ops {
                      }
 
                  },
+                SSS {
+
+                    @Override
+                    public boolean isImplemented() {
+                        return true;
+                    }
+
+                    @Override
+                    public Mutator getOperator(CompModule context) { return new SSS(context); }
+
+                    @Override
+                    public int getComplexity() {
+                        return 5;
+                    }
+
+                },
                  MULTI { //this operator is used when compressing mutations
 
                      @Override

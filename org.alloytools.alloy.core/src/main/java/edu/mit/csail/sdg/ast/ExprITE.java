@@ -169,7 +169,10 @@ public final class ExprITE extends Expr {
         Expr cond = this.cond.resolve(Type.FORMULA, warns);
         Expr left = this.left.resolve(a, warns);
         Expr right = this.right.resolve(b, warns);
-        return (cond == this.cond && left == this.left && right == this.right) ? this : make(pos, cond, left, right);
+        int mgl = mutGenLimit();
+        Expr resolvedExpr = (cond == this.cond && left == this.left && right == this.right) ? this : make(pos, cond, left, right);
+        resolvedExpr.mutGenLimit(mgl);
+        return resolvedExpr;
     }
 
     /** {@inheritDoc} */

@@ -38,7 +38,7 @@ public class TestingMain {
     }
 
     private static void generateMutants(CompModule m, Ops... ops) {
-        m.updateMarkedExprsToMutate();
+//        m.updateMarkedExprsToMutate();
 
         List<Mutation> mutations = new LinkedList<>();
 //        Optional<List<Expr>> expressions = m.();

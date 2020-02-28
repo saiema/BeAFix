@@ -398,7 +398,10 @@ public final class CompModule extends Browsable implements Module {
             TempList<Expr> temp = new TempList<Expr>(x.args.size());
             for (int i = 0; i < x.args.size(); i++)
                 temp.add(visitThis(x.args.get(i)));
-            return ExprList.make(x.pos, x.closingBracket, x.op, temp.makeConst());
+            int mgl = x.mutGenLimit();
+            Expr newExpr = ExprList.make(x.pos, x.closingBracket, x.op, temp.makeConst());;
+            newExpr.mutGenLimit(mgl);
+            return newExpr;
         }
 
         /** {@inheritDoc} */
@@ -407,7 +410,10 @@ public final class CompModule extends Browsable implements Module {
             Expr f = visitThis(x.cond);
             Expr a = visitThis(x.left);
             Expr b = visitThis(x.right);
-            return ExprITE.make(x.pos, f, a, b);
+            int mgl = x.mutGenLimit();
+            Expr newExpr = ExprITE.make(x.pos, f, a, b);
+            newExpr.mutGenLimit(mgl);
+            return newExpr;
         }
 
         /** {@inheritDoc} */
@@ -415,17 +421,23 @@ public final class CompModule extends Browsable implements Module {
         public Expr visit(ExprBadJoin x) throws Err {
             Expr left = visitThis(x.left);
             Expr right = visitThis(x.right);
+            int mgl = x.mutGenLimit();
+            Expr newExpr;
             // If it's a macro invocation, instantiate it
-            if (right instanceof Macro)
-                return ((Macro) right).addArg(left).instantiate(this, warns);
-            // check to see if it is the special builtin function "Int[]"
-            if (left.type().is_int() && right.isSame(Sig.SIGINT))
-                return left; // [AM] .cast2sigint();
-            // otherwise, process as regular join or as method call
-            left = left.typecheck_as_set();
-            if (!left.errors.isEmpty() || !(right instanceof ExprChoice))
-                return ExprBinary.Op.JOIN.make(x.pos, x.closingBracket, left, right);
-            return process(x.pos, x.closingBracket, right.pos, ((ExprChoice) right).choices, ((ExprChoice) right).reasons, left);
+            if (right instanceof Macro) {
+                newExpr = ((Macro) right).addArg(left).instantiate(this, warns);
+            } else if (left.type().is_int() && right.isSame(Sig.SIGINT)) // check to see if it is the special builtin function "Int[]"
+                newExpr = left; // [AM] .cast2sigint();
+            else {
+                // otherwise, process as regular join or as method call
+                left = left.typecheck_as_set();
+                if (!left.errors.isEmpty() || !(right instanceof ExprChoice))
+                    newExpr = ExprBinary.Op.JOIN.make(x.pos, x.closingBracket, left, right);
+                else
+                    newExpr = process(x.pos, x.closingBracket, right.pos, ((ExprChoice) right).choices, ((ExprChoice) right).reasons, left);
+            }
+            newExpr.mutGenLimit(mgl);
+            return newExpr;
         }
 
         /** {@inheritDoc} */
@@ -433,20 +445,26 @@ public final class CompModule extends Browsable implements Module {
         public Expr visit(ExprBinary x) throws Err {
             Expr left = visitThis(x.left);
             Expr right = visitThis(x.right);
+            int mgl = x.mutGenLimit();
+            Expr newExpr;
             if (x.op == ExprBinary.Op.JOIN) {
                 // If it's a macro invocation, instantiate it
-                if (right instanceof Macro)
-                    return ((Macro) right).addArg(left).instantiate(this, warns);
-                // check to see if it is the special builtin function "Int[]"
-                if (left.type().is_int() && right.isSame(Sig.SIGINT))
-                    return left; // [AM] .cast2sigint();
-                // otherwise, process as regular join or as method call
-                left = left.typecheck_as_set();
-                if (!left.errors.isEmpty() || !(right instanceof ExprChoice))
-                    return x.op.make(x.pos, x.closingBracket, left, right);
-                return process(x.pos, x.closingBracket, right.pos, ((ExprChoice) right).choices, ((ExprChoice) right).reasons, left);
-            }
-            return x.op.make(x.pos, x.closingBracket, left, right);
+                if (right instanceof Macro) {
+                    newExpr = ((Macro) right).addArg(left).instantiate(this, warns);
+                }  else if (left.type().is_int() && right.isSame(Sig.SIGINT)) // check to see if it is the special builtin function "Int[]"
+                    newExpr = left; // [AM] .cast2sigint();
+                else {
+                    // otherwise, process as regular join or as method call
+                    left = left.typecheck_as_set();
+                    if (!left.errors.isEmpty() || !(right instanceof ExprChoice))
+                        newExpr = x.op.make(x.pos, x.closingBracket, left, right);
+                    else
+                        newExpr = process(x.pos, x.closingBracket, right.pos, ((ExprChoice) right).choices, ((ExprChoice) right).reasons, left);
+                }
+            } else
+                newExpr = x.op.make(x.pos, x.closingBracket, left, right);
+            newExpr.mutGenLimit(mgl);
+            return newExpr;
         }
 
         /** {@inheritDoc} */
@@ -458,7 +476,10 @@ public final class CompModule extends Browsable implements Module {
             put(left.label, left);
             Expr sub = visitThis(x.sub);
             remove(left.label);
-            return ExprLet.make(x.pos, left, right, sub);
+            int mgl = x.mutGenLimit();
+            Expr newExpr = ExprLet.make(x.pos, left, right, sub);
+            newExpr.mutGenLimit(mgl);
+            return newExpr;
         }
 
         private boolean isOneOf(Expr x) {
@@ -531,6 +552,7 @@ public final class CompModule extends Browsable implements Module {
                     Expr returnValue = ExprLet.make(Pos.UNKNOWN, combinedAnswer, answer, combinedAnswer);
                     // Restore the "warns" array, then return the answer
                     warns = saved;
+                    returnValue.mutGenLimit(x.mutGenLimit());
                     return returnValue;
                 }
                 // Above is a special case to allow more fine-grained
@@ -551,7 +573,9 @@ public final class CompModule extends Browsable implements Module {
             for (Decl d : decls.makeConst())
                 for (ExprHasName v : d.names)
                     remove(v.label);
-            return x.op.make(x.pos, x.closingBracket, decls.makeConst(), sub);
+            Expr newExpr = x.op.make(x.pos, x.closingBracket, decls.makeConst(), sub);
+            newExpr.mutGenLimit(x.mutGenLimit());
+            return newExpr;
         }
 
         /** {@inheritDoc} */
@@ -574,15 +598,20 @@ public final class CompModule extends Browsable implements Module {
                     }
 
                 });
+                instantiated.mutGenLimit(x.mutGenLimit());
                 return instantiated;
-            } else
+            } else {
+                obj.mutGenLimit(x.mutGenLimit());
                 return obj;
+            }
         }
 
         /** {@inheritDoc} */
         @Override
         public Expr visit(ExprUnary x) throws Err {
-            return x.op.make(x.pos, visitThis(x.sub));
+            Expr newExpr = x.op.make(x.pos, visitThis(x.sub));
+            newExpr.mutGenLimit(x.mutGenLimit());
+            return newExpr;
         }
 
         /** {@inheritDoc} */
@@ -2452,41 +2481,41 @@ public final class CompModule extends Browsable implements Module {
 
 
 
-    /** update mutant references.   */
-    public void updateMarkedExprsToMutate(){
-        for (int i=0; i< markedEprsToMutate.size(); i++) {
-            boolean found=false;
-            VisitSearchExpByPos v=new VisitSearchExpByPos(markedEprsToMutate.get(i).pos);
-             //search in all possible funcs and preds
-            for (ArrayList<Func> entry : funcs.values())
-                if (!found) {
-                    for (Func ff : entry) {
-                        Expr newexpr = ff.getBody().accept(v);
-                        if (newexpr != null) {
-                            newexpr.mutGenLimit(1);
-                            markedEprsToMutate.set(i,newexpr);
-                            found = true;
-                            break;
-                        }
-
-                    }
-                }
-            //search in all possible facs
-            if (!found) {
-                for (Pair<String, Expr> f : facts) {
-                    Expr newexpr = f.b.accept(v);
-                    if (newexpr != null) {
-                        newexpr.mutGenLimit(1);
-                        markedEprsToMutate.set(i,newexpr);
-                        found=true;
-                        break;
-                    }
-
-                }
-            }
-            //TODO search in the rest of expressions (Sigs)
-        }
-    }
+//    /** update mutant references.   */
+//    public void updateMarkedExprsToMutate(){
+//        for (int i=0; i< markedEprsToMutate.size(); i++) {
+//            boolean found=false;
+//            VisitSearchExpByPos v=new VisitSearchExpByPos(markedEprsToMutate.get(i).pos);
+//             //search in all possible funcs and preds
+//            for (ArrayList<Func> entry : funcs.values())
+//                if (!found) {
+//                    for (Func ff : entry) {
+//                        Expr newexpr = ff.getBody().accept(v);
+//                        if (newexpr != null) {
+//                            newexpr.mutGenLimit(1);
+//                            markedEprsToMutate.set(i,newexpr);
+//                            found = true;
+//                            break;
+//                        }
+//
+//                    }
+//                }
+//            //search in all possible facs
+//            if (!found) {
+//                for (Pair<String, Expr> f : facts) {
+//                    Expr newexpr = f.b.accept(v);
+//                    if (newexpr != null) {
+//                        newexpr.mutGenLimit(1);
+//                        markedEprsToMutate.set(i,newexpr);
+//                        found=true;
+//                        break;
+//                    }
+//
+//                }
+//            }
+//            //TODO search in the rest of expressions (Sigs)
+//        }
+//    }
 
 
     /** Each command now points to a typechecked Expr. */

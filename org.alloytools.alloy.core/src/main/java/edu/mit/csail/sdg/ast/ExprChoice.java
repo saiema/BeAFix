@@ -250,8 +250,12 @@ public final class ExprChoice extends Expr {
     public Expr resolve(Type t, Collection<ErrorWarning> warns) {
         if (errors.size() > 0)
             return this;
-        else
-            return resolveHelper(true, t, choices, reasons, warns);
+        else {
+            int mgl = mutGenLimit();
+            Expr resolvedExpr = resolveHelper(true, t, choices, reasons, warns);
+            resolvedExpr.mutGenLimit(mgl);
+            return resolvedExpr;
+        }
     }
 
     // ============================================================================================================//
