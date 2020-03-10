@@ -18,9 +18,7 @@ package edu.mit.csail.sdg.alloy4whole;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
-import ar.edu.unrc.dc.mutation.mutantLab.ASTMutator;
-import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
-import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
+import ar.edu.unrc.dc.mutation.mutantLab.*;
 import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
 import ar.edu.unrc.dc.mutation.util.DependencyGraph;
 import ar.edu.unrc.dc.mutation.util.DependencyScanner;
@@ -804,8 +802,10 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.TRUE);                      //+
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR, Boolean.TRUE);     //+
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, Boolean.TRUE);                      //+
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, 3);                                 //+
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);  //ONLY FOR DEBUGGING MUTATION GENERATION
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
             ASTMutator.startInstance(world);
@@ -824,9 +824,11 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "RepairSubTittle", "Generating mutants... ");
 //            world.updateMarkedExprsToMutate();
             ContextExpressionExtractor.reInitialize(world);
+            Variabilization.initializeInstance(null, options);
             Ops[] availableOps = Ops.values();
             //MutantLabMulti mutantLab = new MutantLabMulti(world, availableOps);//new MutantLab((CompModule) world);
-            MutantLab mutantLab = new MutantLab(world, maxMutationsForRepair(), availableOps);
+            MutantLab.initialize(world, maxDepthForRepair(), availableOps);
+            MutantLab mutantLab = MutantLab.getInstance();
             //cb(out, "RepairSubTittle", mutantLab.mutantCount() + " mutants generated \n\n");
             //======================== mutants test cycle ===========
             int count =1;
@@ -836,25 +838,21 @@ final class SimpleReporter extends A4Reporter {
                 Optional<Candidate> current = mutantLab.getCurrentCandidate();
                 if (!current.isPresent())
                     break;
+                current.get().clearMutatedStatus();
                 for ( Triplet<String,String,String> em: current.get().getCurrentMutationsInfo()){
                     cb(out, "RepairExprOrig->Mut", em.a, em.b , em.c+"  \n");
                 }
                 logger.info("Validating mutant");
                 logger.info(mutantLab.getCurrentCandidate().toString());
+                //Variabilization.searchAndPrintMarkedExpressions(current.get(), logger);
 
                 //=============================================
                 // check all commands
                 boolean discarded = false;
                 boolean repaired = true;
                 List<String> results = new ArrayList<>();
-                List<Command> cmds;
-                if (useDependencyGraphForChecking()) {
-                    List<Browsable> relatedAssertionsAndFunctions = current.get().getRelatedAssertionsAndFunctions();
-                    cmds = new LinkedList<>(dependencyGraph.getPriorityCommands(relatedAssertionsAndFunctions));
-                    cmds.addAll(dependencyGraph.getNonPriorityCommands(relatedAssertionsAndFunctions));
-                } else {
-                    cmds = world.getAllCommands();
-                }
+                List<Command> cmds = MutantLab.getInstance().getCommandsToRunFor(current.get());
+                //Variabilization.getInstance().printVariabilizationProcess(current.get(), cmds, logger);
                 for (int i = 0; i < cmds.size(); i++) {
                     logger.info("Running cmd " +  cmds.get(i).toString() + " with complexity " + dependencyGraph.getCommandComplexity(cmds.get(i)));
                     current.get().clearMutatedStatus();
@@ -901,6 +899,7 @@ final class SimpleReporter extends A4Reporter {
                         e.printStackTrace(new PrintWriter(sw));
                         String exceptionAsString = sw.toString();
                         logger.info(exceptionAsString);
+                        current.get().clearMutatedStatus();
                         mutantLab.reportCurrentAsInvalid();
                         Browsable.unfreezeParents();
                         mutantLab.unlockCandidateGeneration();
@@ -926,13 +925,9 @@ final class SimpleReporter extends A4Reporter {
                 }
 
             }
+            mutantLab.stopSearch();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
-        }
-
-        private boolean useDependencyGraphForChecking() {
-            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING);
-            return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING.defaultValue());
         }
 
         private boolean skipVerification() {
@@ -940,9 +935,9 @@ final class SimpleReporter extends A4Reporter {
             return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION.defaultValue());
         }
 
-        private int maxMutationsForRepair() {
-            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_MAX_MUTATIONS);
-            return configValue.map(o -> (Integer) o).orElse((Integer) ConfigKey.REPAIR_MAX_MUTATIONS.defaultValue());
+        private int maxDepthForRepair() {
+            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_MAX_DEPTH);
+            return configValue.map(o -> (Integer) o).orElse((Integer) ConfigKey.REPAIR_MAX_DEPTH.defaultValue());
         }
 
     }

@@ -224,6 +224,7 @@ parser code {:
     ch.put(CompSym.NUMBER, "NUMBER");
     ch.put(CompSym.STR, "STRING");
     ch.put(CompSym.MUTABLE, "#m#");
+    ch.put(CompSym.VARTEST, "#t#");
 
     TreeSet<String> list = new TreeSet<String>();
     Pos p=Pos.UNKNOWN;
@@ -332,7 +333,7 @@ action code {:
     private void nod(List<ExprVar> names) throws Err {
         if (names!=null) for(ExprVar n:names) if (n!=null && n.label.indexOf('$')>=0) throw new ErrorSyntax(n.pos, "The name cannot contain the '$' symbol.");
     }
-    private void c(boolean follow, ExprVar o, ExprVar x, ExprVar n, Expr e, List<CommandScope> s, ExprConstant c) throws Err {
+    private void c(boolean follow, ExprVar o, ExprVar x, ExprVar n, Expr e, List<CommandScope> s, ExprConstant c, boolean isTest) throws Err {
         if (n!=null) nod(n);
         int bitwidth=(-1), maxseq=(-1), overall=(-1), expects=(c==null ? -1 : c.num);
         Pos p = o.pos.merge(n!=null ? n.span() : e.span());
@@ -344,9 +345,9 @@ action code {:
           if (j.label.equals("seq"))  { if (maxseq>=0) throw new ErrorSyntax(j.pos, "The maximum sequence length cannot be specified more than once."); maxseq=k; s.remove(i); continue; }
         }
         if (n!=null)
-          parser.alloymodule.addCommand(follow, p, n, o.label.equals("c"), overall, bitwidth, maxseq, expects, s, x);
+          parser.alloymodule.addCommand(follow, p, n, o.label.equals("c"), overall, bitwidth, maxseq, expects, s, x, isTest);
         else
-          parser.alloymodule.addCommand(follow, p, e, o.label.equals("c"), overall, bitwidth, maxseq, expects, s, x);
+          parser.alloymodule.addCommand(follow, p, e, o.label.equals("c"), overall, bitwidth, maxseq, expects, s, x, isTest);
     }
     private Expr t(Pos pos, Pos oldClosing, Expr left, Expr right, Pos close) throws Err {
       if (right instanceof ExprVar) {
@@ -478,6 +479,7 @@ terminal Pos THIS;             //  this
 terminal Pos TILDE;            //  ~
 terminal Pos UNIV;             //  univ
 terminal Pos MUTABLE;             //  #m#
+terminal Pos VARTEST;           // #t#
 
 terminal ExprVar ID;
 
@@ -494,7 +496,7 @@ nonterminal Expr                       BracketExprB;
 nonterminal Expr                       CompareExprA;
 nonterminal Expr                       CompareExprB;
 nonterminal                            Command;
-nonterminal ExprVar                    CommandPrefix;
+nonterminal Pair<Boolean, ExprVar>     CommandPrefix;
 nonterminal Decl                       Decla;
 nonterminal Decl                       Declb;
 nonterminal List<Decl>                 Declp;
@@ -567,6 +569,7 @@ nonterminal Expr                       UnionDiffExprB;
 nonterminal Expr                       UnopExprA;
 nonterminal Expr                       UnopExprB;
 nonterminal Pos                        Vis;
+nonterminal Boolean                    VarTest;
 
 //===========================================================================//
 
@@ -593,17 +596,20 @@ Spec ::= Spec Macro           ;
 Spec ::= Spec Command         ;
 Spec ::= ;
 
-CommandPrefix ::= CHECK:c  {: RESULT = ExprVar.make(c, "c"); :};
-CommandPrefix ::= RUN:r    {: RESULT = ExprVar.make(r, "r"); :};
+CommandPrefix ::= VarTest:v CHECK:c  {: RESULT = new Pair<Boolean, ExprVar>(v, ExprVar.make(c, "c")); :};
+CommandPrefix ::= VarTest:v RUN:r    {: RESULT = new Pair<Boolean, ExprVar>(v, ExprVar.make(r, "r")); :};
 
-Command ::=                 CommandPrefix:o Name:x Super:e  Scope:s  Expects:c {: c(false,o,x   ,null,e   ,s,c); :};
-Command ::=                 CommandPrefix:o        Super:e  Scope:s  Expects:c {: c(false,o,null,null,e   ,s,c); :};
-Command ::= Command IMPLIES CommandPrefix:o Name:x Super:e  Scope:s  Expects:c {: c(true ,o,x   ,null,e   ,s,c); :};
-Command ::= Command IMPLIES CommandPrefix:o        Super:e  Scope:s  Expects:c {: c(true ,o,null,null,e   ,s,c); :};
-Command ::=                 CommandPrefix:o Name:x Name:n   Scope:s  Expects:c {: c(false,o,x   ,n   ,null,s,c); :};
-Command ::=                 CommandPrefix:o        Name:n   Scope:s  Expects:c {: c(false,o,null,n   ,null,s,c); :};
-Command ::= Command IMPLIES CommandPrefix:o Name:x Name:n   Scope:s  Expects:c {: c(true ,o,x   ,n   ,null,s,c); :};
-Command ::= Command IMPLIES CommandPrefix:o        Name:n   Scope:s  Expects:c {: c(true ,o,null,n   ,null,s,c); :};
+VarTest ::= VARTEST             {: RESULT = Boolean.TRUE; :}
+        | {: RESULT = Boolean.FALSE; :};
+
+Command ::=                 CommandPrefix:o Name:x Super:e  Scope:s  Expects:c {: c(false,  o.b,  x,      null,   e,      s,  c, o.a); :};
+Command ::=                 CommandPrefix:o        Super:e  Scope:s  Expects:c {: c(false,  o.b,  null,   null,   e,      s,  c, o.a); :};
+Command ::= Command IMPLIES CommandPrefix:o Name:x Super:e  Scope:s  Expects:c {: c(true,   o.b,  x,      null,   e,      s,  c, o.a); :};
+Command ::= Command IMPLIES CommandPrefix:o        Super:e  Scope:s  Expects:c {: c(true,   o.b,  null,   null,   e,      s,  c, o.a); :};
+Command ::=                 CommandPrefix:o Name:x Name:n   Scope:s  Expects:c {: c(false,  o.b,  x,      n,      null,   s,  c, o.a); :};
+Command ::=                 CommandPrefix:o        Name:n   Scope:s  Expects:c {: c(false,  o.b,  null,   n,      null,   s,  c, o.a); :};
+Command ::= Command IMPLIES CommandPrefix:o Name:x Name:n   Scope:s  Expects:c {: c(true,   o.b,  x,      n,      null,   s,  c, o.a); :};
+Command ::= Command IMPLIES CommandPrefix:o        Name:n   Scope:s  Expects:c {: c(true,   o.b,  null,   n,      null,   s,  c, o.a); :};
 
 Expects    ::=                 {: RESULT=null; :};
 Expects    ::= EXPECT NUMBER:a {: RESULT=a;    :};

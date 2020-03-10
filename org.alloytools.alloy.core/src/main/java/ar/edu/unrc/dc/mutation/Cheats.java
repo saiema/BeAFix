@@ -122,6 +122,34 @@ public final class Cheats {
             throw new CheatingIsBadMkay("Couldn't find target decl in quantified expression");
     }
 
+    public static void changeLetExpr(ExprLet original, Expr replacement) throws CheatingIsBadMkay {
+        Field exprField = getField(ExprLet.class, "expr");
+        if (exprField == null)
+            throw new CheatingIsBadMkay("Couldn't find expr field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(exprField, true);
+            exprField.set(original, replacement);
+            replacement.setBrowsableParent(original);
+            setAccessibleStatus(exprField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("There was a problem while trying to change expr field", e);
+        }
+    }
+
+    public static void changeLetSub(ExprLet original, Expr replacement) throws CheatingIsBadMkay {
+        Field subField = getField(ExprLet.class, "sub");
+        if (subField == null)
+            throw new CheatingIsBadMkay("Couldn't find sub field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(subField, true);
+            subField.set(original, replacement);
+            replacement.setBrowsableParent(original);
+            setAccessibleStatus(subField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("There was a problem while trying to change sub field", e);
+        }
+    }
+
     public static void changeListElement(ExprList original, Expr target, Expr replacement) throws CheatingIsBadMkay {
         boolean targetFound = false;
         List<Expr> newArgs = new LinkedList<>();
@@ -193,6 +221,42 @@ public final class Cheats {
             asserts.put(targetAssertionsName, replacement);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("An error ocurred while trying to access asserts field");
+        }
+    }
+
+    public static void addSigToModule(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        Field sigsField = getField(CompModule.class, "sigs");
+        if (sigsField == null)
+            throw new CheatingIsBadMkay("Couldn't find sigs field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(sigsField, true);
+            Map<String, Sig> sigs = (Map<String, Sig>) sigsField.get(module);
+            if (sigs.containsKey(sig.label)) {
+                setAccessibleStatus(sigsField, oldAccessibleStatus);
+                throw new IllegalAccessException("Sig to add (" + sig.label + ") already exists in module");
+            }
+            sigs.put(sig.label, sig);
+            setAccessibleStatus(sigsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access sigs field");
+        }
+    }
+
+    public static void removeSigFromModule(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        Field sigsField = getField(CompModule.class, "sigs");
+        if (sigsField == null)
+            throw new CheatingIsBadMkay("Couldn't find sigs field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(sigsField, true);
+            Map<String, Sig> sigs = (Map<String, Sig>) sigsField.get(module);
+            if (!sigs.containsKey(sig.label)) {
+                setAccessibleStatus(sigsField, oldAccessibleStatus);
+                throw new IllegalAccessException("Sig to remove (" + sig.label + ") doesn't exists in module");
+            }
+            sigs.remove(sig.label);
+            setAccessibleStatus(sigsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access sigs field");
         }
     }
 

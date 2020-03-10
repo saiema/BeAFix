@@ -25,6 +25,7 @@ import java.awt.event.FocusListener;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * This abstract class represents a node that can be browsed in the graphical
@@ -40,6 +41,7 @@ public abstract class Browsable {
     private static boolean freezeParents = false;
     private static int NEXT_ID_Env = 0;
     private int        ID_Env      = NEXT_ID_Env++;
+    protected boolean skipBlockMutation = false;
 
     public void mutGenLimit(int m) {
         if (m < 0)
@@ -48,22 +50,77 @@ public abstract class Browsable {
     }
 
     public int mutGenLimit() {
+        return getMarkedExpression().map(Browsable::directMutGenLimit).orElse(0);
+    }
+
+    public int directMutGenLimit() {
+        return mutGenLimit;
+    }
+
+    public boolean directBlockStatus() {
+        return skipBlockMutation;
+    }
+
+    public void directBlockStatus(boolean status) {
+        skipBlockMutation = status;
+    }
+
+    public boolean isBlockedForMutation() {
+        return getMarkedExpression().map(x -> x.skipBlockMutation).orElse(false);
+    }
+
+    public void blockMutations() {
+        changeBlockStatus(true);
+    }
+
+    public void unblockMutations() {
+        changeBlockStatus(false);
+    }
+
+    private void changeBlockStatus(boolean newStatus) {
+        Optional<Expr> markedExpression = getMarkedExpression();
+        if (markedExpression.isPresent()) {
+            markedExpression.get().skipBlockMutation = newStatus;
+        } else {
+            throw new IllegalStateException("This expression does not belong to a marked expression (you should called isMarked before)");
+        }
+    }
+
+    public Optional<Expr> getMarkedExpression() {
         Browsable current = this;
         while (current != null) {
-            if (current.mutGenLimit > 0)
-                return current.mutGenLimit;
+            if (current.mutGenLimit > 0 && current.isNotChildOfMarkedExpression())
+                return Optional.of((Expr) current);
             Browsable parent = current.getBrowsableParent();
             if (parent != null) {
                 if (parent instanceof Sig || parent instanceof Sig.Field)
-                    return 0;
+                    return Optional.empty();
             }
             current = parent;
         }
-        return 0;
+        return Optional.empty();
+    }
+
+    private boolean isNotChildOfMarkedExpression() {
+        Browsable parent = getBrowsableParent();
+        if (parent != null) {
+            if (parent instanceof Sig || parent instanceof Command)
+                return true;
+            return parent.mutGenLimit == 0;
+        }
+        return true;
+    }
+
+    public boolean canBeMutated() {
+        return getMarkedExpression().isPresent() && !isBlockedForMutation();
+    }
+
+    public boolean isMarkedExpression() {
+        return mutGenLimit > 0 && isNotChildOfMarkedExpression();
     }
 
     public boolean hasMutGenLimit() {
-        return mutGenLimit() > 0;
+        return getMarkedExpression().isPresent();
     }
 
     public int getID() {
@@ -209,7 +266,8 @@ public abstract class Browsable {
                 Browsable clone = Browsable.make(pos, span, getHTML(), ConstList.make(subnodes));
                 clone.setID(getID());
                 clone.setIDEnv(getIDEnv());
-                mutGenLimit(mutGenLimit());
+                clone.mutGenLimit(directMutGenLimit());
+                clone.skipBlockMutation = this.skipBlockMutation;
                 return clone;
             }
 

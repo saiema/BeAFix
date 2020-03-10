@@ -210,6 +210,15 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
                         break;
                     }
                 }
+            } else if (originalParent instanceof ExprLet) {
+                ExprLet oParentAsLet = (ExprLet) originalParent;
+                if (oParentAsLet.expr.getID() == original.getID()) {
+                    //replacement should be the expr associated to the variable
+                    modifiedParent = oParentAsLet.mutateBound(replacement);
+                } else if (oParentAsLet.sub.getID() == original.getID()) {
+                    //replacement should be the expr associated to the let
+                    modifiedParent = oParentAsLet.mutateBody(replacement);
+                }
             } else {
                 //for now we only have to deal with binary and unary expressions
                 //TODO: update as this change

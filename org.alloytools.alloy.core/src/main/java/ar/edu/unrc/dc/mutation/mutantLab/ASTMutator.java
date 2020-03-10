@@ -141,8 +141,15 @@ public class ASTMutator {
                 else {
                     return Optional.empty();
                 }
+            } else if (initialExpressionParent instanceof ExprLet) {
+                ExprLet oParentAsLet = (ExprLet) initialExpressionParent;
+                if (oParentAsLet.expr.getID() == original.getID()) {
+                    Cheats.changeLetExpr(oParentAsLet, newExpression);
+                } else if (oParentAsLet.sub.getID() == original.getID()) {
+                    Cheats.changeLetSub(oParentAsLet, newExpression);
+                } else
+                    return Optional.empty();
             } else if (initialExpressionParent instanceof Expr){
-                Expr oParentAsExpr = (Expr) initialExpressionParent;
                 //replacement should be an assertion's body
                 boolean targetFound = false;
                 for (Pair<String, Expr> assertion : ast.getAllAssertions()) {

@@ -591,7 +591,8 @@ public abstract class Sig extends Expr implements Clause {
             }
             clone.setID(getID());
             clone.setIDEnv(getIDEnv());
-            clone.mutGenLimit(mutGenLimit());
+            clone.mutGenLimit(directMutGenLimit());
+            clone.skipBlockMutation = skipBlockMutation;
             //copyComponentsToClone(clone);
             return clone;
         }

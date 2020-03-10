@@ -384,9 +384,9 @@ public final class ExprUnary extends Expr {
             warns.add(w1);
         if (w2 != null)
             warns.add(w2);
-        int mgl = mutGenLimit();
         Expr resolvedExpr = (sub == this.sub) ? this : op.make(pos, sub, null, weight - (this.sub.weight));
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 
@@ -509,14 +509,16 @@ public final class ExprUnary extends Expr {
 //        return new ExprUnary(pos, op, (Expr) replacement.clone(), type, weight, errors);
         Expr subExprClone = (Expr) replacement.clone();
         ExprUnary mutant = (ExprUnary) op.make(pos, subExprClone);
-        mutant.mutGenLimit(mutGenLimit());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
     public ExprUnary mutateOp(Op op) {
         Expr subClone = (Expr) sub.clone();
         ExprUnary mutant = (ExprUnary) op.make(pos, subClone);
-        mutant.mutGenLimit(mutGenLimit());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
@@ -531,7 +533,8 @@ public final class ExprUnary extends Expr {
         ExprUnary clone = new ExprUnary(this.pos, this.op, subClone, this.type, this.weight, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 }

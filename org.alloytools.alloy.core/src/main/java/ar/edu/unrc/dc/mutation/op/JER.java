@@ -1,7 +1,9 @@
 package ar.edu.unrc.dc.mutation.op;
 
+import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
+import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -44,14 +46,19 @@ public class JER extends JEX {
     }
 
     @Override
-    protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) {
+    protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) throws Err {
         if (!mutGenLimitCheck(from))
             return Optional.empty();
         List<Mutation> mutations = new LinkedList<>();
         ExprBinary original = (ExprBinary) from;
         if (!isMemberOfBinaryExpression(original, replace))
             throw new IllegalArgumentException("replace expression must be either the left or right part of the from expression");
-        Optional<List<Expr>> replacements = getCompatibleVariablesFor(replace, strictTypeCheck());
+        Optional<List<Expr>> replacements;
+        try {
+            replacements = getCompatibleVariablesFor(replace, strictTypeCheck());
+        } catch (CheatingIsBadMkay e) {
+            throw new Error("There was a problem obtaining replacements", e);
+        }
         if (replacements.isPresent()) {
             for (Expr r : replacements.get()) {
                 r = (Expr) r.clone();

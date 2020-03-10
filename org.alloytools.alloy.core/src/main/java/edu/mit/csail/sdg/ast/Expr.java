@@ -197,9 +197,9 @@ public abstract class Expr extends Browsable {
         if (type.is_small_int())
             return this;
         if (type.is_int()) {
-            int mgl = mutGenLimit();
             Expr castedExpr = cast2int();
-            castedExpr.mutGenLimit(mgl);
+            castedExpr.mutGenLimit(directMutGenLimit());
+            castedExpr.skipBlockMutation = skipBlockMutation;
             return castedExpr;
         }
         // else: error
@@ -259,9 +259,9 @@ public abstract class Expr extends Browsable {
      *            null if we wish to ignore warnings
      */
     public final Expr resolve_as_formula(Collection<ErrorWarning> warnings) {
-        int mgl = mutGenLimit();
         Expr resolvedExpr = typecheck_as_formula().resolve(Type.FORMULA, warnings).typecheck_as_formula();
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 
@@ -281,9 +281,9 @@ public abstract class Expr extends Browsable {
      *            null if we wish to ignore warnings
      */
     public final Expr resolve_as_int(Collection<ErrorWarning> warnings) {
-        int mgl = mutGenLimit();
         Expr resolvedExpr = typecheck_as_int().resolve(Type.smallIntType(), warnings).typecheck_as_int();
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 
@@ -305,9 +305,9 @@ public abstract class Expr extends Browsable {
     public final Expr resolve_as_set(Collection<ErrorWarning> warnings) {
         Expr x = typecheck_as_set();
         Type t = x.type;
-        int mgl = mutGenLimit();
         Expr resolvedExpr = x.resolve(Type.removesBoolAndInt(t), warnings).typecheck_as_set();
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 

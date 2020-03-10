@@ -15,20 +15,10 @@
 
 package edu.mit.csail.sdg.alloy4;
 
-import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.Serializable;
-import java.lang.Thread.UncaughtExceptionHandler;
-
 import org.alloytools.alloy.core.AlloyCore;
+
+import java.io.*;
+import java.lang.Thread.UncaughtExceptionHandler;
 
 /**
  * This class allows you to execute tasks in a subprocess, and receive its
@@ -213,6 +203,7 @@ public final class WorkerEngine {
                 task.run(callback);
                 callback.done();
             } catch (Throwable ex) {
+                ex.printStackTrace(); //TODO: REMOVE
                 callback.callback(ex);
                 callback.fail();
             }
@@ -285,11 +276,11 @@ public final class WorkerEngine {
 
                 if (jniPath != null && jniPath.length() > 0)
                     sub = Runtime.getRuntime().exec(new String[] {
-                                                                  java, "-Xmx" + newmem + "m", "-Xss" + newstack + "k", "-Djava.library.path=" + jniPath, "-Ddebug=" + debug, "-cp", classPath, WorkerEngine.class.getName(), Version.buildDate(), "" + Version.buildNumber()
+                                                                  java, "-Xverify:none", "-Xmx" + newmem + "m", "-Xss" + newstack + "k", "-Djava.library.path=" + jniPath, "-Ddebug=" + debug, "-cp", classPath, WorkerEngine.class.getName(), Version.buildDate(), "" + Version.buildNumber()
                     });
                 else
                     sub = Runtime.getRuntime().exec(new String[] {
-                                                                  java, "-Xmx" + newmem + "m", "-Xss" + newstack + "k", "-Ddebug=" + debug, "-cp", classPath, WorkerEngine.class.getName(), Version.buildDate(), "" + Version.buildNumber()
+                                                                  java, "-Xverify:none", "-Xmx" + newmem + "m", "-Xss" + newstack + "k", "-Ddebug=" + debug, "-cp", classPath, WorkerEngine.class.getName(), Version.buildDate(), "" + Version.buildNumber()
                     });
                 latest_sub = sub;
             } else {
@@ -307,6 +298,7 @@ public final class WorkerEngine {
                         main2sub.close();
                         sub2main = new ObjectInputStream(wrap(sub.getInputStream()));
                     } catch (Throwable ex) {
+                        ex.printStackTrace(); //TODO: REMOVE
                         sub.destroy();
                         Util.close(main2sub);
                         Util.close(sub2main);
@@ -326,6 +318,7 @@ public final class WorkerEngine {
                         try {
                             x = sub2main.readObject();
                         } catch (Throwable ex) {
+                            ex.printStackTrace(); //TODO: REMOVE
                             sub.destroy();
                             Util.close(sub2main);
                             synchronized (WorkerEngine.class) {

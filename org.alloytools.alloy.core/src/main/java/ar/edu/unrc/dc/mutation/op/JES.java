@@ -1,5 +1,6 @@
 package ar.edu.unrc.dc.mutation.op;
 
+import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
 import edu.mit.csail.sdg.alloy4.Err;
@@ -67,7 +68,7 @@ public class JES extends JEX {
     }
 
     @Override
-    protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) {
+    protected Optional<List<Mutation>> generateMutants(Expr from, Expr replace) throws Err {
         if (!mutGenLimitCheck(from))
             return Optional.empty();
         //from and replace must be the same
@@ -75,7 +76,12 @@ public class JES extends JEX {
             throw new IllegalArgumentException("from and replace must be the same");
         List<Mutation> mutations = new LinkedList<>();
         if (from instanceof ExprBinary) {
-            Optional<List<Expr>> replacements = obtainReplacements((ExprBinary) replace);
+            Optional<List<Expr>> replacements;
+            try {
+                replacements = obtainReplacements((ExprBinary) replace);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem obtaining replacements", e);
+            }
             if (replacements.isPresent()) {
                 for (Expr r : replacements.get()) {
                     mutations.add(new Mutation(whoiam(), replace, r));
@@ -87,7 +93,7 @@ public class JES extends JEX {
         return Optional.empty();
     }
 
-    private Optional<List<Expr>> obtainReplacements(ExprBinary replace) {
+    private Optional<List<Expr>> obtainReplacements(ExprBinary replace) throws CheatingIsBadMkay {
         List<Expr> replacements = new LinkedList<>();
         if (size(replace.right) == 1 && canReplace(replace, replace.left,strictTypeCheck())) {
             replacements.add(replace.left);

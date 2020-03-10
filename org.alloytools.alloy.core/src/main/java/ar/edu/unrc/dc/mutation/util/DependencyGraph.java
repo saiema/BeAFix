@@ -7,11 +7,25 @@ import java.util.*;
 
 public class DependencyGraph {
 
+    private static DependencyGraph instance;
+
+    public static void initialize(List<Command> commands) {
+        if (instance != null)
+            throw new IllegalStateException("DependencyGraph already initialized");
+        instance = new DependencyGraph(commands);
+    }
+
+    public static DependencyGraph getInstance() {
+        if (instance == null)
+            throw new IllegalStateException("DependencyGraph not yet initialized");
+        return instance;
+    }
+
     private Map<Browsable, List<Command>> dependencyGraph;
     private Map<Command, Integer> commandComplexity;
     private List<Command> commands;
 
-    public DependencyGraph(List<Command> commands) {
+    private DependencyGraph(List<Command> commands) {
         if (commands == null)
             throw new IllegalArgumentException("commands list cannot be null");
         dependencyGraph = new HashMap<>();
@@ -41,6 +55,10 @@ public class DependencyGraph {
 
     public List<Command> getPriorityCommands(Browsable b) {
         return dependencyGraph.containsKey(b)?dependencyGraph.get(b):new LinkedList<>();
+    }
+
+    public List<Command> getAllCommands() {
+        return commands;
     }
 
     public void setCommandComplexity(Command c, Integer complexity) {

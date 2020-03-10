@@ -1,7 +1,9 @@
 package ar.edu.unrc.dc.mutation.mutantLab;
 
 import ar.edu.unrc.dc.mutation.Mutation;
+import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
@@ -73,7 +75,8 @@ public class MutationTask implements Runnable {
                 if (run) {
                     Optional<Candidate> current = inputChannel.getAndAdvance();
                     lock.lock();
-                    current.ifPresent(this::generateMutations);
+                    if (run)
+                        current.ifPresent(this::checkAndGenerateNewCandidates);
                     lock.unlock();
                 }
             } catch (Exception e) {
@@ -89,6 +92,7 @@ public class MutationTask implements Runnable {
         synchronized (thresholdLock) {
             thresholdLock.notify();
         }
+        inputChannel.unlockAllWaitingThreads();
     }
 
     private void waitForOutputThreshold() throws InterruptedException {
@@ -101,9 +105,37 @@ public class MutationTask implements Runnable {
         logger.info("Threshold reached");
     }
 
-    private void generateMutations(Candidate from) {
+    private void checkAndGenerateNewCandidates(Candidate from) {
         if (!from.isValid())
             return;
+        if (from.isLast()) {
+            outputChannel.insert(Candidate.STOP);
+            return;
+        }
+        if (from.getCurrentMarkedExpression() >= MutantLab.getInstance().getMarkedExpressions()) {
+            outputChannel.insert(Candidate.STOP);
+            return;
+        }
+        //=============VARIABILIZATION=============
+        if (variabilizationCheck(from)) {
+            Candidate nextMutationSpotCandidate = from.copy();
+            nextMutationSpotCandidate.currentMarkedExpressionInc();
+            if (from.isFirst()) {
+                outputChannel.insert(nextMutationSpotCandidate);
+                return;
+            } else
+                generateMutationsFor(nextMutationSpotCandidate);
+        } else if (from.isFirst()) {
+            outputChannel.insert(Candidate.STOP);
+            return;
+        }
+        if (!from.isFirst())
+            generateMutationsFor(from);
+        //=========================================
+    }
+
+    private void generateMutationsFor(Candidate from) {
+        Variabilization.getInstance().blockAllButCurrent(from);
         CompModule context = from.getContext();
         ASTMutator astMutator = ASTMutator.getInstance();
         from.getMutations().forEach(astMutator::pushNewMutation);
@@ -124,15 +156,28 @@ public class MutationTask implements Runnable {
             Optional<List<Mutation>> mutationsOp = o.getOperator(context).getMutations();
             mutationsOp.ifPresent(mutations -> mutations.forEach(m -> {
                 Candidate newCandidate = Candidate.mutantFromCandidate(updatedFrom.get(), m);
-                //outputChannel.insert(newCandidate);
-                if (mutantsHashes.add(newCandidate))
+                newCandidate.currentMarkedExpressionInc();
+                if (mutantsHashes.add(newCandidate)) {
+                    newCandidate.clearMutatedStatus();
                     newCandidates.add(newCandidate);
+                }
             }));
         }
         if (!astMutator.undoMutations())
             outputChannel.insert(Candidate.INVALID);
         else
             outputChannel.insertBulk(newCandidates);
+    }
+
+    private boolean variabilizationCheck(Candidate candidate) {
+        if (!useVariabilization())
+            return true;
+        return Variabilization.getInstance().variabilizationCheck(candidate, MutantLab.getInstance().getCommandsToRunFor(candidate, true), logger);
+    }
+
+    private boolean useVariabilization() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION.defaultValue());
     }
 
 

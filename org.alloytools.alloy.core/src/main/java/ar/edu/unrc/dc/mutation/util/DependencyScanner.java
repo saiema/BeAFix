@@ -20,7 +20,8 @@ public class DependencyScanner {
         scanAsserts(module.getAllAssertions(), module.getAllCommands(), temporalGraph);
         temporalGraph.merge();
         analyzeCommandComplexity(module.getAllFunc(), module.getAllAssertions(), module.getAllCommands(), temporalGraph);
-        DependencyGraph dependencyGraph = new DependencyGraph(module.getAllCommands());
+        DependencyGraph.initialize(module.getAllCommands());
+        DependencyGraph dependencyGraph = DependencyGraph.getInstance();
         module.getAllFunc().forEach(f -> {
             dependencyGraph.addDependencies(f, temporalGraph.getRelatedCommands(f));
         });

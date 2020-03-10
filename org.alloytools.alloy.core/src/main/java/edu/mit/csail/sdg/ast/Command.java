@@ -40,6 +40,15 @@ import java.util.Set;
 
 public final class Command extends Browsable {
 
+    private boolean isVariabilizationTest = false;
+    public boolean isVariabilizationTest() {
+        return isVariabilizationTest;
+    }
+
+    public void setAsVariabilizationTest() {
+        isVariabilizationTest = true;
+    }
+
     /**
      * If nonnull, it means this command depends on this parent command.
      */
@@ -335,6 +344,8 @@ public final class Command extends Browsable {
         Command clone = new Command(this.pos, nameExprClone, this.label, this.check, this.overall, this.bitwidth, this.maxseq, this.expects, this.scope, ConstList.make(sigsClone), formulaClone, parentClone);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        if (isVariabilizationTest())
+            clone.setAsVariabilizationTest();
         return clone;
     }
 

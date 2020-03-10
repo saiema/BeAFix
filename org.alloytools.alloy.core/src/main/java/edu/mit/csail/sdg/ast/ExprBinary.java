@@ -711,9 +711,9 @@ public final class ExprBinary extends Expr {
         Expr right = this.right.resolve(b, warns);
         if (w != null)
             warns.add(w);
-        int mgl = mutGenLimit();
         Expr resolvedExpr = (left == this.left && right == this.right) ? this : op.make(pos, closingBracket, left, right);
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 
@@ -751,21 +751,24 @@ public final class ExprBinary extends Expr {
 
     public ExprBinary mutateLeft(Expr replacement) {
         ExprBinary mutant = (ExprBinary) op.make(pos, closingBracket, (Expr) replacement.clone(), (Expr) right.clone());
-        mutant.mutGenLimit(mutGenLimit());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
     public ExprBinary mutateRight(Expr replacement) {
         ExprBinary mutant = (ExprBinary) op.make(pos, closingBracket, (Expr) left.clone(), (Expr) replacement.clone());
-        mutant.mutGenLimit(mutGenLimit());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
     public Expr mutateOp(Op op) {
         Expr leftClone = (Expr) left.clone();
         Expr rightClone = (Expr) right.clone();
-        Expr mutant =op.make (pos, closingBracket, leftClone, rightClone);
-        mutant.mutGenLimit(mutGenLimit());
+        Expr mutant = op.make (pos, closingBracket, leftClone, rightClone);
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
@@ -782,7 +785,8 @@ public final class ExprBinary extends Expr {
         ExprBinary clone = new ExprBinary(pos, closingBracket, op, leftClone, rightClone, type, errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 

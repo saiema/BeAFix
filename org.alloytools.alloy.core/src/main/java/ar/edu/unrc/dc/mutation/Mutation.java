@@ -41,11 +41,14 @@ public class Mutation {
         this.operator = operator;
         this.original = original;
         this.mutant = mutant;
-        updateMutGenLimit();
+        updateMarkedStatus();
     }
 
-    private void updateMutGenLimit() {
-        mutant.mutGenLimit(original.mutGenLimit());
+    private void updateMarkedStatus() {
+        if (original.directMutGenLimit() > 0) {
+            mutant.directBlockStatus(original.directBlockStatus());
+            mutant.mutGenLimit(original.directMutGenLimit());
+        }
     }
 
     public Ops operator() {

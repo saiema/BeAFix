@@ -15,16 +15,16 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.ast.Type.EMPTY;
+import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.ErrorWarning;
+import edu.mit.csail.sdg.alloy4.JoinableList;
+import edu.mit.csail.sdg.alloy4.Pos;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
+import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 /**
  * Immutable; represents an illegal node.
@@ -101,6 +101,8 @@ public final class ExprBad extends Expr {
         ExprBad clone = new ExprBad(this.pos, this.originalText, this.errors.get(0));
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 }

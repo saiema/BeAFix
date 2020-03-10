@@ -15,17 +15,13 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.ast.Type.EMPTY;
+import edu.mit.csail.sdg.alloy4.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
+import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 /**
  * Immutable; represents an illegal relation join.
@@ -139,6 +135,8 @@ public final class ExprBadJoin extends Expr {
         ExprBadJoin clone = new ExprBadJoin(this.pos, this.closingBracket, leftClone, rightClone, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 

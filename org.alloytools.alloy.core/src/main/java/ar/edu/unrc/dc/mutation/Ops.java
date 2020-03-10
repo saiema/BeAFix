@@ -388,6 +388,19 @@ public enum Ops {
                          return 10;
                      }
 
+                 },
+                 VAR { //this operator is used for variabilization
+
+                     @Override
+                     public boolean isImplemented() {
+                         return false;
+                     }
+
+                     @Override
+                     public int getComplexity() {
+                         return 10;
+                     }
+
                  };
 
     public abstract boolean isImplemented();

@@ -172,7 +172,7 @@ public class MutationConfiguration {
 
         },
 
-        REPAIR_MAX_MUTATIONS {
+        REPAIR_MAX_DEPTH {
             @Override
             public Class<?> getValueType() {
                 return Integer.class;
@@ -223,7 +223,23 @@ public class MutationConfiguration {
                 return 5000L;
             }
 
-        };
+        },
+
+        REPAIR_VARIABILIZATION {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
+        }
+
+        ;
 
         public abstract Class<?> getValueType();
 

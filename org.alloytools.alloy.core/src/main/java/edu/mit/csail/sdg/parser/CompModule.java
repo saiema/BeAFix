@@ -15,10 +15,8 @@
 
 package edu.mit.csail.sdg.parser;
 
-import ar.edu.unrc.dc.mutation.Mutation;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.ConstList.TempList;
-import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.*;
 
@@ -398,9 +396,9 @@ public final class CompModule extends Browsable implements Module {
             TempList<Expr> temp = new TempList<Expr>(x.args.size());
             for (int i = 0; i < x.args.size(); i++)
                 temp.add(visitThis(x.args.get(i)));
-            int mgl = x.mutGenLimit();
             Expr newExpr = ExprList.make(x.pos, x.closingBracket, x.op, temp.makeConst());;
-            newExpr.mutGenLimit(mgl);
+            newExpr.mutGenLimit(x.directMutGenLimit());
+            newExpr.directBlockStatus(x.directBlockStatus());
             return newExpr;
         }
 
@@ -410,9 +408,9 @@ public final class CompModule extends Browsable implements Module {
             Expr f = visitThis(x.cond);
             Expr a = visitThis(x.left);
             Expr b = visitThis(x.right);
-            int mgl = x.mutGenLimit();
             Expr newExpr = ExprITE.make(x.pos, f, a, b);
-            newExpr.mutGenLimit(mgl);
+            newExpr.mutGenLimit(x.directMutGenLimit());
+            newExpr.directBlockStatus(x.directBlockStatus());
             return newExpr;
         }
 
@@ -421,7 +419,6 @@ public final class CompModule extends Browsable implements Module {
         public Expr visit(ExprBadJoin x) throws Err {
             Expr left = visitThis(x.left);
             Expr right = visitThis(x.right);
-            int mgl = x.mutGenLimit();
             Expr newExpr;
             // If it's a macro invocation, instantiate it
             if (right instanceof Macro) {
@@ -436,7 +433,8 @@ public final class CompModule extends Browsable implements Module {
                 else
                     newExpr = process(x.pos, x.closingBracket, right.pos, ((ExprChoice) right).choices, ((ExprChoice) right).reasons, left);
             }
-            newExpr.mutGenLimit(mgl);
+            newExpr.mutGenLimit(x.directMutGenLimit());
+            newExpr.directBlockStatus(x.directBlockStatus());
             return newExpr;
         }
 
@@ -445,7 +443,6 @@ public final class CompModule extends Browsable implements Module {
         public Expr visit(ExprBinary x) throws Err {
             Expr left = visitThis(x.left);
             Expr right = visitThis(x.right);
-            int mgl = x.mutGenLimit();
             Expr newExpr;
             if (x.op == ExprBinary.Op.JOIN) {
                 // If it's a macro invocation, instantiate it
@@ -463,7 +460,8 @@ public final class CompModule extends Browsable implements Module {
                 }
             } else
                 newExpr = x.op.make(x.pos, x.closingBracket, left, right);
-            newExpr.mutGenLimit(mgl);
+            newExpr.mutGenLimit(x.directMutGenLimit());
+            newExpr.directBlockStatus(x.directBlockStatus());
             return newExpr;
         }
 
@@ -476,9 +474,9 @@ public final class CompModule extends Browsable implements Module {
             put(left.label, left);
             Expr sub = visitThis(x.sub);
             remove(left.label);
-            int mgl = x.mutGenLimit();
             Expr newExpr = ExprLet.make(x.pos, left, right, sub);
-            newExpr.mutGenLimit(mgl);
+            newExpr.mutGenLimit(x.directMutGenLimit());
+            newExpr.directBlockStatus(x.directBlockStatus());
             return newExpr;
         }
 
@@ -552,7 +550,8 @@ public final class CompModule extends Browsable implements Module {
                     Expr returnValue = ExprLet.make(Pos.UNKNOWN, combinedAnswer, answer, combinedAnswer);
                     // Restore the "warns" array, then return the answer
                     warns = saved;
-                    returnValue.mutGenLimit(x.mutGenLimit());
+                    returnValue.mutGenLimit(x.directMutGenLimit());
+                    returnValue.directBlockStatus(x.directBlockStatus());
                     return returnValue;
                 }
                 // Above is a special case to allow more fine-grained
@@ -574,7 +573,8 @@ public final class CompModule extends Browsable implements Module {
                 for (ExprHasName v : d.names)
                     remove(v.label);
             Expr newExpr = x.op.make(x.pos, x.closingBracket, decls.makeConst(), sub);
-            newExpr.mutGenLimit(x.mutGenLimit());
+            newExpr.mutGenLimit(x.directMutGenLimit());
+            newExpr.directBlockStatus(x.directBlockStatus());
             return newExpr;
         }
 
@@ -598,10 +598,12 @@ public final class CompModule extends Browsable implements Module {
                     }
 
                 });
-                instantiated.mutGenLimit(x.mutGenLimit());
+                instantiated.mutGenLimit(x.directMutGenLimit());
+                instantiated.directBlockStatus(x.directBlockStatus());
                 return instantiated;
             } else {
-                obj.mutGenLimit(x.mutGenLimit());
+                obj.mutGenLimit(x.directMutGenLimit());
+                obj.directBlockStatus(x.directBlockStatus());
                 return obj;
             }
         }
@@ -610,7 +612,8 @@ public final class CompModule extends Browsable implements Module {
         @Override
         public Expr visit(ExprUnary x) throws Err {
             Expr newExpr = x.op.make(x.pos, visitThis(x.sub));
-            newExpr.mutGenLimit(x.mutGenLimit());
+            newExpr.mutGenLimit(x.directMutGenLimit());
+            newExpr.directBlockStatus(x.directBlockStatus());
             return newExpr;
         }
 
@@ -1800,7 +1803,7 @@ public final class CompModule extends Browsable implements Module {
 
     /** Add a COMMAND declaration. */
 
-    void addCommand(boolean followUp, Pos pos, ExprVar name, boolean check, int overall, int bitwidth, int seq, int exp, List<CommandScope> scopes, ExprVar label) throws Err {
+    void addCommand(boolean followUp, Pos pos, ExprVar name, boolean check, int overall, int bitwidth, int seq, int exp, List<CommandScope> scopes, ExprVar label, boolean isTest) throws Err {
         if (followUp && !Version.experimental)
             throw new ErrorSyntax(pos, "Syntax error encountering => symbol.");
         if (label != null)
@@ -1813,6 +1816,8 @@ public final class CompModule extends Browsable implements Module {
         String labelName = (label == null || label.label.length() == 0) ? name.label : label.label;
         Command parent = followUp ? commands.get(commands.size() - 1) : null;
         Command newcommand = new Command(pos, name, labelName, check, overall, bitwidth, seq, exp, scopes, null, name, parent);
+        if (isTest)
+            newcommand.setAsVariabilizationTest();
         if (parent != null)
             commands.set(commands.size() - 1, newcommand);
         else
@@ -1820,7 +1825,7 @@ public final class CompModule extends Browsable implements Module {
     }
 
     /** Add a COMMAND declaration. */
-    void addCommand(boolean followUp, Pos pos, Expr e, boolean check, int overall, int bitwidth, int seq, int expects, List<CommandScope> scopes, ExprVar label) throws Err {
+    void addCommand(boolean followUp, Pos pos, Expr e, boolean check, int overall, int bitwidth, int seq, int expects, List<CommandScope> scopes, ExprVar label, boolean isTest) throws Err {
 
         if (followUp && !Version.experimental)
             throw new ErrorSyntax(pos, "Syntax error encountering => symbol.");
@@ -1837,6 +1842,8 @@ public final class CompModule extends Browsable implements Module {
         String labelName = (label == null || label.label.length() == 0) ? n : label.label;
         Command parent = followUp ? commands.get(commands.size() - 1) : null;
         Command newcommand = new Command(e.span().merge(pos), e, labelName, check, overall, bitwidth, seq, expects, scopes, null, ExprVar.make(null, n), parent);
+        if (isTest)
+            newcommand.setAsVariabilizationTest();
         if (parent != null)
             commands.set(commands.size() - 1, newcommand);
         else
@@ -1853,6 +1860,8 @@ public final class CompModule extends Browsable implements Module {
     /** Resolve a particular command. */
     private Command resolveCommand(Command cmd, ConstList<Sig> exactSigs, Expr globalFacts) throws Err {
         Command parent = cmd.parent == null ? null : resolveCommand(cmd.parent, exactSigs, globalFacts);
+        if (cmd.parent != null && cmd.parent.isVariabilizationTest())
+            parent.setAsVariabilizationTest();
         String cname = ((ExprVar) (cmd.formula)).label;
         Expr e;
         Clause declaringClause = null;
@@ -1898,8 +1907,10 @@ public final class CompModule extends Browsable implements Module {
         if (cmd.nameExpr != null) {
             cmd.nameExpr.setReferenced(declaringClause);
         }
-        return new Command(cmd.pos, cmd.nameExpr, cmd.label, cmd.check, cmd.overall, cmd.bitwidth, cmd.maxseq, cmd.expects, sc.makeConst(), exactSigs, globalFacts.and(e), parent);
-
+        Command resolvedCommand = new Command(cmd.pos, cmd.nameExpr, cmd.label, cmd.check, cmd.overall, cmd.bitwidth, cmd.maxseq, cmd.expects, sc.makeConst(), exactSigs, globalFacts.and(e), parent);
+        if (cmd.isVariabilizationTest())
+            resolvedCommand.setAsVariabilizationTest();
+        return resolvedCommand;
     }
 
 
@@ -2464,125 +2475,5 @@ public final class CompModule extends Browsable implements Module {
         v.mutGenLimit(1);
     }
 
-    /** build mutantions .   */
-//    public void genMutantions () {
-//        for (Mutant m : mutants) {
-//            List<Mutation> ms = new LinkedList<>();
-//            for (Ops o : Ops.values()) {
-//                if (o.isImplemented()) {
-//                    Optional<List<Mutation>> opMutations = o.getOperator(this).getMutations(m.exprToMutate);
-//                    if (opMutations.isPresent())
-//                        ms.addAll(opMutations.get());
-//                }
-//            }
-//            m.mutations = ms;
-//        }
-//    }
 
-
-
-//    /** update mutant references.   */
-//    public void updateMarkedExprsToMutate(){
-//        for (int i=0; i< markedEprsToMutate.size(); i++) {
-//            boolean found=false;
-//            VisitSearchExpByPos v=new VisitSearchExpByPos(markedEprsToMutate.get(i).pos);
-//             //search in all possible funcs and preds
-//            for (ArrayList<Func> entry : funcs.values())
-//                if (!found) {
-//                    for (Func ff : entry) {
-//                        Expr newexpr = ff.getBody().accept(v);
-//                        if (newexpr != null) {
-//                            newexpr.mutGenLimit(1);
-//                            markedEprsToMutate.set(i,newexpr);
-//                            found = true;
-//                            break;
-//                        }
-//
-//                    }
-//                }
-//            //search in all possible facs
-//            if (!found) {
-//                for (Pair<String, Expr> f : facts) {
-//                    Expr newexpr = f.b.accept(v);
-//                    if (newexpr != null) {
-//                        newexpr.mutGenLimit(1);
-//                        markedEprsToMutate.set(i,newexpr);
-//                        found=true;
-//                        break;
-//                    }
-//
-//                }
-//            }
-//            //TODO search in the rest of expressions (Sigs)
-//        }
-//    }
-
-
-    /** Each command now points to a typechecked Expr. */
-    @Deprecated public List<Command> resolveCommandsWithMatation( Mutation mutation) throws Err {
-        List<Command> cmds = new ArrayList<Command>();
-        ConstList<Sig> exactSigs = ConstList.make(world.exactSigs);
-        VisitReplaceExp vr = new VisitReplaceExp(mutation.original(),mutation.mutant());
-        Expr mutatedGlobalFacts = getAllReachableFacts().accept(vr);
-        for (int i = 0; i < commands.size(); i++) {
-            Command cmd = commands.get(i);
-            cmds.add(resolveCommandWithMutation(cmd, exactSigs, mutatedGlobalFacts,mutation));
-        }
-        return cmds;
-    }
-
-    /** Resolve a particular command with mutation. */
-    @Deprecated public Command resolveCommandWithMutation(Command cmd, ConstList<Sig> exactSigs, Expr mutatedGlobalFacts, Mutation mutation) throws Err {
-        // facts are mutated in resolveCommandsWithMutation
-        Command parent = cmd.parent == null ? null : resolveCommand(cmd.parent, exactSigs, mutatedGlobalFacts); //@mutation
-        String cname = cmd.label;
-        Expr e;
-        Clause declaringClause = null;
-        if (cmd.check) {
-            List<Object> m = getRawQS(2, cname); // We prefer assertion in the
-            // topmost module
-            if (m.size() == 0 && cname.indexOf('/') < 0)
-                m = getRawNQS(this, 2, cname);
-            if (m.size() > 1)
-                unique(cmd.pos, cname, m);
-            if (m.size() < 1)
-                throw new ErrorSyntax(cmd.pos, "The assertion \"" + cname + "\" cannot be found.");
-
-            Expr expr = (Expr) (m.get(0));
-            e = expr.not();
-        } else {
-            List<Object> m = getRawQS(4, cname); // We prefer fun/pred in the
-            // topmost module
-            if (m.size() == 0 && cname.indexOf('/') < 0)
-                m = getRawNQS(this, 4, cname);
-            if (m.size() > 1)
-                unique(cmd.pos, cname, m);
-            if (m.size() < 1)
-                throw new ErrorSyntax(cmd.pos, "The predicate/function \"" + cname + "\" cannot be found.");
-            Func f = (Func) (m.get(0));
-            declaringClause = f;
-            // get the mutated func if necessary  @mutation
-            VisitReplaceExp vr = new VisitReplaceExp(mutation.original(),mutation.mutant());
-            e = f.getBody().accept(vr);
-            if (!f.isPred)
-                e = e.in(f.returnDecl);
-            if (f.decls.size() > 0)
-                e = ExprQt.Op.SOME.make(null, null, f.decls, e);
-        }
-        if (e == null)
-            e = ExprConstant.TRUE;
-        TempList<CommandScope> sc = new TempList<CommandScope>(cmd.scope.size());
-        for (CommandScope et : cmd.scope) {
-            Sig s = getRawSIG(et.sig.pos, et.sig.label);
-            if (s == null)
-                throw new ErrorSyntax(et.sig.pos, "The sig \"" + et.sig.label + "\" cannot be found.");
-            sc.add(new CommandScope(null, s, et.isExact, et.startingScope, et.endingScope, et.increment));
-        }
-
-        if (cmd.nameExpr != null) {
-            cmd.nameExpr.setReferenced(declaringClause);
-        }
-        return new Command(cmd.pos, cmd.nameExpr, cmd.label, cmd.check, cmd.overall, cmd.bitwidth, cmd.maxseq, cmd.expects, sc.makeConst(), exactSigs, mutatedGlobalFacts.and(e), parent);
-
-    }
 }

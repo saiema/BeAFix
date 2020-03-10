@@ -15,19 +15,14 @@
 
 package edu.mit.csail.sdg.ast;
 
-import static edu.mit.csail.sdg.ast.Type.EMPTY;
+import edu.mit.csail.sdg.alloy4.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.JoinableList;
-import edu.mit.csail.sdg.alloy4.Pos;
+import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 /**
  * Immutable; represents an illegal pred/fun call.
@@ -187,6 +182,8 @@ public final class ExprBadCall extends Expr {
         ExprBadCall clone = new ExprBadCall(this.pos, this.closingBracket, this.ambiguous, funcClone, ConstList.make(argsClone), this.errors, this.extraWeight, this.weight);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 

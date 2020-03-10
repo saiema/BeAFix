@@ -348,7 +348,8 @@ public final class Func extends Browsable implements Clause {
         Func clone = new Func(this.pos, this.label, declsClone, returnDeclClone, bodyClone);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 

@@ -75,7 +75,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     protected abstract Ops whoiam();
 
     protected boolean mutGenLimitCheck(Expr x) {
-        return !useMutGenLimit || x.hasMutGenLimit();
+        return !useMutGenLimit || x.canBeMutated();
     }
 
     //UTILITIES

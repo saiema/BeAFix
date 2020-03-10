@@ -79,6 +79,10 @@ public class BlockingCollection<V> {
         notifyAllIncreaseAssociatedObjects();
     }
 
+    public synchronized void unlockAllWaitingThreads() {
+        notifyAll();
+    }
+
     public synchronized void insert(V value) {
         logger.info("inserting value");
         switch (insertionPolicy) {

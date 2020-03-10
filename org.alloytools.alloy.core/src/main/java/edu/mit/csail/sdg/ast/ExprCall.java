@@ -381,9 +381,9 @@ public final class ExprCall extends Expr {
             // +"The argument has type "+y.type+"\nbut the parameter has type
             // "+p));
         }
-        int mgl = mutGenLimit();
         Expr resolvedExpr = changed ? make(pos, closingBracket, fun, args.makeConst(), extraWeight) : this;
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 
@@ -450,7 +450,8 @@ public final class ExprCall extends Expr {
         ExprCall clone = new ExprCall(this.pos, this.closingBracket, this.ambiguous, this.type, funClone, ConstList.make(argsClone), this.extraWeight, this.weight, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 

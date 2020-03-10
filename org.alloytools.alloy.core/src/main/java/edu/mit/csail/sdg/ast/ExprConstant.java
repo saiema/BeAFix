@@ -272,7 +272,8 @@ public final class ExprConstant extends Expr {
         ExprConstant clone = new ExprConstant(this.pos, this.op, this.num, this.string);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 }

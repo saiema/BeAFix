@@ -251,9 +251,9 @@ public final class ExprChoice extends Expr {
         if (errors.size() > 0)
             return this;
         else {
-            int mgl = mutGenLimit();
             Expr resolvedExpr = resolveHelper(true, t, choices, reasons, warns);
-            resolvedExpr.mutGenLimit(mgl);
+            resolvedExpr.mutGenLimit(directMutGenLimit());
+            resolvedExpr.skipBlockMutation = skipBlockMutation;
             return resolvedExpr;
         }
     }
@@ -307,7 +307,8 @@ public final class ExprChoice extends Expr {
         ExprChoice clone = new ExprChoice(this.pos, ConstList.make(choicesClone), this.reasons, this.type, this.weight);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 }

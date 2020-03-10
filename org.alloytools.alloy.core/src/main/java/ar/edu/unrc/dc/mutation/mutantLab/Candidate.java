@@ -25,11 +25,16 @@ public class Candidate {
     private boolean isAlreadyMutated;
     private boolean markedAsInvalid;
     public static final Candidate INVALID;
+    public static final Candidate STOP;
+    private int markedExpressions;
+    private int currentMarkedExpression;
+    private int mutations;
 
     static {
         Candidate invalid = new Candidate(null);
         invalid.markAsInvalid();
         INVALID = invalid;
+        STOP = new Candidate(null);
     }
 
     private Candidate(CompModule context) {
@@ -44,21 +49,17 @@ public class Candidate {
         this.context = context;
         if (mutation != null)
             collectRelatedAssertionsAndFunctions();
+        markedExpressions = MutantLab.getInstance().getMarkedExpressions();
+        currentMarkedExpression = 0;
     }
 
     public static Candidate original(CompModule context) {
         if (context == null)
             throw new IllegalArgumentException("context can't be null");
-        return new Candidate(context);
+        Candidate original = new Candidate(context);
+        original.mutations = 0;
+        return original;
     }
-
-//    public static Candidate mutant(Mutation mutation, CompModule context) {
-//        if (mutation == null)
-//            throw new IllegalArgumentException("mutation can't be null");
-//        if (context == null)
-//            throw new IllegalArgumentException("context can't be null");
-//        return mutantFromCandidate(original(context), mutation);
-//    }
 
     public static Candidate mutantFromCandidate(Candidate from, Mutation mutation) {
         if (from == null)
@@ -74,13 +75,37 @@ public class Candidate {
             Mutation merged = new Mutation(Ops.MULTI, from.mutation.original(), mutation.mutant());
             return new Candidate(from.parent, merged, from.getContext());
         }
-        return new Candidate(from, mutation, context);
+        Candidate newCandidate = new Candidate(from, mutation, context);
+        newCandidate.mutations = 1 + from.mutations;
+        return newCandidate;
     }
 
     private boolean verifyParentStructure() {
         if (parent == null)
             return mutation == null;
         return mutation != null && parent.verifyParentStructure();
+    }
+
+    public boolean isFirst() {
+        return currentMarkedExpression == 0;
+    }
+
+    public boolean isLast() {
+        return currentMarkedExpression == markedExpressions + 1;
+    }
+
+    public int getCurrentMarkedExpression() {
+        return currentMarkedExpression;
+    }
+
+    public void setCurrentMarkedExpression(int newValue) {
+        if (newValue < 0 || newValue > markedExpressions + 1)
+            throw new IllegalArgumentException("marked expression index must be between 0 and " + (markedExpressions + 1) + " (" + newValue + ")");
+        currentMarkedExpression = newValue;
+    }
+
+    public void currentMarkedExpressionInc() {
+        setCurrentMarkedExpression(currentMarkedExpression + 1);
     }
 
     public CompModule getContext() {
@@ -166,11 +191,6 @@ public class Candidate {
     }
 
     public int mutations() {
-        int mutations = 0;
-        if (mutation != null) {
-            mutations++;
-            mutations += parent.mutations();
-        }
         return mutations;
     }
 
@@ -184,24 +204,41 @@ public class Candidate {
         return mutations;
     }
 
+    public Optional<Mutation> getLastMutation() {
+        return Optional.ofNullable(mutation);
+    }
+
     /**
      * Returns a list of triplet (place & OP, orig expr, mutation expr) of the current mutation
-     * @return
+     * @return a representation of a this candidate mutations showing line, operator used, original and mutated expression
      */
     public List<Triplet<String,String,String>>  getCurrentMutationsInfo(){
-        ArrayList<Triplet<String,String,String>> l = new ArrayList<Triplet<String,String,String>>();
+        ArrayList<Triplet<String,String,String>> l = new ArrayList<>();
         if (!isValid()) {
             Triplet<String, String, String> t =  new Triplet<>("INVALID","","");
             l.add(t);
-            return l;
         }
         else {
             for (Mutation m : getMutations()) {
                 Triplet<String, String, String> t = new Triplet<>("Line "+m.original().pos.y+" <"+ m.operator()+"> ", m.original().toString(),m.mutant().toString());
                 l.add(t);
             }
-            return l;
         }
+        return l;
+    }
+
+    public Candidate copy() {
+        if (markedAsInvalid)
+            throw new IllegalStateException("Shouldn't clone an invalid candidate");
+        Candidate clone = new Candidate(context);
+        clone.mutation = mutation;
+        clone.relatedAssertionsAndFunctions = relatedAssertionsAndFunctions != null? (new LinkedList<>(relatedAssertionsAndFunctions)):null;
+        clone.isAlreadyMutated = false;
+        clone.markedAsInvalid = false;
+        clone.markedExpressions = markedExpressions;
+        clone.currentMarkedExpression = currentMarkedExpression;
+        clone.parent = parent != null? parent.copy() : null;
+        return clone;
     }
 
 }

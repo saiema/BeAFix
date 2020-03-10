@@ -400,7 +400,8 @@ public final class ExprQt extends Expr {
         }
         Expr subClone = (Expr) this.sub.clone();
         ExprQt mutant = (ExprQt) op.make(pos, closingBracket, declsClone, subClone);
-        mutant.mutGenLimit(mutGenLimit());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
@@ -421,7 +422,8 @@ public final class ExprQt extends Expr {
         }
         Expr subClone = (Expr) this.sub.clone();
         ExprQt mutant = (ExprQt) op.make(pos, closingBracket, ConstList.make(newDecls), subClone);
-        mutant.mutGenLimit(mutGenLimit());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
@@ -436,7 +438,8 @@ public final class ExprQt extends Expr {
             declsClone.add(dclone);
         }
         ExprQt mutant = (ExprQt) op.make(pos, closingBracket, ConstList.make(declsClone), (Expr) replacement.clone());
-        mutant.mutGenLimit(mutGenLimit());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
@@ -455,7 +458,8 @@ public final class ExprQt extends Expr {
         ExprQt clone = new ExprQt(this.pos, this.closingBracket, this.op, this.type, ConstList.make(declsClone), subClone, this.ambiguous, this.weight, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 }

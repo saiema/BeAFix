@@ -120,9 +120,9 @@ public final class ExprLet extends Expr {
         Expr newSub = sub.resolve(p, warns);
         if (warns != null && !newSub.hasVar(var))
             warns.add(new ErrorWarning(var.pos, "This variable is unused."));
-        int mgl = mutGenLimit();
         Expr resolvedExpr = (sub == newSub) ? this : make(pos, var, expr, newSub);
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 
@@ -166,6 +166,24 @@ public final class ExprLet extends Expr {
         this.sub.setBrowsableParent(this);
     }
 
+    public ExprLet mutateBound(Expr replacement) {
+        ExprVar varClone = (ExprVar) this.var.clone();
+        Expr subClone = (Expr) this.sub.clone();
+        ExprLet mutant = new ExprLet(this.pos, varClone, replacement, subClone, this.errors);;
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
+        return mutant;
+    }
+
+    public ExprLet mutateBody(Expr replacement) {
+        ExprVar varClone = (ExprVar) this.var.clone();
+        Expr exprClone = (Expr) this.expr.clone();
+        ExprLet mutant = new ExprLet(this.pos, varClone, exprClone, replacement, this.errors);;
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
+        return mutant;
+    }
+
     @Override
     public Object clone() {
         ExprVar varClone = (ExprVar) this.var.clone();
@@ -174,7 +192,8 @@ public final class ExprLet extends Expr {
         ExprLet clone = new ExprLet(this.pos, varClone, exprClone, subClone, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 

@@ -278,9 +278,9 @@ public final class ExprList extends Expr {
             changed = (a != args.get(0) || b != args.get(1) || c != args.get(2));
             newargs.add(a).add(b).add(c);
         }
-        int mgl = mutGenLimit();
         Expr resolvedExpr = changed ? make(pos, closingBracket, op, newargs.makeConst()) : this;
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 
@@ -345,7 +345,8 @@ public final class ExprList extends Expr {
                 argsClone.add((Expr) a.clone());
         }
         ExprList mutant = new ExprList(this.pos, this.closingBracket, this.op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
-        mutant.mutGenLimit(mutGenLimit());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
         return mutant;
     }
 
@@ -358,7 +359,8 @@ public final class ExprList extends Expr {
         ExprList clone = new ExprList(this.pos, this.closingBracket, this.op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 }

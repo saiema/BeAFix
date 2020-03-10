@@ -5,9 +5,9 @@ import ar.edu.unrc.dc.mutation.visitors.SearchExpr;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.ast.*;
-import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Type.ProductType;
+import edu.mit.csail.sdg.parser.CompModule;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,12 +51,26 @@ public final class ContextExpressionExtractor {
         return context != null;
     }
 
-    public static Optional<List<Expr>> getAllVariablesFor(Expr target) {
-        return getCompatibleVariablesFor(target, false, false);
+    public static Optional<List<Expr>> getAllVariablesFor(Expr target) throws CheatingIsBadMkay {
+        List<Expr> clonedVars = new LinkedList<>();
+        Optional<List<Expr>> vars = getCompatibleVariablesFor(target, false, false);
+        if (vars.isPresent()) {
+            for (Expr x : vars.get()) {
+                clonedVars.add(cheatedClone(x));
+            }
+        }
+        return clonedVars.isEmpty()?Optional.empty():Optional.of(clonedVars);
     }
 
-    public static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean strictTypeCheck) {
-        return getCompatibleVariablesFor(target, true, strictTypeCheck);
+    public static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean strictTypeCheck) throws CheatingIsBadMkay {
+        List<Expr> clonedVars = new LinkedList<>();
+        Optional<List<Expr>> vars = getCompatibleVariablesFor(target, true, strictTypeCheck);
+        if (vars.isPresent()) {
+            for (Expr x : vars.get()) {
+                clonedVars.add(cheatedClone(x));
+            }
+        }
+        return clonedVars.isEmpty()?Optional.empty():Optional.of(clonedVars);
     }
 
     private static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean typeCheck, boolean strictTypeCheck) {

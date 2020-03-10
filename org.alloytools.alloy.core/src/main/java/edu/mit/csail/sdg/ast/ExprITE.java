@@ -169,9 +169,9 @@ public final class ExprITE extends Expr {
         Expr cond = this.cond.resolve(Type.FORMULA, warns);
         Expr left = this.left.resolve(a, warns);
         Expr right = this.right.resolve(b, warns);
-        int mgl = mutGenLimit();
         Expr resolvedExpr = (cond == this.cond && left == this.left && right == this.right) ? this : make(pos, cond, left, right);
-        resolvedExpr.mutGenLimit(mgl);
+        resolvedExpr.mutGenLimit(directMutGenLimit());
+        resolvedExpr.skipBlockMutation = skipBlockMutation;
         return resolvedExpr;
     }
 
@@ -218,7 +218,8 @@ public final class ExprITE extends Expr {
         ExprITE clone = new ExprITE(this.pos, condClone, leftClone, rightClone, this.type, this.errors);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
-        clone.mutGenLimit(mutGenLimit());
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
         return clone;
     }
 
