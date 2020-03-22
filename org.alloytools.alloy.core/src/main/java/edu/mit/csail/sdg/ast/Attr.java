@@ -86,7 +86,9 @@ public final class Attr {
                            * ENUM; if a PrimSig has the ENUM attribute, it is toplevel and abstract and
                            * has only singleton children.
                            */
-                          ENUM("enum");
+                          ENUM("enum"),
+
+                          VARTEST("varTest");
 
         /** The label for this attribute type. */
         private final String label;
@@ -193,6 +195,8 @@ public final class Attr {
      * has only singleton children.
      */
     public static final Attr ENUM     = new Attr(AttrType.ENUM, null);
+
+    public static final Attr VARTEST = new Attr(AttrType.VARTEST, null);
 
     /**
      * Construct an attribute of the given type with the given position; if

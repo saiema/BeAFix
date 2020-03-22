@@ -1,6 +1,7 @@
 package ar.edu.unrc.dc.mutation.op;
 
 import ar.edu.unrc.dc.mutation.*;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -111,7 +112,8 @@ public class SSS extends Mutator {
                 Expr originalClone = cheatedClone(x);
                 Expr rightClone = cheatedClone(right);
                 Expr mutant = ExprBinary.Op.MINUS.make(originalClone.pos, null, originalClone, rightClone);
-                mutants.add(mutant);
+                if (TypeChecking.canReplace(x, mutant, strictTypeCheck()))
+                    mutants.add(mutant);
             }
         }
         if (!mutants.isEmpty())

@@ -263,12 +263,22 @@ public final class TypeChecking {
             case CARDINALITY :
                 return true;
             case EXACTLYOF :
-            case SETOF :
-                return !emptyOrNone(Type.removesBoolAndInt(replacementType));
+            case SETOF : {
+                Type resType = Type.removesBoolAndInt(replacementType);
+                if (emptyOrNone(resType))
+                    return false;
+                Optional<Expr> opParent = getContext(x);
+                return opParent.map(o -> canReplace(o, resType, strictCheck)).orElse(true);
+            }
             case LONEOF :
             case ONEOF :
-            case SOMEOF :
-                return !emptyOrNone(replacementType.extract(1));
+            case SOMEOF : {
+                Type unaryType = replacementType.extract(1);
+                if (emptyOrNone(unaryType))
+                    return false;
+                Optional<Expr> opParent = getContext(x);
+                return opParent.map(o -> canReplace(o, unaryType, strictCheck)).orElse(true);
+            }
             case RCLOSURE :
             case CLOSURE : {
                 Type resType = replacementType.closure();

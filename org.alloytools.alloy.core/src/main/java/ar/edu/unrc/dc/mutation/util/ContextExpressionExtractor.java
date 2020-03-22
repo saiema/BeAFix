@@ -198,6 +198,8 @@ public final class ContextExpressionExtractor {
             List<Expr> collectedSigsAndDecls = new LinkedList<>();
             SafeList<Sig> sigs = context.getAllSigs();
             for (Sig s : sigs) {
+                if (s.isVariabilizationTestRelatedSig())
+                    continue;
                 collectedSigsAndDecls.add(s);
                 for (Decl d : s.getFieldDecls()) {
                     collectedSigsAndDecls.addAll(d.names);
@@ -222,6 +224,8 @@ public final class ContextExpressionExtractor {
         List<Expr> sigsList = new LinkedList<>();
         Map<Expr,Type> fields = new HashMap<>();
         for (Sig s : sigs) {
+            if (s.isVariabilizationTestRelatedSig())
+                continue;
             Type stype = s.type();
             sigsList.add(s);
             for (Decl d : s.getFieldDecls()) {

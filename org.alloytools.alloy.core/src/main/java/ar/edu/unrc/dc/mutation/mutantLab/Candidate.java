@@ -11,10 +11,7 @@ import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.parser.CompModule;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class Candidate {
 
@@ -28,7 +25,7 @@ public class Candidate {
     public static final Candidate STOP;
     private int markedExpressions;
     private int currentMarkedExpression;
-    private int mutations;
+    private int[] mutationsPerIndex;
 
     static {
         Candidate invalid = new Candidate(null);
@@ -51,14 +48,14 @@ public class Candidate {
             collectRelatedAssertionsAndFunctions();
         markedExpressions = MutantLab.getInstance().getMarkedExpressions();
         currentMarkedExpression = 0;
+        mutationsPerIndex = new int[markedExpressions];
+        Arrays.fill(mutationsPerIndex, 0);
     }
 
     public static Candidate original(CompModule context) {
         if (context == null)
             throw new IllegalArgumentException("context can't be null");
-        Candidate original = new Candidate(context);
-        original.mutations = 0;
-        return original;
+        return new Candidate(context);
     }
 
     public static Candidate mutantFromCandidate(Candidate from, Mutation mutation) {
@@ -71,12 +68,16 @@ public class Candidate {
         CompModule context = from.getContext();
         if (context == null)
             throw new IllegalArgumentException("from candidate doesn't have a context associated");
+        Candidate newCandidate;
         if (from.mutation != null && from.mutation.mutant().equals(mutation.original())) {
             Mutation merged = new Mutation(Ops.MULTI, from.mutation.original(), mutation.mutant());
-            return new Candidate(from.parent, merged, from.getContext());
+            newCandidate = new Candidate(from.parent, merged, from.getContext());
+        } else {
+            newCandidate = new Candidate(from, mutation, context);
         }
-        Candidate newCandidate = new Candidate(from, mutation, context);
-        newCandidate.mutations = 1 + from.mutations;
+        newCandidate.currentMarkedExpression = from.currentMarkedExpression;
+        if (from.markedExpressions >= 0)
+            System.arraycopy(from.mutationsPerIndex, 0, newCandidate.mutationsPerIndex, 0, from.markedExpressions);
         return newCandidate;
     }
 
@@ -179,21 +180,39 @@ public class Candidate {
 
     @Override
     public String toString() {
+        return "CANDIDATE {" +
+                "INDEX : " + currentMarkedExpression +
+                " FROM RANGE [0.." + (markedExpressions + 1) + "] ; " + Arrays.toString(mutationsPerIndex) + " mutations}\n" +
+                toString(this);
+    }
+
+    private String toString(Candidate current) {
         StringBuilder sb = new StringBuilder();
-        if (mutation == null)
+        if (current.mutation == null)
             sb.append("ORIGINAL").append("\n");
         else {
-            sb.append(parent.toString());
-            sb.append("Line: ").append(mutation.original().pos.y).append(" : ");
-            sb.append(mutation.toString()).append("\n");
+            sb.append(toString(current.parent));
+            sb.append("Line: ").append(current.mutation.original().pos.y).append(" : ");
+            sb.append(current.mutation.toString()).append("\n");
         }
         return sb.toString();
     }
 
-    public int mutations() {
-        return mutations;
+    public int mutations(int index) {
+        if (index < 1 || index > markedExpressions)
+            throw new IllegalArgumentException("Index must go between 1 and " + markedExpressions);
+        return mutationsPerIndex[index-1];
     }
 
+    public int mutations() {
+        return mutations(currentMarkedExpression);
+    }
+
+    public void increaseMutations(int index) {
+        if (index < 1 || index > markedExpressions)
+            throw new IllegalArgumentException("Index must go between 1 and " + markedExpressions);
+        mutationsPerIndex[index-1]++;
+    }
 
     public List<Mutation> getMutations() {
         List<Mutation> mutations = new LinkedList<>();
@@ -202,6 +221,10 @@ public class Candidate {
             mutations.addAll(parent.getMutations());
         }
         return mutations;
+    }
+
+    public void copyMutationsFrom(Candidate from) {
+        System.arraycopy(from.mutationsPerIndex, 0, mutationsPerIndex ,0, markedExpressions);
     }
 
     public Optional<Mutation> getLastMutation() {
@@ -238,6 +261,8 @@ public class Candidate {
         clone.markedExpressions = markedExpressions;
         clone.currentMarkedExpression = currentMarkedExpression;
         clone.parent = parent != null? parent.copy() : null;
+        clone.mutationsPerIndex = new int[markedExpressions];
+        System.arraycopy(mutationsPerIndex, 0, clone.mutationsPerIndex, 0, markedExpressions);
         return clone;
     }
 

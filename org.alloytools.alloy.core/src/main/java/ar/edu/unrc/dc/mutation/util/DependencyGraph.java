@@ -21,6 +21,12 @@ public class DependencyGraph {
         return instance;
     }
 
+    public static void destroyInstance() {
+        if (instance == null)
+            throw new IllegalStateException("No instance to destroy");
+        instance = null;
+    }
+
     private Map<Browsable, List<Command>> dependencyGraph;
     private Map<Command, Integer> commandComplexity;
     private List<Command> commands;

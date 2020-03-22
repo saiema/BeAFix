@@ -113,6 +113,24 @@ public enum Ops {
                      }
 
                  },
+                 VCR {
+
+                     @Override
+                     public boolean isImplemented() {
+                         return true;
+                     }
+
+                     @Override
+                     public Mutator getOperator(CompModule context) {
+                         return new ar.edu.unrc.dc.mutation.op.VCR(context);
+                     }
+
+                     @Override
+                     public int getComplexity() {
+                         return 3;
+                     }
+
+                 },
                  JER {
 
                      @Override

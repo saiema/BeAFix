@@ -32,6 +32,18 @@ public class MutationConfiguration {
             }
         },
 
+        OPERATOR_VCR_STRICT_TYPE_CHECK {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
+        },
+
         OPERATOR_QTBER_BOUND_MAX_GENERATION {
             @Override
             public Class<?> getValueType() {
@@ -257,10 +269,10 @@ public class MutationConfiguration {
 
     private MutationConfiguration() {
         config = new HashMap<>();
-        loadSystemProperties();
+        //loadSystemProperties();
     }
 
-    private void loadSystemProperties() {
+    public void loadSystemProperties() {
         for (ConfigKey ck : ConfigKey.values()) {
             String propValue = System.getProperty(ck.toString());
             if (propValue != null) {
@@ -288,6 +300,7 @@ public class MutationConfiguration {
             setConfig(ConfigKey.OPERATOR_BIN_OP_REPLACEMENT_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_EMOR_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_JEX_STRICT_TYPE_CHECK, value);
+            setConfig(ConfigKey.OPERATOR_VCR_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_SSX_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_QTOI_STRICT_TYPE_CHECK, value);
             setConfig(ConfigKey.OPERATOR_RUOD_STRICT_TYPE_CHECK, value);
@@ -300,6 +313,23 @@ public class MutationConfiguration {
             return Optional.of(this.config.get(configKey.toString()));
         }
         return Optional.empty();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("***MUTATION CONFIGURATION***\n");
+        for (ConfigKey configKey : ConfigKey.values()) {
+            Optional<Object> configValue = getConfigValue(configKey);
+            sb.append(configKey.toString()).append(" : ");
+            if (configValue.isPresent()) {
+                sb.append(configValue.get().toString());
+            } else {
+                sb.append(configKey.defaultValue().toString());
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 
 }

@@ -1,29 +1,11 @@
 package ar.edu.unrc.dc.mutation.mutantLab;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.FileHandler;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 public class BlockingCollection<V> {
-
-    private static final Logger logger = Logger.getLogger(BlockingCollection.class.getName());
-
-    static {
-        try {
-            // This block configure the logger with handler and formatter
-            FileHandler fh = new FileHandler("BlockingCollection.log");
-            logger.addHandler(fh);
-            SimpleFormatter formatter = new SimpleFormatter();
-            fh.setFormatter(formatter);
-        } catch (SecurityException | IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     private List<V> internalCollection;
     private INSERTION_POLICY insertionPolicy;
@@ -61,7 +43,6 @@ public class BlockingCollection<V> {
 
 
     public synchronized void insertBulk(Collection<V> values) {
-        logger.info("insertBulk with " + values.size() + " elements");
         for (V value : values) {
             switch (insertionPolicy) {
                 case FIFO: {
@@ -74,7 +55,6 @@ public class BlockingCollection<V> {
                 }
             }
         }
-        logger.info("insertBulk finished");
         notifyAll();
         notifyAllIncreaseAssociatedObjects();
     }
@@ -84,7 +64,6 @@ public class BlockingCollection<V> {
     }
 
     public synchronized void insert(V value) {
-        logger.info("inserting value");
         switch (insertionPolicy) {
             case FIFO: {
                 internalCollection.add(internalCollection.size(), value);
@@ -95,18 +74,15 @@ public class BlockingCollection<V> {
                 break;
             }
         }
-        logger.info("value inserted");
         notifyAll();
         notifyAllIncreaseAssociatedObjects();
     }
 
     private synchronized void notifyAllIncreaseAssociatedObjects() {
-        logger.info("notifyAllIncreaseAssociatedObjects");
         for (Object o : increaseAssociatedObjects)
             synchronized (o) {
                 o.notify();
             }
-        logger.info("notifyAllIncreaseAssociatedObjects finished");
     }
 
     public synchronized void addIncreaseAssociatedObject(Object o) {
@@ -120,13 +96,11 @@ public class BlockingCollection<V> {
     }
 
     private synchronized void notifyAllDecreaseAssociatedObjects() {
-        logger.info("notifyAllDecreaseAssociatedObjects");
         for (Object o : decreaseAssociatedObjects) {
             synchronized (o) {
                 o.notify();
             }
         }
-        logger.info("notifyAllDecreaseAssociatedObjects finished");
     }
 
     public synchronized void addDecreaseAssociatedObject(Object o) {
@@ -140,30 +114,24 @@ public class BlockingCollection<V> {
     }
 
     public synchronized Optional<V> current() throws InterruptedException {
-        logger.info("current called");
         if (isEmpty()) {
             wait(timeout);
         }
         if (isEmpty()) {
-            logger.info("returning empty");
             return Optional.empty();
         }
-        logger.info("returning value at index 0");
         return Optional.of(internalCollection.get(0));
     }
 
     public synchronized Optional<V> getAndAdvance() throws InterruptedException {
-        logger.info("getAndAdvance called");
         if (isEmpty()) {
             wait(timeout);
         }
         Optional<V> res;
         if (isEmpty()) {
             res = Optional.empty();
-            logger.info("returning empty");
         } else {
             res = Optional.of(internalCollection.remove(0));
-            logger.info("returning (and removing) value at index 0");
         }
         notifyAllDecreaseAssociatedObjects();
         return res;

@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
+import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
 import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getCompatibleVariablesFor;
 import static ar.edu.unrc.dc.mutation.util.TypeChecking.canReplace;
 
@@ -96,10 +97,10 @@ public class JES extends JEX {
     private Optional<List<Expr>> obtainReplacements(ExprBinary replace) throws CheatingIsBadMkay {
         List<Expr> replacements = new LinkedList<>();
         if (size(replace.right) == 1 && canReplace(replace, replace.left,strictTypeCheck())) {
-            replacements.add(replace.left);
+            replacements.add(cheatedClone(replace.left));
         }
         if (size(replace.left) == 1 && canReplace(replace, replace.right, strictTypeCheck())) {
-            replacements.add(replace.right);
+            replacements.add(cheatedClone(replace.right));
         }
         if (size(replace) == 2) {
             Optional<List<Expr>> simpleReplacementsOp = getCompatibleVariablesFor(replace, strictTypeCheck());

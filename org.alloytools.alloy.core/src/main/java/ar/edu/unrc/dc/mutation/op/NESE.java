@@ -77,6 +77,7 @@ public class NESE extends Mutator {
         Expr some = null;
         if (varsAndJoins.isPresent()) {
             for (Expr v : varsAndJoins.get()) {
+                v = cheatedClone(v);
                 if (some == null) {
                     some = ExprUnary.Op.SOME.make(null, v);
                 } else {

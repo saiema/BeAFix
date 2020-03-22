@@ -1,6 +1,7 @@
 package ar.edu.unrc.dc.mutation.op;
 
 import ar.edu.unrc.dc.mutation.*;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -10,8 +11,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
-import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.*;
-import static ar.edu.unrc.dc.mutation.util.TypeChecking.*;
+import static ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor.getCompatibleVariablesFor;
+import static ar.edu.unrc.dc.mutation.util.TypeChecking.emptyOrNone;
 
 /**
  * Simple Set Extender
@@ -111,7 +112,8 @@ public class SSE extends Mutator {
                 Expr originalClone = cheatedClone(x);
                 Expr rightClone = cheatedClone(right);
                 Expr mutant = ExprBinary.Op.PLUS.make(originalClone.pos, null, originalClone, rightClone);
-                mutants.add(mutant);
+                if (TypeChecking.canReplace(x, mutant, strictTypeCheck()))
+                    mutants.add(mutant);
             }
         }
         if (!mutants.isEmpty())

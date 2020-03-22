@@ -1,5 +1,7 @@
 package ar.edu.unrc.dc.mutation.visitors;
 
+import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
+import ar.edu.unrc.dc.mutation.Cheats;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.*;
@@ -8,9 +10,11 @@ import edu.mit.csail.sdg.parser.CompModule;
 public class ParentRelationshipFixer extends VisitReturn<Void> {
 
     private Browsable currentParent;
+    private Expr varConstantReplacement;
 
     public ParentRelationshipFixer(Func f) {
         currentParent = f;
+        varConstantReplacement = null;
     }
 
     public ParentRelationshipFixer(Expr a, CompModule context) {
@@ -66,7 +70,23 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
             x.setBrowsableParent(currentParent);
         }
         changeParentVisitAndRestore(x.left, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeBinaryLeftField(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating binary expression " + x.toString() + " left expression", e);
+            }
+            varConstantReplacement = null;
+        }
         changeParentVisitAndRestore(x.right, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeBinaryRightField(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating binary expression " + x.toString() + " right expression", e);
+            }
+            varConstantReplacement = null;
+        }
         return null;
     }
 
@@ -77,6 +97,14 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
         }
         for (Expr elem : x.args) {
             changeParentVisitAndRestore(elem, isCurrentParent(x)?currentParent:x);
+            if (varConstantReplacement != null) {
+                try {
+                    Cheats.changeListElement(x, elem, varConstantReplacement);
+                } catch (CheatingIsBadMkay e) {
+                    throw new Error("There was a problem while updating list expression " + x.toString() + " element", e);
+                }
+                varConstantReplacement = null;
+            }
         }
         return null;
     }
@@ -88,14 +116,29 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
         }
         for (Expr arg : x.args) {
             changeParentVisitAndRestore(arg, isCurrentParent(x)?currentParent:x);
+            if (varConstantReplacement != null) {
+                try {
+                    Cheats.changeCallArgument(x, arg, varConstantReplacement);
+                } catch (CheatingIsBadMkay e) {
+                    throw new Error("There was a problem while updating function call " + x.toString() + " argument", e);
+                }
+                varConstantReplacement = null;
+            }
         }
         return null;
     }
 
     @Override
     public Void visit(ExprConstant x) throws Err {
-        if (!isCurrentParent(x)) {
-            x.setBrowsableParent(currentParent);
+        try {
+            if (!isCurrentParent(x)) {
+                ExprConstant constCopy = (ExprConstant) Cheats.cheatedClone(x);
+                constCopy.newID();
+                varConstantReplacement = constCopy;
+                constCopy.setBrowsableParent(currentParent);
+            }
+        } catch (CheatingIsBadMkay e) {
+            throw new Error("There was a problem while cloning variable " + x.toString(), e);
         }
         return null;
     }
@@ -106,8 +149,32 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
             x.setBrowsableParent(currentParent);
         }
         changeParentVisitAndRestore(x.cond, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeITECondition(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating ITE condition " + x.toString(), e);
+            }
+            varConstantReplacement = null;
+        }
         changeParentVisitAndRestore(x.left, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeITEThen(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating ITE then " + x.toString() + " expression", e);
+            }
+            varConstantReplacement = null;
+        }
         changeParentVisitAndRestore(x.right, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeITETElse(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating ITE else " + x.toString() + " expression", e);
+            }
+            varConstantReplacement = null;
+        }
         return null;
     }
 
@@ -117,8 +184,27 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
             x.setBrowsableParent(currentParent);
         }
         changeParentVisitAndRestore(x.var, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            varConstantReplacement = null;
+        }
         changeParentVisitAndRestore(x.expr, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeLetExpr(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating LET var bound " + x.toString() + " expression", e);
+            }
+            varConstantReplacement = null;
+        }
         changeParentVisitAndRestore(x.sub, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeLetSub(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating LET sub " + x.toString() + " expression", e);
+            }
+            varConstantReplacement = null;
+        }
         return null;
     }
 
@@ -129,10 +215,30 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
         }
         for (Decl d : x.decls) {
             changeParentVisitAndRestore(d.expr, isCurrentParent(x)?currentParent:x);
-            for (Expr dName : d.names)
-                changeParentVisitAndRestore(dName, isCurrentParent(x)?currentParent:x);
+            if (varConstantReplacement != null) {
+                try {
+                    Cheats.changeQtBoundFieldFor(x, varConstantReplacement, d);
+                } catch (CheatingIsBadMkay e) {
+                    throw new Error("There was a problem while updating QT bound " + x.toString() + " expression", e);
+                }
+                varConstantReplacement = null;
+            }
+            for (Expr dName : d.names) {
+                changeParentVisitAndRestore(dName, isCurrentParent(x) ? currentParent : x);
+                if (varConstantReplacement != null) {
+                    varConstantReplacement = null;
+                }
+            }
         }
         changeParentVisitAndRestore(x.sub, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeQtFormulaField(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating QT formula " + x.toString() + " expression", e);
+            }
+            varConstantReplacement = null;
+        }
         return null;
     }
 
@@ -142,16 +248,32 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
             x.setBrowsableParent(currentParent);
         }
         changeParentVisitAndRestore(x.sub, isCurrentParent(x)?currentParent:x);
+        if (varConstantReplacement != null) {
+            try {
+                Cheats.changeUnarySubField(x, varConstantReplacement);
+            } catch (CheatingIsBadMkay e) {
+                throw new Error("There was a problem while updating Unary sub " + x.toString() + " expression", e);
+            }
+            varConstantReplacement = null;
+        }
         return null;
     }
 
     @Override
     public Void visit(ExprVar x) throws Err {
-        if (!isCurrentParent(x)) {
-            x.setBrowsableParent(currentParent);
+        try {
+            if (!isCurrentParent(x)) {
+                ExprVar varCopy = (ExprVar) Cheats.cheatedClone(x);
+                varCopy.newID();
+                varConstantReplacement = varCopy;
+                varCopy.setBrowsableParent(currentParent);
+            }
+        } catch (CheatingIsBadMkay e) {
+            throw new Error("There was a problem while cloning variable " + x.toString(), e);
         }
         return null;
     }
+
 
     @Override
     public Void visit(Sig x) throws Err {

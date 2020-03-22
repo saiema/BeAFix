@@ -56,6 +56,14 @@ public abstract class Sig extends Expr implements Clause {
         }
     }
 
+    private boolean isVariabilizationTestRelatedSig;
+    public boolean isVariabilizationTestRelatedSig() {
+        return isVariabilizationTestRelatedSig;
+    }
+    public void isVariabilizationTestRelatedSig(boolean b) {
+        isVariabilizationTestRelatedSig = b;
+    }
+
     /**
      * Returns the name for this sig; this name need not be unique.
      */
@@ -294,6 +302,9 @@ public abstract class Sig extends Expr implements Clause {
                         break;
                     case SUBSIG :
                         isSubsig = a.pos.merge(isSubsig);
+                        break;
+                    case VARTEST :
+                        isVariabilizationTestRelatedSig(true);
                         break;
                     default :
                         //TODO throw new ErrorWarning("Undefined case " + a);

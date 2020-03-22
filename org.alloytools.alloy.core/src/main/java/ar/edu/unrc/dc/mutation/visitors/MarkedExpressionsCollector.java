@@ -61,7 +61,7 @@ public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>
     @Override
     public Optional<List<Expr>> visit(ExprBinary x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         List<Expr> markedExpressions = null;
         Optional<List<Expr>> markedExpressionsLeft = visitThis(x.left);
         if (markedExpressionsLeft.isPresent()) {
@@ -82,7 +82,7 @@ public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>
     @Override
     public Optional<List<Expr>> visit(ExprList x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         List<Expr> markedExpressions = new LinkedList<>();
         for (Expr arg : x.args) {
             visitThis(arg).ifPresent(markedExpressions::addAll);
@@ -95,7 +95,7 @@ public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>
     @Override
     public Optional<List<Expr>> visit(ExprCall x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         List<Expr> markedExpressions = new LinkedList<>();
         for (Expr arg : x.args) {
             visitThis(arg).ifPresent(markedExpressions::addAll);
@@ -108,14 +108,14 @@ public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>
     @Override
     public Optional<List<Expr>> visit(ExprConstant x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         return Optional.empty();
     }
 
     @Override
     public Optional<List<Expr>> visit(ExprITE x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         List<Expr> markedExpressions = new LinkedList<>();
         visitThis(x.cond).ifPresent(markedExpressions::addAll);
         visitThis(x.left).ifPresent(markedExpressions::addAll);
@@ -128,7 +128,7 @@ public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>
     @Override
     public Optional<List<Expr>> visit(ExprLet x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         List<Expr> markedExpressions = new LinkedList<>();
         visitThis(x.var).ifPresent(markedExpressions::addAll);
         visitThis(x.expr).ifPresent(markedExpressions::addAll);
@@ -141,7 +141,7 @@ public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>
     @Override
     public Optional<List<Expr>> visit(ExprQt x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         List<Expr> markedExpressions = new LinkedList<>();
         for (Decl d : x.decls) {
             for (Expr var : d.names) {
@@ -158,28 +158,35 @@ public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>
     @Override
     public Optional<List<Expr>> visit(ExprUnary x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         return visitThis(x.sub);
     }
 
     @Override
     public Optional<List<Expr>> visit(ExprVar x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         return Optional.empty();
     }
 
     @Override
     public Optional<List<Expr>> visit(Sig x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         return Optional.empty();
     }
 
     @Override
     public Optional<List<Expr>> visit(Sig.Field x) throws Err {
         if (x.directMutGenLimit() > 0)
-            return Optional.of(Collections.singletonList(x));
+            return Optional.of(singleElementList(x));
         return Optional.empty();
     }
+
+    private List<Expr> singleElementList(Expr x) {
+        List<Expr> result = new LinkedList<>();
+        result.add(x);
+        return result;
+    }
+
 }

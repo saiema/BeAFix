@@ -1,11 +1,14 @@
 package ar.edu.unrc.dc.mutation.mutantLab;
 
+import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.util.DependencyGraph;
+import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
@@ -73,7 +76,13 @@ public class MutantLab {
         this.ops.addAll(Arrays.asList(ops));
         this.maxDepth = maxDepth;
         searchStarted = false;
-        markedExpressions = Variabilization.getInstance().getMarkedExpressions(context).map(mes -> mes.size()).orElse(0);
+        Optional<List<Expr>> initialMarkedExpressions = Variabilization.getInstance().getMarkedExpressions(context);
+        markedExpressions = initialMarkedExpressions.map(List::size).orElse(0);
+        initialMarkedExpressions.ifPresent(mes -> mes.forEach(e -> RepairReport.getInstance().addMarkedExpression(e)));
+    }
+
+    public int getMaxDepth() {
+        return maxDepth;
     }
 
     public int getMarkedExpressions() {
@@ -109,15 +118,13 @@ public class MutantLab {
                 logger.info("Received invalid candidate, skipping candidate");
                 return advance();
             }
-            if (current.get().mutations() < maxDepth) {
-                logger.info("Inserting current to mutation task input channel");
-                input.insert(current.get());
-            }
             if (current.get() == Candidate.STOP) {
                 mutationTask.stop();
-                logger.info("Recived STOP candidate, stopping generation...");
+                logger.info("Received STOP candidate, stopping generation...");
                 return false;
             }
+            logger.info("Inserting current to mutation task input channel");
+            input.insert(current.get());
             return output.current().isPresent();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -133,15 +140,11 @@ public class MutantLab {
     }
 
     public void lockCandidateGeneration() {
-        logger.info("locking candidate generation...");
         mutationTask.getLock().lock();
-        logger.info("...candidate generation locked");
     }
 
     public void unlockCandidateGeneration() {
-        logger.info("unlocking candidate generation...");
         mutationTask.getLock().unlock();
-        logger.info("...candidate generation unlocked");
     }
 
     public Optional<Candidate> getCurrentCandidate() {
@@ -171,8 +174,23 @@ public class MutantLab {
         return cmds.stream().filter(Command::isVariabilizationTest).collect(Collectors.toList());
     }
 
+    public synchronized boolean applyCandidateToAst(Candidate candidate) {
+        ASTMutator astMutator = ASTMutator.getInstance();
+        candidate.getMutations().forEach(astMutator::pushNewMutation);
+        return astMutator.applyMutations();
+    }
+
+    public synchronized List<Mutation> getMutationsAppliedToAst() {
+        return ASTMutator.getInstance().appliedMutations();
+    }
+
+    public synchronized boolean undoChangesToAst() {
+        return ASTMutator.getInstance().undoMutations();
+    }
+
     public void reportCurrentAsInvalid() {
         if (getCurrentCandidate().isPresent()) {
+            RepairReport.getInstance().incInvalidCandidates();
             getCurrentCandidate().get().markAsInvalid();
             logger.info("Current combination " + getCurrentCandidate().toString() + " reported as invalid by repair task");
         }

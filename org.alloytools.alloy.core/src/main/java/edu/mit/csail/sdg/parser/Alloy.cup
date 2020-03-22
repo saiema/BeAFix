@@ -44,6 +44,7 @@ import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4.Version;
 import edu.mit.csail.sdg.ast.Attr.AttrType;
+import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.CommandScope;
 import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
@@ -551,6 +552,7 @@ nonterminal                            Sig;
 nonterminal List<ExprVar>              SigIn;
 nonterminal List<Pos>                  SigQual;
 nonterminal List<Pos>                  SigQuals;
+nonterminal Pair<List<Pos>, Boolean>   SigQualifiers;
 nonterminal ExprVar                    SigRef;
 nonterminal List<ExprVar>              SigRefp;
 nonterminal List<ExprVar>              SigRefs;
@@ -692,8 +694,11 @@ Predicate ::= Vis:p PRED:o SigRef:f DOT Name:n                           Super:v
 Vis ::=           {: RESULT=null; :};
 Vis ::= PRIVATE:p {: RESULT=p;    :};
 
-Sig ::= SigQuals:a Names:b SigIn:c LBRACE Decls:d RBRACE:o SuperOpt:e
+//Sig ::= SigQuals:a Names:b SigIn:c LBRACE Decls:d RBRACE:o SuperOpt:e
+Sig ::= SigQualifiers:sq Names:b SigIn:c LBRACE Decls:d RBRACE:o SuperOpt:e
  {:
+   List<Pos> a = sq.a;
+   Boolean varTest = sq.b;
    if (e==null) e = ExprConstant.Op.TRUE.make(o, 0);
    ExprVar cc = (c!=null && c.size()>0) ? c.remove(c.size()-1) : null;
    for(ExprVar bb:b) {
@@ -703,9 +708,13 @@ Sig ::= SigQuals:a Names:b SigIn:c LBRACE Decls:d RBRACE:o SuperOpt:e
          AttrType.LONE    .makenull(a.get(1)),
          AttrType.ONE     .makenull(a.get(2)),
          AttrType.SOME    .makenull(a.get(3)),
-         AttrType.PRIVATE .makenull(a.get(4)));
+         AttrType.PRIVATE .makenull(a.get(4)),
+         varTest?Attr.VARTEST:null);
    }
  :};
+
+SigQualifiers ::= VARTEST SigQuals:sqs {: RESULT=new Pair<List<Pos>, Boolean>(sqs, true); :};
+SigQualifiers ::= SigQuals:sqs {: RESULT=new Pair<List<Pos>, Boolean>(sqs, false); :};
 
 SigQual  ::= ABSTRACT:x               {: RESULT=new ArrayList<Pos>(5); RESULT.add(x);    RESULT.add(null); RESULT.add(null); RESULT.add(null); RESULT.add(null); :};
 SigQual  ::= LONE:x                   {: RESULT=new ArrayList<Pos>(5); RESULT.add(null); RESULT.add(x);    RESULT.add(null); RESULT.add(null); RESULT.add(null); :};

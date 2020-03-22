@@ -1443,7 +1443,21 @@ public final class CompModule extends Browsable implements Module {
         sigs.put(name, obj);
         old2fields.put(obj, fields);
         old2appendedfacts.put(obj, fact);
+        if (isVarTest(attributes))
+            obj.isVariabilizationTestRelatedSig(true);
+        else
+            obj.isVariabilizationTestRelatedSig(false);
         return obj;
+    }
+
+    private boolean isVarTest(Attr... attributes) {
+        if (attributes == null)
+            return false;
+        for (Attr a : attributes) {
+            if (a != null && a.equals(Attr.VARTEST))
+                return true;
+        }
+        return false;
     }
 
     /** Add an enumeration. */

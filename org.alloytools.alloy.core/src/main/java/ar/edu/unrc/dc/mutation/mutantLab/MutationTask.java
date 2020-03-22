@@ -4,6 +4,7 @@ import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
+import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
@@ -81,6 +82,7 @@ public class MutationTask implements Runnable {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                logger.info("Exception in run method");
                 lock.unlock();
                 return;
             }
@@ -96,59 +98,71 @@ public class MutationTask implements Runnable {
     }
 
     private void waitForOutputThreshold() throws InterruptedException {
-        logger.info("Checking threshold");
         while (outputChannel.size() > outputMinThreshold) {
             synchronized (thresholdLock) {
                 thresholdLock.wait(thresholdRetryTimeout);
             }
         }
-        logger.info("Threshold reached");
     }
 
     private void checkAndGenerateNewCandidates(Candidate from) {
-        if (!from.isValid())
-            return;
-        if (from.isLast()) {
-            outputChannel.insert(Candidate.STOP);
+        logger.info("***Variabilization check started***");
+        if (!from.isValid()) {
+            logger.info("candidate was invalid, returning");
             return;
         }
-        if (from.getCurrentMarkedExpression() >= MutantLab.getInstance().getMarkedExpressions()) {
+        if (from.isLast()) { //TODO: check if this verification is needed, this method should not be getting called with a last candidate
+            logger.info("candidate was last, sending stop signal");
             outputChannel.insert(Candidate.STOP);
             return;
         }
         //=============VARIABILIZATION=============
-        if (variabilizationCheck(from)) {
+        logger.info("Current candidate:\n" + from.toString());
+        if (!from.isLast() && variabilizationCheck(from)) {
+            logger.info("variabilization check SUCCEEDED");
             Candidate nextMutationSpotCandidate = from.copy();
             nextMutationSpotCandidate.currentMarkedExpressionInc();
             if (from.isFirst()) {
+                logger.info("Sending only next index candidate:\n" + nextMutationSpotCandidate.toString());
                 outputChannel.insert(nextMutationSpotCandidate);
                 return;
-            } else
+            } else if (!nextMutationSpotCandidate.isLast()){
+                logger.info("Sending mutants of:\n" + nextMutationSpotCandidate.toString());
                 generateMutationsFor(nextMutationSpotCandidate);
-        } else if (from.isFirst()) {
-            outputChannel.insert(Candidate.STOP);
-            return;
+            }
+        } else {
+            logger.info("variabilization check FAILED");
+            if (from.isFirst()) {
+                logger.info("current candidate had index 0, sending stop signal");
+                outputChannel.insert(Candidate.STOP);
+                return;
+            }
         }
-        if (!from.isFirst())
+        if (!from.isFirst()) {
+            logger.info("Sending mutants of:\n" + from.toString());
             generateMutationsFor(from);
+        }
+        logger.info("***Variabilization check finished***");
         //=========================================
     }
 
     private void generateMutationsFor(Candidate from) {
-        Variabilization.getInstance().blockAllButCurrent(from);
+        if (from.mutations() >= MutantLab.getInstance().getMaxDepth())
+            return;
         CompModule context = from.getContext();
-        ASTMutator astMutator = ASTMutator.getInstance();
-        from.getMutations().forEach(astMutator::pushNewMutation);
-        if (!astMutator.applyMutations()) {
+        if (!MutantLab.getInstance().applyCandidateToAst(from)) {
             outputChannel.insert(Candidate.INVALID);
             return;
         }
         AtomicReference<Candidate> updatedFrom = new AtomicReference<>(Candidate.original(context));
+        updatedFrom.get().setCurrentMarkedExpression(from.getCurrentMarkedExpression());
         AtomicReference<Candidate> lastCandidate = new AtomicReference<>(updatedFrom.get());
-        astMutator.appliedMutations().forEach(m -> {
+        MutantLab.getInstance().getMutationsAppliedToAst().forEach(m -> {
             updatedFrom.set(Candidate.mutantFromCandidate(lastCandidate.get(), m));
             lastCandidate.set(updatedFrom.get());
         });
+        updatedFrom.get().copyMutationsFrom(from);
+        Variabilization.getInstance().blockAllButCurrent(from);
         List<Candidate> newCandidates = new LinkedList<>();
         for (Ops o : ops) {
             if (!o.isImplemented())
@@ -156,22 +170,25 @@ public class MutationTask implements Runnable {
             Optional<List<Mutation>> mutationsOp = o.getOperator(context).getMutations();
             mutationsOp.ifPresent(mutations -> mutations.forEach(m -> {
                 Candidate newCandidate = Candidate.mutantFromCandidate(updatedFrom.get(), m);
-                newCandidate.currentMarkedExpressionInc();
+                newCandidate.increaseMutations(newCandidate.getCurrentMarkedExpression());
+                RepairReport.getInstance().incGeneratedCandidates();
                 if (mutantsHashes.add(newCandidate)) {
                     newCandidate.clearMutatedStatus();
                     newCandidates.add(newCandidate);
                 }
             }));
         }
-        if (!astMutator.undoMutations())
+        if (!MutantLab.getInstance().undoChangesToAst())
             outputChannel.insert(Candidate.INVALID);
         else
             outputChannel.insertBulk(newCandidates);
     }
 
     private boolean variabilizationCheck(Candidate candidate) {
-        if (!useVariabilization())
+        if (!useVariabilization()) {
+            logger.info("variabilization check is disabled, returning true");
             return true;
+        }
         return Variabilization.getInstance().variabilizationCheck(candidate, MutantLab.getInstance().getCommandsToRunFor(candidate, true), logger);
     }
 

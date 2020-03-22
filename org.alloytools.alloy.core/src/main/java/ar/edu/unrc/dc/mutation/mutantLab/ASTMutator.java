@@ -22,6 +22,9 @@ public class ASTMutator {
         instance = new ASTMutator(original);
         return instance;
     }
+    public static void destroyInstance() {
+        instance = null;
+    }
     public static ASTMutator getInstance() {
         if (instance == null)
             throw new IllegalStateException("You need to execute startInstance first");

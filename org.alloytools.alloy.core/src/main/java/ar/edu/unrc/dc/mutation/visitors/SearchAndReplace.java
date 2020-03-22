@@ -3,9 +3,29 @@ package ar.edu.unrc.dc.mutation.visitors;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Optional;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
+
+    private static final Logger logger = Logger.getLogger(SearchAndReplace.class.getName());
+
+    static {
+        try {
+            // This block configure the logger with handler and formatter
+            FileHandler fh = new FileHandler("SearchAndReplaceErrors.log");
+            logger.addHandler(fh);
+            SimpleFormatter formatter = new SimpleFormatter();
+            fh.setFormatter(formatter);
+        } catch (SecurityException | IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * position of expression to search
@@ -170,6 +190,23 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
     }
 
     private Optional<Expr> replace(Expr original, Expr replacement) {
+        try {
+            return replaceNode(original, replacement);
+        } catch (Exception e) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String exceptionAsString = sw.toString();
+            logger.info("***ERROR***\n" +
+                    "Original expression: " + original.toString() + "\n" +
+                    "Replacement expression: " + replacement.toString() + "\n" +
+                    exceptionAsString + "\n" +
+                    "---ERROR---"
+            );
+            throw e;
+        }
+    }
+
+    private Optional<Expr> replaceNode(Expr original, Expr replacement) {
         if (original.getID() == initialExpression.getID())
             return Optional.of(replacement);
         Browsable originalParent = original.getBrowsableParent();

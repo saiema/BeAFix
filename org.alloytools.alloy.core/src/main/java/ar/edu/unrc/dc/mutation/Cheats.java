@@ -150,6 +150,20 @@ public final class Cheats {
         }
     }
 
+    public static void changeLetVar(ExprLet original, ExprVar replacement) throws CheatingIsBadMkay {
+        Field varField = getField(ExprLet.class, "var");
+        if (varField == null)
+            throw new CheatingIsBadMkay("Couldn't find var field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(varField, true);
+            varField.set(original, replacement);
+            replacement.setBrowsableParent(original);
+            setAccessibleStatus(varField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("There was a problem while trying to change var field", e);
+        }
+    }
+
     public static void changeListElement(ExprList original, Expr target, Expr replacement) throws CheatingIsBadMkay {
         boolean targetFound = false;
         List<Expr> newArgs = new LinkedList<>();
@@ -187,6 +201,74 @@ public final class Cheats {
             setAccessibleStatus(bodyField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("There was a problem while trying to change function's body field", e);
+        }
+    }
+
+    public static void changeCallArgument(ExprCall original, Expr target, Expr replacement) throws CheatingIsBadMkay {
+        boolean targetFound = false;
+        List<Expr> newArgs = new LinkedList<>();
+        for (Expr arg : original.args) {
+            if (arg.getID() == target.getID()) {
+                targetFound = true;
+                newArgs.add(replacement);
+            } else
+                newArgs.add(arg);
+        }
+        if (!targetFound)
+            throw new CheatingIsBadMkay("Couldn't find target arg in call arguments");
+        ConstList<Expr> newArgsConstList = ConstList.make(newArgs);
+        Field argsField = getField(ExprCall.class, "args");
+        if (argsField == null)
+            throw new CheatingIsBadMkay("Couldn't find args field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(argsField, true);
+            argsField.set(original, newArgsConstList);
+            replacement.setBrowsableParent(original);
+            setAccessibleStatus(argsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("There was a problem while trying to change expr field for target argument", e);
+        }
+    }
+
+    public static void changeITECondition(ExprITE original, Expr replacement) throws CheatingIsBadMkay {
+        Field condField = getField(ExprITE.class, "cond");
+        if (condField == null)
+            throw new CheatingIsBadMkay("Couldn't find cond field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(condField, true);
+            condField.set(original, replacement);
+            replacement.setBrowsableParent(original);
+            setAccessibleStatus(condField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("There was a problem while trying to change ITE cond field", e);
+        }
+    }
+
+    public static void changeITEThen(ExprITE original, Expr replacement) throws CheatingIsBadMkay {
+        Field leftField = getField(ExprITE.class, "left");
+        if (leftField == null)
+            throw new CheatingIsBadMkay("Couldn't find left field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(leftField, true);
+            leftField.set(original, replacement);
+            replacement.setBrowsableParent(original);
+            setAccessibleStatus(leftField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("There was a problem while trying to change ITE left field", e);
+        }
+    }
+
+    public static void changeITETElse(ExprITE original, Expr replacement) throws CheatingIsBadMkay {
+        Field rightField = getField(ExprITE.class, "right");
+        if (rightField == null)
+            throw new CheatingIsBadMkay("Couldn't find right field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(rightField, true);
+            rightField.set(original, replacement);
+            replacement.setBrowsableParent(original);
+            setAccessibleStatus(rightField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("There was a problem while trying to change ITE right field", e);
         }
     }
 

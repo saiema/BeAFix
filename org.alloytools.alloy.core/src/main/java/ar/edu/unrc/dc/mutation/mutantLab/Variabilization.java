@@ -4,6 +4,7 @@ import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Cheats;
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.RepairReport;
 import ar.edu.unrc.dc.mutation.visitors.MarkedExpressionsCollector;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class Variabilization {
 
@@ -47,70 +49,105 @@ public class Variabilization {
         this.options = options;
     }
 
-    public void searchAndPrintMarkedExpressions(Candidate from, Logger logger) {
-        MarkedExpressionsCollector markedExpressionsCollector = new MarkedExpressionsCollector(from);
-        Optional<Mutation> lastMutation = from.getLastMutation();
-        StringBuilder sb = new StringBuilder("Marked expressions:\n");
-        markedExpressionsCollector.getMarkedExpressions().ifPresent(mes -> mes.forEach(me -> {
-            sb.append("Line ").append(me.pos.y).append(" : ").append(me.toString());
-            if (lastMutation.isPresent()) {
-                Optional<Expr> lastMutationRelatedMarkedExpression = lastMutation.get().original().getMarkedExpression();
-                if (lastMutationRelatedMarkedExpression.isPresent() && lastMutationRelatedMarkedExpression.get().getID() == me.getID()) {
-                    sb.append(" (current)");
-                } else if (lastMutation.get().mutant().getID() == me.getID()) {
-                    sb.append(" (current)");
-                } else if (!lastMutationRelatedMarkedExpression.isPresent()) {
-                    sb.append("ERROR: candidate has a mutation but does not have an associated marked expression");
-                }
-            }
-            sb.append("\n");
-        }));
-        logger.info(sb.toString());
-    }
+//    public void searchAndPrintMarkedExpressions(Candidate from, Logger logger) {
+//        MarkedExpressionsCollector markedExpressionsCollector = new MarkedExpressionsCollector(from);
+//        Optional<Mutation> lastMutation = from.getLastMutation();
+//        StringBuilder sb = new StringBuilder("Marked expressions:\n");
+//        markedExpressionsCollector.getMarkedExpressions().ifPresent(mes -> mes.forEach(me -> {
+//            sb.append("Line ").append(me.pos.y).append(" : ").append(me.toString());
+//            if (lastMutation.isPresent()) {
+//                Optional<Expr> lastMutationRelatedMarkedExpression = lastMutation.get().original().getMarkedExpression();
+//                if (lastMutationRelatedMarkedExpression.isPresent() && lastMutationRelatedMarkedExpression.get().getID() == me.getID()) {
+//                    sb.append(" (current)");
+//                } else if (lastMutation.get().mutant().getID() == me.getID()) {
+//                    sb.append(" (current)");
+//                } else if (!lastMutationRelatedMarkedExpression.isPresent()) {
+//                    sb.append("ERROR: candidate has a mutation but does not have an associated marked expression");
+//                }
+//            }
+//            sb.append("\n");
+//        }));
+//        logger.info(sb.toString());
+//    }
 
-    public void printVariabilizationProcess(Candidate from, List<Command> commands, Logger logger) {
-        StringBuilder sb = new StringBuilder("VARIABILIZATION\n");
-        Optional<List<Pair<Expr, Boolean>>> expressionsForVariabilization = getMarkedExpressionsForVariabilizationCheck(from);
-        sb.append("Marked expressions, fixed and to replace:\n");
-        if (expressionsForVariabilization.isPresent()) {
-            for (Pair<Expr, Boolean> me : expressionsForVariabilization.get()) {
-                sb.append("Line ").append(me.a.pos.y).append(" : ").append(me.a.toString());
-                sb.append(me.b?" (TO REPLACE)":" (FIXED)");
-                sb.append("\n");
-            }
-            sb.append("Variabilization related sig:\n");
-            Optional<Sig> varSig = generateMagicSigForExpressions(expressionsForVariabilization.get());
-            if (varSig.isPresent()) {
-                sb.append(varSig.get().toExtendedString());
-                sb.append("\n");
-                sb.append("Marked expressions related fields (magic vars):\n");
-                for (Pair<Expr, Boolean> me : expressionsForVariabilization.get()) {
-                    if (!me.b)
-                        continue;
-                    Expr x = me.a;
-                    Optional<Field> magicVar = getMarkedExpressionReplacement(varSig.get(), x);
-                    sb.append("Magic var for expression : ").append(x.toString()).append(" : ");
-                    if (magicVar.isPresent()) {
-                        magicVar.get().toString(sb, 1);
-                    } else {
-                        sb.append("NOT FOUND (THIS SHOULD NOT HAPPEN!)");
-                    }
-                }
-                sb.append("Variabilization tests\n");
-                for (Command c : commands) {
-                    if (c.isVariabilizationTest()) {
-                        sb.append(c.toString());
-                        sb.append("\n");
-                    }
-                }
-            } else {
-                sb.append("NO SIG GENERATED (THIS SHOULD NOT HAPPEN!)");
-            }
-        } else {
-            sb.append("NO EXPRESSIONS FOUND\n");
-        }
-        logger.info(sb.toString());
-    }
+//    public void printVariabilizationProcess(Candidate from, List<Command> commands, Logger logger) {
+//        StringBuilder sb = new StringBuilder("VARIABILIZATION\n");
+//        Optional<List<Pair<Expr, Boolean>>> expressionsForVariabilization = getMarkedExpressionsForVariabilizationCheck(from);
+//        sb.append("Marked expressions, fixed and to replace:\n");
+//        if (expressionsForVariabilization.isPresent()) {
+//            for (Pair<Expr, Boolean> me : expressionsForVariabilization.get()) {
+//                sb.append("Line ").append(me.a.pos.y).append(" : ").append(me.a.toString());
+//                sb.append(me.b?" (TO REPLACE)":" (FIXED)");
+//                sb.append("\n");
+//            }
+//            sb.append("Variabilization related sig:\n");
+//            Optional<Sig> varSig = generateMagicSigForExpressions(expressionsForVariabilization.get());
+//            if (varSig.isPresent()) {
+//                sb.append(varSig.get().toExtendedString());
+//                sb.append("\n");
+//                sb.append("Marked expressions related fields (magic vars):\n");
+//                for (Pair<Expr, Boolean> me : expressionsForVariabilization.get()) {
+//                    if (!me.b)
+//                        continue;
+//                    Expr x = me.a;
+//                    Optional<Field> magicVar = getMarkedExpressionReplacement(varSig.get(), x);
+//                    sb.append("Magic var for expression : ").append(x.toString()).append(" : ");
+//                    if (magicVar.isPresent()) {
+//                        magicVar.get().toString(sb, 1);
+//                    } else {
+//                        sb.append("NOT FOUND (THIS SHOULD NOT HAPPEN!)");
+//                    }
+//                }
+//                sb.append("Variabilization tests\n");
+//                for (Command c : commands) {
+//                    if (c.isVariabilizationTest()) {
+//                        sb.append(c.toString());
+//                        sb.append("\n");
+//                    }
+//                }
+//            } else {
+//                sb.append("NO SIG GENERATED (THIS SHOULD NOT HAPPEN!)");
+//            }
+//        } else {
+//            sb.append("NO EXPRESSIONS FOUND\n");
+//        }
+//        logger.info(sb.toString());
+//    }
+
+//    public boolean variabilizationCheck(Candidate from, List<Command> commands, Logger logger) throws Err {
+//        if (from == null)
+//            throw new IllegalArgumentException("from can't be null");
+//        if (from.isLast())
+//            throw new IllegalArgumentException("from candidate can't be a last candidate");
+//        if (commands == null)
+//            throw new IllegalArgumentException("commands can't be null");
+//        logger.info("Variabilization check for:\n" + from.toString() + "Using commands: [" + commands.stream().map(Command::toString).collect(Collectors.joining(",")) + "]");
+//        if (commands.isEmpty())
+//            return true;
+//        Optional<List<Pair<Expr, Boolean>>> markedExpressions = getMarkedExpressionsForVariabilizationCheck(from);
+//        if (markedExpressions.isPresent()) {
+//            Optional<Sig> magicSig = generateMagicSigForExpressions(markedExpressions.get());
+//            if (magicSig.isPresent()) {
+//                RepairReport.getInstance().incVariabilizationChecks();
+////                MutantLab.getInstance().lockCandidateGeneration();
+//                List<Mutation> variabilizationMutations = generateVariabilizationMutations(magicSig.get(), markedExpressions.get());
+//                Candidate variabilizationCandidate = generateCandidateForVariabilization(from.getContext(), variabilizationMutations);
+//                logger.info("Reporter available: " + (reporter != null));
+//                logger.info("variabilization candidate:\n" + variabilizationCandidate.toString());
+//                prepareAstForVariabilization(from, magicSig.get());
+//                boolean solverResult = runSolver(from.getContext(), commands, variabilizationCandidate);
+//                logger.info("solver returned: " + solverResult + "\n");
+//                restoreAst(from, magicSig.get());
+////                MutantLab.getInstance().unlockCandidateGeneration();
+//                if (solverResult)
+//                    RepairReport.getInstance().incVariabilizationChecksPassed();
+//                else
+//                    RepairReport.getInstance().incVariabilizationChecksFailed();
+//                return solverResult;
+//            }
+//        }
+//        return true;
+//    }
 
     public boolean variabilizationCheck(Candidate from, List<Command> commands, Logger logger) throws Err {
         if (from == null)
@@ -119,19 +156,33 @@ public class Variabilization {
             throw new IllegalArgumentException("from candidate can't be a last candidate");
         if (commands == null)
             throw new IllegalArgumentException("commands can't be null");
+        logger.info("Variabilization check for:\n" + from.toString() + "Using commands: [" + commands.stream().map(Command::toString).collect(Collectors.joining(",")) + "]");
         if (commands.isEmpty())
             return true;
-        Optional<List<Pair<Expr, Boolean>>> markedExpressions = getMarkedExpressionsForVariabilizationCheck(from, true);
+        if (!MutantLab.getInstance().applyCandidateToAst(from))
+            throw new Error("There was a problem while mutating the ast");
+        Optional<List<Pair<Expr, Boolean>>> markedExpressions = getMarkedExpressionsForVariabilizationCheck(from);
         if (markedExpressions.isPresent()) {
+            CompModule context = from.getContext();
             Optional<Sig> magicSig = generateMagicSigForExpressions(markedExpressions.get());
             if (magicSig.isPresent()) {
-                MutantLab.getInstance().lockCandidateGeneration();
+                RepairReport.getInstance().incVariabilizationChecks();
                 List<Mutation> variabilizationMutations = generateVariabilizationMutations(magicSig.get(), markedExpressions.get());
                 Candidate variabilizationCandidate = generateCandidateForVariabilization(from.getContext(), variabilizationMutations);
-                prepareAstForVariabilization(from, variabilizationMutations, magicSig.get());
+                logger.info("Reporter available: " + (reporter != null));
+                logger.info("variabilization candidate:\n" + variabilizationCandidate.toString());
+                try {
+                    Cheats.addSigToModule(context, magicSig.get());
+                } catch (CheatingIsBadMkay e) {
+                    throw new Error("There was a problem while adding the magic signature to the module", e);
+                }
                 boolean solverResult = runSolver(from.getContext(), commands, variabilizationCandidate);
+                logger.info("solver returned: " + solverResult + "\n");
                 restoreAst(from, magicSig.get());
-                MutantLab.getInstance().unlockCandidateGeneration();
+                if (solverResult)
+                    RepairReport.getInstance().incVariabilizationChecksPassed();
+                else
+                    RepairReport.getInstance().incVariabilizationChecksFailed();
                 return solverResult;
             }
         }
@@ -189,7 +240,7 @@ public class Variabilization {
         return repaired;
     }
 
-    private void prepareAstForVariabilization(Candidate from, List<Mutation> variabilizationReplacements, Sig magicSig) throws Err {
+    private void prepareAstForVariabilization(Candidate from, Sig magicSig) throws Err {
         CompModule context = from.getContext();
         try {
             Cheats.addSigToModule(context, magicSig);
@@ -204,10 +255,12 @@ public class Variabilization {
     }
 
     private List<Mutation> generateVariabilizationMutations(Sig magicSig, List<Pair<Expr, Boolean>> markedExpressions) throws Err {
+        if (markedExpressions.stream().noneMatch(p -> p.b))
+            throw new IllegalStateException("No marked expressions available to generate variabilization mutations");
         List<Mutation> variabilizationMutations = new LinkedList<>();
         for (Pair<Expr, Boolean> me : markedExpressions) {
             if (!me.b) {
-                throw new IllegalStateException("All marked expressions in this step should not be FIXED");
+                continue;
             }
             Optional<Field> magicField = getMarkedExpressionReplacement(magicSig, me.a);
             if (!magicField.isPresent())
@@ -238,66 +291,85 @@ public class Variabilization {
         }
     }
 
-    public Optional<List<Expr>> getMarkedExpressions(Candidate from) {
-        MarkedExpressionsCollector markedExpressionsCollector = new MarkedExpressionsCollector(from);
-        Optional<Mutation> lastMutation = from.getLastMutation();
-        Optional<List<Expr>> markedExpressions = markedExpressionsCollector.getMarkedExpressions();
-        List<Expr> result = new LinkedList<>();
-        if (markedExpressions.isPresent()) {
-            for (Expr me : markedExpressions.get()) {
-                if (lastMutation.isPresent()) {
-                    Optional<Expr> lastMutationRelatedMarkedExpression = lastMutation.get().original().getMarkedExpression();
-                    Expr markedExpression = me;
-                    if (lastMutationRelatedMarkedExpression.isPresent() && lastMutationRelatedMarkedExpression.get().getID() == me.getID()) {
-                        markedExpression = lastMutationRelatedMarkedExpression.get();
-                    } else if (lastMutation.get().mutant().getID() == me.getID()) {
-                        markedExpression = lastMutation.get().mutant();
-                    }
-                    result.add(markedExpression);
-                }
-            }
-        }
-        return result.isEmpty()?Optional.empty():Optional.of(result);
-    }
+//    public Optional<List<Expr>> getMarkedExpressions(Candidate from) {
+//        MarkedExpressionsCollector markedExpressionsCollector = new MarkedExpressionsCollector(from);
+//        Optional<Mutation> lastMutation = from.getLastMutation();
+//        Optional<List<Expr>> markedExpressions = markedExpressionsCollector.getMarkedExpressions();
+//        List<Expr> result = new LinkedList<>();
+//        if (markedExpressions.isPresent()) {
+//            for (Expr me : markedExpressions.get()) {
+//                if (lastMutation.isPresent()) {
+//                    Optional<Expr> lastMutationRelatedMarkedExpression = lastMutation.get().original().getMarkedExpression();
+//                    Expr markedExpression = me;
+//                    if (lastMutationRelatedMarkedExpression.isPresent() && lastMutationRelatedMarkedExpression.get().getID() == me.getID()) {
+//                        markedExpression = lastMutationRelatedMarkedExpression.get();
+//                    } else if (lastMutation.get().mutant().getID() == me.getID()) {
+//                        markedExpression = lastMutation.get().mutant();
+//                    }
+//                    result.add(markedExpression);
+//                }
+//            }
+//        }
+//        return result.isEmpty()?Optional.empty():Optional.of(result);
+//    }
 
     public Optional<List<Expr>> getMarkedExpressions(CompModule ast) {
         MarkedExpressionsCollector markedExpressionsCollector = new MarkedExpressionsCollector(ast);
         return markedExpressionsCollector.getMarkedExpressions();
     }
 
-    public Optional<List<Pair<Expr, Boolean>>> getMarkedExpressionsForVariabilizationCheck(Candidate from) {
-        return getMarkedExpressionsForVariabilizationCheck(from, false);
-    }
+//    public Optional<List<Pair<Expr, Boolean>>> getMarkedExpressionsForVariabilizationCheck(Candidate from) {
+//        return getMarkedExpressionsForVariabilizationCheck(from, false);
+//    }
 
-    public Optional<List<Pair<Expr, Boolean>>> getMarkedExpressionsForVariabilizationCheck(Candidate from, boolean skipAlreadyMutatedExpressions) {
+//    public Optional<List<Pair<Expr, Boolean>>> getMarkedExpressionsForVariabilizationCheck(Candidate from) {
+//        MarkedExpressionsCollector markedExpressionsCollector = new MarkedExpressionsCollector(from);
+//        Optional<Mutation> lastMutation = from.getLastMutation();
+//        Optional<List<Expr>> markedExpressions = markedExpressionsCollector.getMarkedExpressions();
+//        List<Pair<Expr, Boolean>> result = new LinkedList<>();
+//        if (markedExpressions.isPresent()) {
+//            int idx = 1;
+//            for (Expr me : markedExpressions.get()) {
+//                if (!from.isFirst() && from.getCurrentMarkedExpression() >= idx) {
+//                    idx++;
+//                    continue;
+//                }
+//                Boolean toReplace;
+//                Expr markedExpression = me;
+//                if (lastMutation.isPresent()) {
+//                    Optional<Expr> lastMutationRelatedMarkedExpression = lastMutation.get().original().getMarkedExpression();
+//                    if (lastMutationRelatedMarkedExpression.isPresent() && lastMutationRelatedMarkedExpression.get().getID() == me.getID()) {
+//                        markedExpression = lastMutationRelatedMarkedExpression.get();
+//                        toReplace = Boolean.FALSE;
+//                    } else if (lastMutation.get().mutant().getID() == me.getID()) {
+//                        markedExpression = lastMutation.get().mutant();
+//                        toReplace = Boolean.FALSE;
+//                    } else {
+//                        toReplace = Boolean.TRUE;
+//                    }
+//                } else {
+//                    toReplace = Boolean.TRUE;
+//                }
+//                result.add(new Pair<>(markedExpression, toReplace));
+//            }
+//        }
+//        return result.isEmpty()?Optional.empty():Optional.of(result);
+//    }
+
+    public Optional<List<Pair<Expr, Boolean>>> getMarkedExpressionsForVariabilizationCheck(Candidate from) {
         MarkedExpressionsCollector markedExpressionsCollector = new MarkedExpressionsCollector(from);
-        Optional<Mutation> lastMutation = from.getLastMutation();
         Optional<List<Expr>> markedExpressions = markedExpressionsCollector.getMarkedExpressions();
         List<Pair<Expr, Boolean>> result = new LinkedList<>();
         if (markedExpressions.isPresent()) {
             int idx = 1;
             for (Expr me : markedExpressions.get()) {
-                if (skipAlreadyMutatedExpressions && !from.isFirst() && from.getCurrentMarkedExpression() >= idx) {
-                    idx++;
-                    continue;
-                }
                 Boolean toReplace;
-                Expr markedExpression = me;
-                if (lastMutation.isPresent()) {
-                    Optional<Expr> lastMutationRelatedMarkedExpression = lastMutation.get().original().getMarkedExpression();
-                    if (lastMutationRelatedMarkedExpression.isPresent() && lastMutationRelatedMarkedExpression.get().getID() == me.getID()) {
-                        markedExpression = lastMutationRelatedMarkedExpression.get();
-                        toReplace = Boolean.FALSE;
-                    } else if (lastMutation.get().mutant().getID() == me.getID()) {
-                        markedExpression = lastMutation.get().mutant();
-                        toReplace = Boolean.FALSE;
-                    } else {
-                        toReplace = Boolean.TRUE;
-                    }
-                } else {
+                if (idx > from.getCurrentMarkedExpression())
                     toReplace = Boolean.TRUE;
-                }
-                result.add(new Pair<>(markedExpression, toReplace));
+                else
+                    toReplace = Boolean.FALSE;
+                result.add(new Pair<>(me, toReplace));
+                idx++;
             }
         }
         return result.isEmpty()?Optional.empty():Optional.of(result);
