@@ -274,7 +274,7 @@ public class MutationConfiguration {
 
     public void loadSystemProperties() {
         for (ConfigKey ck : ConfigKey.values()) {
-            String propValue = System.getProperty(ck.toString());
+            String propValue = System.getenv(ck.toString());
             if (propValue != null) {
                 if (ck.getValueType().equals(Boolean.class)) {
                     Boolean configValue = Boolean.valueOf(propValue);
@@ -282,6 +282,13 @@ public class MutationConfiguration {
                 } else if (ck.getValueType().equals(Integer.class)) {
                     try {
                         Integer configValue = Integer.parseInt(propValue);
+                        setConfig(ck, configValue);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error while parsing value for property " + ck.toString());
+                    }
+                } else if (ck.getValueType().equals(Long.class)) {
+                    try {
+                        Long configValue = Long.parseLong(propValue);
                         setConfig(ck, configValue);
                     } catch (NumberFormatException e) {
                         System.err.println("Error while parsing value for property " + ck.toString());

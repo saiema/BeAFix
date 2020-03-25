@@ -35,17 +35,17 @@ public class MutantLab {
     }
 
     private static MutantLab instance;
-    public static void initialize(CompModule context, int maxDepth, Ops...ops) {
+    public synchronized static void initialize(CompModule context, int maxDepth, Ops...ops) {
         if (instance != null)
             throw new IllegalStateException("MutantLab already initialized");
         instance = new MutantLab(context, maxDepth, ops);
     }
 
-    public static void initialize(CompModule context, Ops...ops) {
+    public synchronized static void initialize(CompModule context, Ops...ops) {
         initialize(context, Integer.MAX_VALUE, ops);
     }
 
-    public static MutantLab getInstance() {
+    public synchronized static MutantLab getInstance() {
         if (instance == null)
             throw new IllegalStateException("MutantLab is not yet initialized");
         return instance;

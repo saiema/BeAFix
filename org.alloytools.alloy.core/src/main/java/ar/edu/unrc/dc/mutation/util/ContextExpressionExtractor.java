@@ -24,7 +24,7 @@ public final class ContextExpressionExtractor {
     private static Optional<List<Expr>> sigsAndDecls;
     private static Optional<List<Expr>> combinedSigAndDecls;
 
-    public static void initialize(CompModule context) {
+    public synchronized static void initialize(CompModule context) {
         if (ContextExpressionExtractor.context != null)
             throw new IllegalStateException("ContextExpressionExtractor already initialized, use reInitialize if you want to change the associated CompModule");
         if (context == null)
@@ -38,20 +38,20 @@ public final class ContextExpressionExtractor {
         combinedSigAndDecls = null;
     }
 
-    public static void reInitialize(CompModule context) {
+    public synchronized static void reInitialize(CompModule context) {
         ContextExpressionExtractor.context = null;
         initialize(context);
     }
 
-    public static void clear() {
+    public synchronized static void clear() {
         ContextExpressionExtractor.context = null;
     }
 
-    private static boolean validateInstance() {
+    private synchronized static boolean validateInstance() {
         return context != null;
     }
 
-    public static Optional<List<Expr>> getAllVariablesFor(Expr target) throws CheatingIsBadMkay {
+    public synchronized static Optional<List<Expr>> getAllVariablesFor(Expr target) throws CheatingIsBadMkay {
         List<Expr> clonedVars = new LinkedList<>();
         Optional<List<Expr>> vars = getCompatibleVariablesFor(target, false, false);
         if (vars.isPresent()) {
@@ -62,7 +62,7 @@ public final class ContextExpressionExtractor {
         return clonedVars.isEmpty()?Optional.empty():Optional.of(clonedVars);
     }
 
-    public static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean strictTypeCheck) throws CheatingIsBadMkay {
+    public synchronized static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean strictTypeCheck) throws CheatingIsBadMkay {
         List<Expr> clonedVars = new LinkedList<>();
         Optional<List<Expr>> vars = getCompatibleVariablesFor(target, true, strictTypeCheck);
         if (vars.isPresent()) {
@@ -73,7 +73,7 @@ public final class ContextExpressionExtractor {
         return clonedVars.isEmpty()?Optional.empty():Optional.of(clonedVars);
     }
 
-    private static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean typeCheck, boolean strictTypeCheck) {
+    private synchronized static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean typeCheck, boolean strictTypeCheck) {
         if (!typeCheck && allVariablesFor.containsKey(target.getID()))
             return allVariablesFor.get(target.getID());
         if (typeCheck && compatibleVariablesFor.containsKey(target.getID()))
@@ -121,7 +121,7 @@ public final class ContextExpressionExtractor {
      * @return {@link Optional#empty()} if the {@code expression} is not contained
      *         in a function, or an {@code Optional} containing the function
      */
-    public static Optional<Func> getContainerFunc(Expr x) {
+    public synchronized static Optional<Func> getContainerFunc(Expr x) {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
         if (functions.containsKey(x.getID())) {
@@ -146,7 +146,7 @@ public final class ContextExpressionExtractor {
         return result;
     }
 
-    public static Optional<List<Expr>> getLocalVariables(Expr x) {
+    public synchronized static Optional<List<Expr>> getLocalVariables(Expr x) {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
         if (localVariables.containsKey(x.getID())) {
@@ -191,7 +191,7 @@ public final class ContextExpressionExtractor {
         return result;
     }
 
-    public static Optional<List<Expr>> getSigsAndDecls() {
+    public synchronized static Optional<List<Expr>> getSigsAndDecls() {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
         if (sigsAndDecls == null) {
@@ -214,7 +214,7 @@ public final class ContextExpressionExtractor {
         return sigsAndDecls;
     }
 
-    public static Optional<List<Expr>> getCombinedSigAndDecls(int min, int max) throws CheatingIsBadMkay {
+    public synchronized static Optional<List<Expr>> getCombinedSigAndDecls(int min, int max) throws CheatingIsBadMkay {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
         if (combinedSigAndDecls != null)
@@ -244,7 +244,7 @@ public final class ContextExpressionExtractor {
         return combinedSigAndDecls;
     }
 
-    private static void combineSigsAndFields(List<Expr> sigs, Map<Expr,Type> fields, List<Expr> output, int min, int max) throws CheatingIsBadMkay {
+    private synchronized static void combineSigsAndFields(List<Expr> sigs, Map<Expr,Type> fields, List<Expr> output, int min, int max) throws CheatingIsBadMkay {
         boolean modified = true;
         List<Map<Expr,Type>> combinations = new LinkedList<>();
         Map<Expr,Type> firstGeneration = new HashMap<>();
@@ -299,7 +299,7 @@ public final class ContextExpressionExtractor {
         }
     }
 
-    private static Type appendTypes(Type atype, Type btype) {
+    private synchronized static Type appendTypes(Type atype, Type btype) {
         if (atype.is_bool || atype.is_int())
             return Type.EMPTY;
         if (btype.is_bool || btype.is_int())

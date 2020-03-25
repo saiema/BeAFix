@@ -27,13 +27,13 @@ public class Variabilization {
 
     private static Variabilization instance;
 
-    public static void initializeInstance(A4Reporter reporter, A4Options options) {
+    public synchronized static void initializeInstance(A4Reporter reporter, A4Options options) {
         if (instance != null)
             throw new IllegalStateException("Variabilization already initialized");
         instance = new Variabilization(reporter, options);
     }
 
-    public static Variabilization getInstance() {
+    public synchronized static Variabilization getInstance() {
         if (instance == null)
             throw new IllegalStateException("Variabilization not initialized");
         return instance;

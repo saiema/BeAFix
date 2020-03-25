@@ -153,7 +153,7 @@ public class Candidate {
         if (this.relatedAssertionsAndFunctions != null) {
             relatedAssertionsAndFunctions.addAll(this.relatedAssertionsAndFunctions);
             parent.getRelatedAssertionsAndFunctions().forEach(aof -> {
-                if (relatedAssertionsAndFunctions.contains(aof))
+                if (!relatedAssertionsAndFunctions.contains(aof))
                     relatedAssertionsAndFunctions.add(aof);
             });
         }

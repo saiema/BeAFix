@@ -16,16 +16,15 @@ import java.util.Stack;
 public class ASTMutator {
 
     private static ASTMutator instance;
-    public static ASTMutator startInstance(CompModule original) {
+    public synchronized static void startInstance(CompModule original) {
         if (instance != null)
             throw new IllegalStateException("Already instantiated");
         instance = new ASTMutator(original);
-        return instance;
     }
-    public static void destroyInstance() {
+    public synchronized static void destroyInstance() {
         instance = null;
     }
-    public static ASTMutator getInstance() {
+    public synchronized static ASTMutator getInstance() {
         if (instance == null)
             throw new IllegalStateException("You need to execute startInstance first");
         return instance;

@@ -2,12 +2,14 @@ package ar.edu.unrc.dc.mutation.mutantLab;
 
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
-import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
+import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -81,8 +83,9 @@ public class MutationTask implements Runnable {
                     lock.unlock();
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                logger.info("Exception in run method");
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                logger.info("Exception in run method\n"+sw.toString());
                 lock.unlock();
                 return;
             }
@@ -118,7 +121,7 @@ public class MutationTask implements Runnable {
         }
         //=============VARIABILIZATION=============
         logger.info("Current candidate:\n" + from.toString());
-        if (!from.isLast() && variabilizationCheck(from)) {
+        if (variabilizationCheck(from)) {
             logger.info("variabilization check SUCCEEDED");
             Candidate nextMutationSpotCandidate = from.copy();
             nextMutationSpotCandidate.currentMarkedExpressionInc();

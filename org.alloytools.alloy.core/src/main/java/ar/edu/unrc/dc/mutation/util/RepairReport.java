@@ -10,7 +10,7 @@ import java.util.List;
 public class RepairReport {
 
     private static RepairReport instance;
-    public static RepairReport getInstance() {
+    public synchronized static RepairReport getInstance() {
         if (instance == null)
             instance = new RepairReport();
         return instance;
