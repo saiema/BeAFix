@@ -55,6 +55,9 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         context.getAllAssertions().forEach(namedAssertion -> {
             visitThis(namedAssertion.b).ifPresent(mutations::addAll);
         });
+        context.getAllFacts().forEach(namedFact -> {
+            visitThis(namedFact.b).ifPresent(mutations::addAll);
+        });
         if (!mutations.isEmpty())
             return Optional.of(mutations);
         return Optional.empty();

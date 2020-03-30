@@ -39,6 +39,12 @@ public class Variabilization {
         return instance;
     }
 
+    public synchronized static void destroyInstance() {
+        if (instance == null)
+            throw new IllegalStateException("Variabilization instance has not been initialized");
+        instance = null;
+    }
+
     private A4Reporter reporter;
     private A4Options options;
 
@@ -182,7 +188,7 @@ public class Variabilization {
                 if (solverResult)
                     RepairReport.getInstance().incVariabilizationChecksPassed();
                 else
-                    RepairReport.getInstance().incVariabilizationChecksFailed();
+                    RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression());
                 return solverResult;
             }
         }

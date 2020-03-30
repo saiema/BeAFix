@@ -83,6 +83,13 @@ public class ASTMutator {
             Expr newExpression = replacement.get();
             Browsable initialExpressionParent = original.getBrowsableParent();
             if (initialExpressionParent == null) {
+                //first we should check if original is a fact
+                for (Pair<String, Expr> fact : ast.getAllFacts()) {
+                    if (fact.b.getID() == original.getID()) {
+                        Cheats.changeFact(fact.a, newExpression, ast);
+                        return replacement;
+                    }
+                }
                 return Optional.empty();
             }
             if (initialExpressionParent instanceof ExprBinary) {
@@ -152,16 +159,26 @@ public class ASTMutator {
                 } else
                     return Optional.empty();
             } else if (initialExpressionParent instanceof Expr){
-                //replacement should be an assertion's body
-                boolean targetFound = false;
+                //replacement should be either an assertion's o fact's body
+                boolean assertionFound = false;
+                boolean factFound = false;
                 for (Pair<String, Expr> assertion : ast.getAllAssertions()) {
                     if (assertion.b.getID() == original.getID()) {
                         Cheats.changeAssertion(assertion.a, newExpression, ast);
-                        targetFound = true;
+                        assertionFound = true;
                         break;
                     }
                 }
-                if (!targetFound) {
+                if (!assertionFound) {
+                    for (Pair<String, Expr> fact : ast.getAllFacts()) {
+                        if (fact.b.getID() == original.getID()) {
+                            Cheats.changeFact(fact.a, newExpression, ast);
+                            factFound = true;
+                            break;
+                        }
+                    }
+                }
+                if (!assertionFound && !factFound) {
                     return Optional.empty();
                 }
             }

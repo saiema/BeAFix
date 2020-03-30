@@ -854,7 +854,6 @@ final class SimpleReporter extends A4Reporter {
                 List<String> results = new ArrayList<>();
                 List<Command> cmds = MutantLab.getInstance().getCommandsToRunFor(current.get());
                 RepairReport.getInstance().incExaminedCandidates();
-                //Variabilization.getInstance().printVariabilizationProcess(current.get(), cmds, logger);
                 for (int i = 0; i < cmds.size(); i++) {
                     logger.info("Running cmd " +  cmds.get(i).toString() + " with complexity " + dependencyGraph.getCommandComplexity(cmds.get(i)));
                     current.get().clearMutatedStatus();
@@ -933,6 +932,7 @@ final class SimpleReporter extends A4Reporter {
             mutantLab.stopSearch();
             ASTMutator.destroyInstance();
             DependencyGraph.destroyInstance();
+            Variabilization.destroyInstance();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
         }
@@ -950,6 +950,10 @@ final class SimpleReporter extends A4Reporter {
             }
             for (Pair<String, Expr> namedAssertion : module.getAllAssertions()) {
                 ParentRelationshipFixer parentRelationshipFixer = new ParentRelationshipFixer(namedAssertion.b, module);
+                parentRelationshipFixer.fixParentRelation();
+            }
+            for (Pair<String, Expr> namedFact : module.getAllFacts()) {
+                ParentRelationshipFixer parentRelationshipFixer = new ParentRelationshipFixer(namedFact.b, module);
                 parentRelationshipFixer.fixParentRelation();
             }
         }

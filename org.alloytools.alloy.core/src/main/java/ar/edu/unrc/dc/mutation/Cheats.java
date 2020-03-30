@@ -306,6 +306,34 @@ public final class Cheats {
         }
     }
 
+    public static void changeFact(String targetFactName, Expr replacement, CompModule inAst) throws CheatingIsBadMkay {
+        //private final List<Pair<String,Expr>>     facts       = new ArrayList<Pair<String,Expr>>();
+        Field factsField = getField(CompModule.class, "facts");
+        if (factsField == null)
+            throw new CheatingIsBadMkay("Couldn't find facts field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(factsField, true);
+            List<Pair<String, Expr>> facts = (List<Pair<String, Expr>>) factsField.get(inAst);
+            List<Pair<String, Expr>> modifiedFacts = new LinkedList<>();
+            boolean targetFound = false;
+            for (Pair<String, Expr> fact : facts) {
+                if (fact.a.compareTo(targetFactName) == 0) {
+                    targetFound = true;
+                    replacement.setID(fact.b.getID());
+                    modifiedFacts.add(new Pair<String, Expr>(targetFactName, replacement));
+                } else {
+                    modifiedFacts.add(fact);
+                }
+            }
+            if (!targetFound)
+                throw new CheatingIsBadMkay("Couldn't find targeted fact");
+            factsField.set(inAst, modifiedFacts);
+            setAccessibleStatus(factsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access facts field");
+        }
+    }
+
     public static void addSigToModule(CompModule module, Sig sig) throws CheatingIsBadMkay {
         Field sigsField = getField(CompModule.class, "sigs");
         if (sigsField == null)

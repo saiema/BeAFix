@@ -18,6 +18,7 @@ public class DependencyScanner {
         TemporalGraph temporalGraph = new TemporalGraph(module.getAllCommands(), module);
         scanFunctions(module.getAllFunc(), module.getAllCommands(), temporalGraph);
         scanAsserts(module.getAllAssertions(), module.getAllCommands(), temporalGraph);
+        scanFacts(ConstList.make(module.getAllFacts()), module.getAllCommands(), temporalGraph);
         temporalGraph.merge();
         analyzeCommandComplexity(module.getAllFunc(), module.getAllAssertions(), module.getAllCommands(), temporalGraph);
         DependencyGraph.initialize(module.getAllCommands());
@@ -28,8 +29,11 @@ public class DependencyScanner {
         module.getAllAssertions().forEach(a -> {
             dependencyGraph.addDependencies(a.b, temporalGraph.getRelatedCommands(a.b));
         });
+        module.getAllFacts().forEach(fact -> {
+            dependencyGraph.addDependencies(fact.b, temporalGraph.getRelatedCommands(fact.b));
+        });
         for (Command c : temporalGraph.commands) {
-            dependencyGraph.setCommandComplexity(c, temporalGraph.commandComplexity.get(c));
+            dependencyGraph.setCommandComplexity(c, temporalGraph.commandComplexity.getOrDefault(c, 1));
         }
         return dependencyGraph;
     }
@@ -62,6 +66,22 @@ public class DependencyScanner {
         commands.stream().filter(c -> c.check).forEach(c -> {
             String assertionsName = c.nameExpr.toString();
             getAssertByName(assertionsName, assertions).ifPresent(a -> {temporalGraph.addRelatedCommand(a, c);});
+        });
+    }
+
+    private static void scanFacts(ConstList<Pair<String, Expr>> facts, ConstList<Command> commands, TemporalGraph temporalGraph) {
+        FunctionsCollector functionsCollector = new FunctionsCollector();
+        facts.forEach(namedFact -> {
+            temporalGraph.assertRelatedFunctions.put(namedFact.b, new LinkedList<>());
+            temporalGraph.assertRelatedCommands.put(namedFact.b, new LinkedList<>());
+            Expr fact = namedFact.b;
+            functionsCollector.visitThis(fact).forEach(rf -> {
+                temporalGraph.addAssertDependency(fact, rf);
+            });
+        });
+        commands.stream().filter(c -> c.check).forEach(c -> {
+            String factName = c.nameExpr.toString();
+            getAssertByName(factName, facts).ifPresent(a -> {temporalGraph.addRelatedCommand(a, c);});
         });
     }
 

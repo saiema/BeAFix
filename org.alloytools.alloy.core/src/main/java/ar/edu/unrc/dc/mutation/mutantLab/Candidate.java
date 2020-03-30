@@ -6,9 +6,7 @@ import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
 import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Triplet;
-import edu.mit.csail.sdg.ast.Browsable;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.Func;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.util.*;
@@ -26,6 +24,7 @@ public class Candidate {
     private int markedExpressions;
     private int currentMarkedExpression;
     private int[] mutationsPerIndex;
+    private boolean isFromFact;
 
     static {
         Candidate invalid = new Candidate(null);
@@ -39,6 +38,7 @@ public class Candidate {
     }
 
     private Candidate(Candidate parent, Mutation mutation, CompModule context) {
+        isFromFact = false;
         isAlreadyMutated = false;
         markedAsInvalid = false;
         this.mutation = mutation;
@@ -117,16 +117,58 @@ public class Candidate {
 
     public Optional<Expr> getMutatedExpr(Expr x) {
         if (mutation != null) {
-            if (mutation.original().equals(x) && !isAlreadyMutated)
-                return Optional.of(mutation.mutant());
+            if (!isAlreadyMutated) {
+                if (mutation.original().equals(x))
+                    return Optional.of(mutation.mutant());
+                else {
+                    Expr replacement = isFromFact?findSubExpressionMatchFrom(mutation.original(), x, mutation.mutant()):null;
+                    if (replacement != null) {
+                        return Optional.of(replacement);
+                    }
+                }
+
+            }
             return parent.getMutatedExpr(x); //the parent structure guaranties that if mutation != null then parent != null
         }
         return Optional.empty();
     }
 
+    private Expr findSubExpressionMatchFrom(Expr from, Expr target, Expr replacement) {
+         if (from.equals(target))
+             return replacement;
+         if (from instanceof ExprUnary && ((ExprUnary)from).op.equals(ExprUnary.Op.NOOP)) {
+             if (replacement instanceof ExprUnary && ((ExprUnary)replacement).op.equals(ExprUnary.Op.NOOP))
+                return findSubExpressionMatchFrom(((ExprUnary) from).sub, target, ((ExprUnary) replacement).sub);
+             else
+                 return findSubExpressionMatchFrom(((ExprUnary) from).sub, target, replacement);
+         }
+         if (from instanceof ExprList) {
+             ExprList fromAsList = (ExprList) from;
+             if (replacement instanceof ExprList) {
+                 ExprList replacementAsList = (ExprList) replacement;
+                 int i = 0;
+                 for (Expr subExpr : fromAsList.args) {
+                     Expr res = findSubExpressionMatchFrom(target, subExpr, replacementAsList.args.get(i));
+                     i++;
+                     if (res != null)
+                         return res;
+                 }
+             } else {
+                 for (Expr subExpr : fromAsList.args) {
+                     Expr res = findSubExpressionMatchFrom(subExpr, target, replacement);
+                     if (res != null)
+                         return res;
+                 }
+             }
+         }
+         return null;
+    }
+
     public void markAsAlreadyMutated(Expr x) {
         if (mutation != null) {
             if (mutation.original().equals(x) && !isAlreadyMutated)
+                isAlreadyMutated = true;
+            else if (findSubExpressionMatchFrom(mutation.original(), x, mutation.mutant()) != null && !isAlreadyMutated)
                 isAlreadyMutated = true;
             else
                 parent.markAsAlreadyMutated(x);
@@ -168,14 +210,44 @@ public class Candidate {
                 relatedAssertionsAndFunctions.add(contFunc.get());
             } else {
                 Expr mayorExpr = TypeChecking.getMayorExpression(mutation.original());
-                Optional<Pair<String, Expr>> namedAssertion = context.getAllAssertions().stream().filter(na -> {
-                    Expr body = na.b;
-                    return body.toString().compareTo(mayorExpr.toString()) == 0;
-                }).findFirst();
+                Optional<Pair<String, Expr>> namedAssertion = findAssertionMatchFor(mayorExpr);
                 if (namedAssertion.isPresent() && !relatedAssertionsAndFunctions.contains(namedAssertion.get().b))
                     relatedAssertionsAndFunctions.add(namedAssertion.get().b);
+                else if (!namedAssertion.isPresent()) {
+                    Optional<Pair<String, Expr>> namedFact = findFactMatchFor(mayorExpr);
+                    if (namedFact.isPresent() && !relatedAssertionsAndFunctions.contains(namedFact.get().b)) {
+                        relatedAssertionsAndFunctions.add(namedFact.get().b);
+                        isFromFact = true;
+                    } else {
+                        //Facts are weird, let's try searching for the mutated fact
+                        mayorExpr = mutation.original();
+                        namedFact = findFactMatchFor(TypeChecking.getMayorExpression(mutation.mutant()));
+                        if (namedFact.isPresent()) {
+                            //although we found the mutated fact, we should use the original
+                            if (!relatedAssertionsAndFunctions.contains(mayorExpr)) {
+                                relatedAssertionsAndFunctions.add(mayorExpr);
+                                isFromFact = true;
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private Optional<Pair<String, Expr>> findAssertionMatchFor(Expr mayorExpr) {
+        return findMatchInsideFor(context.getAllAssertions(), mayorExpr);
+    }
+
+    private Optional<Pair<String, Expr>> findFactMatchFor(Expr mayorExpr) {
+        return findMatchInsideFor(context.getAllFacts().makeCopy(), mayorExpr);
+    }
+
+    private Optional<Pair<String, Expr>> findMatchInsideFor(List<Pair<String, Expr>> pairs, Expr mayorExpr) {
+        return pairs.stream().filter(na -> {
+            Expr body = na.b;
+            return body.toString().compareTo(mayorExpr.toString()) == 0;
+        }).findFirst();
     }
 
     @Override

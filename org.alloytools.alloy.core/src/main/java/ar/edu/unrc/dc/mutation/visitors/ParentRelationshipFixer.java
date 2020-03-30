@@ -25,8 +25,16 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
                 break;
             }
         }
+        if (!found) {
+            for (Pair<String, Expr> namedFact : context.getAllFacts()) {
+                if (namedFact.b.equals(a)) {
+                    found = true;
+                    break;
+                }
+            }
+        }
         if (!found)
-            throw new IllegalArgumentException("The expression is not an assertion defined by the provided context");
+            throw new IllegalArgumentException("The expression is neither an assertion nor a fact defined by the provided context");
         currentParent = a;
     }
 

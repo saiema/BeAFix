@@ -35,6 +35,9 @@ public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>
         for (Pair<String, Expr> namedAssertion : ast.getAllAssertions()) {
             visitThis(namedAssertion.b).ifPresent(markedExpressions::addAll);
         }
+        for (Pair<String, Expr> namedFact : ast.getAllFacts()) {
+            visitThis(namedFact.b).ifPresent(markedExpressions::addAll);
+        }
         for (Func func : ast.getAllFunc()) {
             visitThis(func.getBody()).ifPresent(markedExpressions::addAll);
         }

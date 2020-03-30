@@ -183,8 +183,10 @@ public class MutationTask implements Runnable {
         }
         if (!MutantLab.getInstance().undoChangesToAst())
             outputChannel.insert(Candidate.INVALID);
-        else
+        else {
+            RepairReport.getInstance().addMutations(newCandidates.size(), from.getCurrentMarkedExpression());
             outputChannel.insertBulk(newCandidates);
+        }
     }
 
     private boolean variabilizationCheck(Candidate candidate) {
