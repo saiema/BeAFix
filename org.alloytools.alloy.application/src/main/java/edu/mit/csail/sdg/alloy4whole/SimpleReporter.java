@@ -842,6 +842,10 @@ final class SimpleReporter extends A4Reporter {
                 Optional<Candidate> current = mutantLab.getCurrentCandidate();
                 if (!current.isPresent())
                     break;
+                if (current.get() == Candidate.STOP) {
+                    logger.info("Received STOP signal.. stopping search");
+                    break;
+                }
                 current.get().clearMutatedStatus();
                 for ( Triplet<String,String,String> em: current.get().getCurrentMutationsInfo()){
                     cb(out, "RepairExprOrig->Mut", em.a, em.b , em.c+"  \n");

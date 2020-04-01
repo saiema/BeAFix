@@ -7,10 +7,7 @@ import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.visitors.SearchExpr;
 import ar.edu.unrc.dc.mutation.visitors.VarsAndJoinExtractor;
 import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprCall;
-import edu.mit.csail.sdg.ast.ExprUnary;
+import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.util.Arrays;
@@ -45,7 +42,19 @@ public class NESE extends Mutator {
     }
 
     @Override
+    public Optional<List<Mutation>> visit(ExprQt x) throws Err {
+        List<Mutation> mutations = new LinkedList<>();
+        Optional<List<Mutation>> formulaMutations = visitThis(x.sub);
+        formulaMutations.ifPresent(mutations::addAll);
+        if (!mutations.isEmpty())
+            return Optional.of(mutations);
+        return Optional.empty();
+    }
+
+    @Override
     public Optional<List<Mutation>> visit(ExprUnary x) throws Err {
+        if (x.op.equals(ExprUnary.Op.NOOP))
+            return visitThis(x.sub);
         return generateMutation(x);
     }
 
@@ -99,6 +108,7 @@ public class NESE extends Mutator {
         Optional<List<Expr>> allExpressions = extractor.visitThis(x);
         if (allExpressions.isPresent()) {
             for (Expr expr : allExpressions.get()) {
+                boolean accepted = true;
                 for (Expr expr2 : allExpressions.get()) {
                     if (expr.toString().compareTo(expr2.toString()) == 0)
                         continue;
@@ -108,10 +118,12 @@ public class NESE extends Mutator {
                             return a.toString().compareTo(b.toString()) == 0;
                         }
                     };
-                    if (searcher.visitThis(expr2))
-                        continue;
-                    varsAndJoins.add(expr);
+                    if (searcher.visitThis(expr2)) {
+                        accepted = false;
+                        break;
+                    }
                 }
+                if (accepted) varsAndJoins.add(expr);
             }
         }
         if (!varsAndJoins.isEmpty())

@@ -150,7 +150,7 @@ public class MutationTask implements Runnable {
     }
 
     private void generateMutationsFor(Candidate from) {
-        if (from.mutations() >= MutantLab.getInstance().getMaxDepth())
+        if (from.mutationsForCurrentIndex() >= MutantLab.getInstance().getMaxDepth())
             return;
         CompModule context = from.getContext();
         if (!MutantLab.getInstance().applyCandidateToAst(from)) {

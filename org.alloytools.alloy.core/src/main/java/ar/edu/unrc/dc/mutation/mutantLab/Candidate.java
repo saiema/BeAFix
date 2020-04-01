@@ -270,14 +270,21 @@ public class Candidate {
         return sb.toString();
     }
 
-    public int mutations(int index) {
+    public int mutationsForIndex(int index) {
         if (index < 1 || index > markedExpressions)
             throw new IllegalArgumentException("Index must go between 1 and " + markedExpressions);
         return mutationsPerIndex[index-1];
     }
 
+    public int mutationsForCurrentIndex() {
+        return mutationsForIndex(currentMarkedExpression);
+    }
+
     public int mutations() {
-        return mutations(currentMarkedExpression);
+        int totalMutations = 0;
+        for (int i = 1; i <= markedExpressions; i++)
+            totalMutations += mutationsForIndex(i);
+        return totalMutations;
     }
 
     public void increaseMutations(int index) {

@@ -79,6 +79,19 @@ public class MutantLab {
         Optional<List<Expr>> initialMarkedExpressions = Variabilization.getInstance().getMarkedExpressions(context);
         markedExpressions = initialMarkedExpressions.map(List::size).orElse(0);
         initialMarkedExpressions.ifPresent(mes -> mes.forEach(e -> RepairReport.getInstance().addMarkedExpression(e)));
+        initialMarkedExpressions.ifPresent(this::checkMarkedExpressionsForVariabilizationCompatibility);
+    }
+
+    private void checkMarkedExpressionsForVariabilizationCompatibility(List<Expr> markedExpressions) {
+        if (!isVariabilizationEnabled())
+            return;
+        for (Expr x : markedExpressions) {
+            if (x.type().is_bool) {
+                logger.info("Marked expression " + x.toString() + " is of bool type: variabilization will be disabled");
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, Boolean.FALSE);
+                return;
+            }
+        }
     }
 
     public int getMaxDepth() {
@@ -209,6 +222,11 @@ public class MutantLab {
     private boolean useDependencyGraphForChecking() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING);
         return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING.defaultValue());
+    }
+
+    private boolean isVariabilizationEnabled() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION.defaultValue());
     }
 
 }

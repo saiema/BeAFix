@@ -141,7 +141,7 @@ public class RepairReport {
     }
 
     private void calculateAvgMutations() {
-        averageMutations = totalMutations / generationCount;
+        averageMutations = generationCount!=0?(totalMutations / generationCount):0;
         averageMutationsPerIndex = new int[markedExpressions];
         for (int i = 1; i <= markedExpressions; i++) {
             int[] avgMuts = mutationsPerIndex.get(i);
