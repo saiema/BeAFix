@@ -79,7 +79,7 @@ public class MutantLab {
         Optional<List<Expr>> initialMarkedExpressions = Variabilization.getInstance().getMarkedExpressions(context);
         markedExpressions = initialMarkedExpressions.map(List::size).orElse(0);
         initialMarkedExpressions.ifPresent(mes -> mes.forEach(e -> RepairReport.getInstance().addMarkedExpression(e)));
-        initialMarkedExpressions.ifPresent(this::checkMarkedExpressionsForVariabilizationCompatibility);
+        //initialMarkedExpressions.ifPresent(this::checkMarkedExpressionsForVariabilizationCompatibility);
     }
 
     private void checkMarkedExpressionsForVariabilizationCompatibility(List<Expr> markedExpressions) {

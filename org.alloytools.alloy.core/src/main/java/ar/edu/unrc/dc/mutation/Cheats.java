@@ -6,6 +6,7 @@ import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -367,6 +368,64 @@ public final class Cheats {
             setAccessibleStatus(sigsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("An error ocurred while trying to access sigs field");
+        }
+    }
+
+    public static void addFunctionToModule(CompModule module, Func function) throws CheatingIsBadMkay {
+        Field funcsField = getField(CompModule.class, "funcs");
+        if (funcsField == null)
+            throw new CheatingIsBadMkay("Couldn't find funcs field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(funcsField, true);
+            Map<String, ArrayList<Func>> funcs = (Map<String,ArrayList<Func>>) funcsField.get(module);
+            if (funcs.containsKey(function.label) && funcs.get(function.label).stream().anyMatch(f -> f.getID() == function.getID())) {
+                setAccessibleStatus(funcsField, oldAccessibleStatus);
+                throw new IllegalAccessException("Function to add (" + function.label + ") already exists in module");
+            } else {
+                ArrayList<Func> functionsList;
+                if (funcs.containsKey(function.label))
+                    functionsList = funcs.get(function.label);
+                else {
+                    functionsList = new ArrayList<>();
+                    funcs.put(function.label, functionsList);
+                }
+                functionsList.add(function);
+            }
+            setAccessibleStatus(funcsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access funcs field");
+        }
+    }
+
+    public static void removeFunctionFromModule(CompModule module, Func function) throws CheatingIsBadMkay {
+        Field funcsField = getField(CompModule.class, "funcs");
+        if (funcsField == null)
+            throw new CheatingIsBadMkay("Couldn't find funcs field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(funcsField, true);
+            Map<String, ArrayList<Func>> funcs = (Map<String,ArrayList<Func>>) funcsField.get(module);
+            if (!funcs.containsKey(function.label) || funcs.get(function.label).stream().noneMatch(f -> f.getID() == function.getID())) {
+                setAccessibleStatus(funcsField, oldAccessibleStatus);
+                throw new IllegalAccessException("Function to remove (" + function.label + ") doesn't exists in module");
+            } else {
+                ArrayList<Func> functionsList = funcs.get(function.label);
+                int i = 0;
+                boolean found = false;
+                for (Func f : functionsList) {
+                    if (f.getID() == function.getID()) {
+                        found = true;
+                        break;
+                    }
+                    i++;
+                }
+                if (!found)
+                    throw new CheatingIsBadMkay("Function to remove should be present but no function with the same ID exists");
+                else
+                    functionsList.remove(i);
+            }
+            setAccessibleStatus(funcsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access funcs field");
         }
     }
 
