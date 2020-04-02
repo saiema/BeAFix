@@ -32,11 +32,13 @@ import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerTask;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.*;
 import org.alloytools.alloy.core.AlloyCore;
+import edu.mit.csail.sdg.alloy4.A4Preferences.*;
 
 import java.io.*;
 import java.util.*;
@@ -807,6 +809,7 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
             MutationConfiguration.getInstance().loadSystemProperties();
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, A4Preferences.AStrykerVariabilization.get()); //update the variabilization Repair option
             logger.info(MutationConfiguration.getInstance().toString());
         }
 
@@ -834,6 +837,7 @@ final class SimpleReporter extends A4Reporter {
             RepairReport.getInstance().setCommands(DependencyGraph.getInstance().getAllCommands().size());
             RepairReport.getInstance().setVariabilizationRelatedCommands((int) DependencyGraph.getInstance().getAllCommands().stream().filter(Command::isVariabilizationTest).count());
             RepairReport.getInstance().setMarkedExpressions(MutantLab.getInstance().getMarkedExpressions());
+            RepairReport.getInstance().clockStart();
             //======================== mutants test cycle ===========
             int count =1;
             while(mutantLab.advance()) {
@@ -932,6 +936,7 @@ final class SimpleReporter extends A4Reporter {
                 }
 
             }
+            RepairReport.getInstance().clockEnd();
             logger.info(RepairReport.getInstance().toString());
             mutantLab.stopSearch();
             ASTMutator.destroyInstance();

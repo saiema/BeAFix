@@ -31,6 +31,8 @@ public class RepairReport {
     private int commands;
     private int variabilizationRelatedCommands;
 
+    private long time =0; //used to calculate the whole repair process time
+
     private Map<Integer, int[]> mutationsPerIndex; //(index, generations, mutants)
     private int[] averageMutationsPerIndex;
     private int totalMutations;
@@ -106,6 +108,7 @@ public class RepairReport {
         this.commands = commands;
     }
 
+
     public void setVariabilizationRelatedCommands(int variabilizationRelatedCommands) {
         if (this.variabilizationRelatedCommands != -1)
             throw new IllegalStateException("variabilizationRelatedCommands value already set");
@@ -179,6 +182,14 @@ public class RepairReport {
         variabilizationEstimatedPrunedCandidates = prunedCandidates;
     }
 
+    public void clockStart() {
+        this.time=System.currentTimeMillis();
+    }
+
+    public void clockEnd() {
+        this.time=System.currentTimeMillis()-this.time;
+    }
+
     @Override
     public String toString() {
         calculateAvgMutations();
@@ -218,6 +229,8 @@ public class RepairReport {
         sb.append("Checks passed:").append("\t").append(variabilizationChecksPassed).append("\n");
         sb.append("Checks failed:").append("\t").append(variabilizationChecksFailed).append("\n");
         sb.append("Estimated candidates pruned:").append("\t").append(variabilizationEstimatedPrunedCandidates).append("\n");
+        sb.append("\n");
+        sb.append("Total time (ms): ").append(time);
         return sb.toString();
     }
 }

@@ -1,6 +1,10 @@
 package edu.mit.csail.sdg.alloy4;
 
-import java.awt.GraphicsEnvironment;
+import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import edu.mit.csail.sdg.translator.A4Options.SatSolver;
+
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -8,13 +12,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.prefs.Preferences;
-
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.DefaultSingleSelectionModel;
-import javax.swing.Icon;
-
-import edu.mit.csail.sdg.translator.A4Options.SatSolver;
 
 @SuppressWarnings({
                    "serial", "unchecked"
@@ -670,6 +667,12 @@ public class A4Preferences {
                                                                                     return value.id;
                                                                                 }
                                                                             };
+    //=========================AStryker Options=========================
+
+    /** Set Variabilization for the repair process */
+    public static final BooleanPref AStrykerVariabilization = new BooleanPref("AStrykerVariabilization", "AStryker | Use Variabilization");
+
+    //==================================================================
 
     public enum Verbosity {
                            /** Level 0. */
@@ -687,6 +690,10 @@ public class A4Preferences {
         public boolean geq(Verbosity other) {
             return ordinal() >= other.ordinal();
         }
+
+
+
+
 
         /**
          * This is a unique String for this value; it should be kept consistent in
@@ -740,6 +747,18 @@ public class A4Preferences {
             ans.remove(p);
         return ans;
     }
+
+
+    //@Mutants
+    public static MutationConfiguration mutationConfiguration = MutationConfiguration.getInstance();
+//    public static final BooleanPref                  OPERATOR_BES_STRICT_TYPE_CHECK   = new BooleanPref("OPERATOR_BES_STRICT_TYPE_CHECK", "OPERATOR_BES_STRICT_TYPE_CHECK"){
+//        @Override
+//        public void toggle() {
+//              mutationConfiguration.setConfig(OPERATOR_BES_STRICT_TYPE_CHECK ); set(!get());
+//        }
+ //   };
+
+
 
     // /** The visualization algorithm */
     // public static final StringChoicePref VisualizationAlgorithm = new

@@ -58,6 +58,7 @@ import java.util.List;
 import java.util.*;
 
 import static edu.mit.csail.sdg.alloy4.A4Preferences.*;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.AStrykerVariabilization;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menu;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menuItem;
 import static java.awt.event.KeyEvent.*;
@@ -1016,15 +1017,13 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 runmenu.add(new JSeparator(), 1);
             }
             //@Mutants
-
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 JMenuItem y = new JMenuItem("Repair by mutating marked exprs (#m#)", null);
                 y.addActionListener(doRepair(-1));
-                JMenuItem x = new JMenuItem("Find all repair by mutating marked exprs (#m#)", null);
-                x.addActionListener(doRepair(-1));
                 runmenu.add(new JSeparator(), runmenu.getItemCount());
                 runmenu.add(y, runmenu.getItemCount());
-                runmenu.add(x, runmenu.getItemCount());
+
+
             }
         } finally {
             wrap = false;
@@ -1127,7 +1126,6 @@ public final class SimpleGUI implements ComponentListener, Listener {
             log.logRed("There are no commands for repair validation.\n\n");
             return null;
         }
-
         SimpleCallback1 cb = new SimpleCallback1(this, null, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
         //@Atryker
         cb.reparing=true;
@@ -1400,6 +1398,19 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, Unrolls);
                 addToMenu(optmenu, ImplicitThis, NoOverflow, InferPartialInstance);
             }
+            //@Mutants options menu
+            if (CompUtil.hasMutableExpressions(text.get().getText())){
+                optmenu.addSeparator();
+                addToMenu(optmenu, AStrykerVariabilization);
+               // addToMenu(optmenu,OPERATOR_BES_STRICT_TYPE_CHECK);
+
+
+                //JMenuItem y = new JMenuItem("Repair by mutating marked exprs (#m#)", null);
+                //y.addActionListener(doRepair(-1));
+                //runmenu.add(new JSeparator(), runmenu.getItemCount());
+                //runmenu.add(y, runmenu.getItemCount());
+            }
+
 
         } finally {
             wrap = false;

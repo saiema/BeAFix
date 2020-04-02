@@ -1,13 +1,15 @@
 package edu.mit.csail.sdg.alloy4whole;
 
+import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.parser.CompUtil;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.stream.Stream;
 
 public class AStrykerCLI {
@@ -17,12 +19,12 @@ public class AStrykerCLI {
         if (args.length != 1) throw new IllegalArgumentException("Only one argument (the module to repair) is required");
         String sourcefile = args[0];
         String source = toText(sourcefile);
-        List<Command> commands = CompUtil.parseOneModule_fromFile(source);
-        if (commands == null || commands.isEmpty()) {
-            System.out.println("There are no commands for repair validation.");
+        Pair<ConstList<Command>,ConstList<Expr>> moduleInfo = CompUtil.parseOneModuleToRepair_fromFile(sourcefile);
+        if (moduleInfo.a == null || moduleInfo.a.isEmpty() || moduleInfo.b == null || moduleInfo.b.isEmpty()) {
+            System.out.println("There are no marked expressions to repair or no commands for repair validation.");
             return;
         }
-        AStryker astryker = new AStryker(commands, sourcefile, source);
+        AStryker astryker = new AStryker(moduleInfo.a, sourcefile, source);
         astryker.init();
         astryker.doRepair();
     }
