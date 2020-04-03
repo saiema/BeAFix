@@ -295,7 +295,26 @@ public final class CompUtil {
                 throw new ErrorFatal("Unknown exception occurred: " + ex, ex);
         }
     }
+    // =============================================================================================================//
 
+    /**
+     * Parses 1 module from the file (without loading any subfiles)
+     *
+     * @return an array of 0 or more Command and marked expression to repair if no error occurred
+     */
+    public static Pair<ConstList<Command>,ConstList<Expr>> parseOneModuleToRepair_fromFile(String filename) throws Err {
+        try {
+            CompModule u = CompUtil.parse(new ArrayList<Object>(), null, null, null, 0, filename, "", 1);
+            return new Pair<>(ConstList.make(u.getAllCommands()),ConstList.make(u.markedEprsToMutate));
+        } catch (IOException ex) {
+            throw new ErrorFatal("IOException occurred: " + ex.getMessage(), ex);
+        } catch (Throwable ex) {
+            if (ex instanceof Err)
+                throw (Err) ex;
+            else
+                throw new ErrorFatal("Unknown exception occurred: " + ex, ex);
+        }
+    }
     // =============================================================================================================//
 
     /**
