@@ -296,7 +296,7 @@ public class DependencyScanner {
 
         private static boolean isFromContext(Func f, CompModule context) {
             for (Func cf : context.getAllFunc()) {
-                if (f.equals(cf))
+                if (Browsable.equals(f, cf))
                     return true;
             }
             return false;

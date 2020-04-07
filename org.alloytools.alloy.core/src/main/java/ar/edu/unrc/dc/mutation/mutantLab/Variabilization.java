@@ -68,12 +68,15 @@ public class Variabilization {
         if (!MutantLab.getInstance().applyCandidateToAst(from))
             throw new Error("There was a problem while mutating the ast");
         Optional<List<Pair<Expr, Boolean>>> markedExpressions = getMarkedExpressionsForVariabilizationCheck(from);
+        Func isEmpty = null;
+        Sig magicSig = null;
+        boolean solverResult = true;
         if (markedExpressions.isPresent()) {
             CompModule context = from.getContext();
-            Optional<Sig> magicSig = generateMagicSigForExpressions(markedExpressions.get());
-            if (magicSig.isPresent()) {
+            Optional<Sig> magicSigOp = generateMagicSigForExpressions(markedExpressions.get());
+            if (magicSigOp.isPresent()) {
+                magicSig = magicSigOp.get();
                 RepairReport.getInstance().incVariabilizationChecks();
-                Func isEmpty = null;
                 if (booleanMarkedExpressionPresent(markedExpressions.get())) {
                     try {
                         isEmpty = generateAndAddIsEmptyPred(context);
@@ -81,26 +84,25 @@ public class Variabilization {
                         throw new Error("There was a problem while adding isEmpty pred to module", e);
                     }
                 }
-                List<Mutation> variabilizationMutations = generateVariabilizationMutations(magicSig.get(), markedExpressions.get(), isEmpty);
+                List<Mutation> variabilizationMutations = generateVariabilizationMutations(magicSig, markedExpressions.get(), isEmpty);
                 Candidate variabilizationCandidate = generateCandidateForVariabilization(from.getContext(), variabilizationMutations);
                 logger.info("Reporter available: " + (reporter != null));
                 logger.info("variabilization candidate:\n" + variabilizationCandidate.toString());
                 try {
-                    Cheats.addSigToModule(context, magicSig.get());
+                    Cheats.addSigToModule(context, magicSig);
                 } catch (CheatingIsBadMkay e) {
                     throw new Error("There was a problem while adding the magic signature to the module", e);
                 }
-                boolean solverResult = runSolver(from.getContext(), commands, variabilizationCandidate);
+                solverResult = runSolver(from.getContext(), commands, variabilizationCandidate);
                 logger.info("solver returned: " + solverResult + "\n");
-                restoreAst(from, magicSig.get(), isEmpty);
                 if (solverResult)
                     RepairReport.getInstance().incVariabilizationChecksPassed();
                 else
                     RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression());
-                return solverResult;
             }
         }
-        return true;
+        restoreAst(from, magicSig, isEmpty);
+        return solverResult;
     }
 
     private Func generateAndAddIsEmptyPred(CompModule context) throws CheatingIsBadMkay {
@@ -138,8 +140,10 @@ public class Variabilization {
         CompModule context = from.getContext();
         boolean sigRemoved = false;
         try {
-            Cheats.removeSigFromModule(context, magicSig);
-            sigRemoved = true;
+            if (magicSig != null) {
+                Cheats.removeSigFromModule(context, magicSig);
+                sigRemoved = true;
+            }
             if (isEmpty != null) Cheats.removeFunctionFromModule(context, isEmpty);
             if (!ASTMutator.getInstance().undoMutations()) {
                 throw new Error("There was a problem while mutating the ast");
@@ -258,20 +262,27 @@ public class Variabilization {
     public Optional<Sig> generateMagicSigForExpressions(List<Pair<Expr, Boolean>> expressions) {
         if (expressions.isEmpty())
             return Optional.empty();
+        boolean atLeastOneUnblockedExpression = false;
         String sigName = VARIABILIZATION_SIG_PREFIX + generateRandomName(6);
         Sig varSig = new Sig.PrimSig(sigName, Attr.ONE);
         for (Pair<Expr, Boolean> me : expressions) {
             if (!me.b)
                 continue;
+            atLeastOneUnblockedExpression = true;
             Expr x = me.a;
             String fieldName = VARIABILIZATION_FIELD_PREFIX + x.getID() + "_" + generateRandomName(3);
             Expr fieldBound = generateMagicFieldBound(x);
             varSig.addField(fieldName, fieldBound);
         }
-        return Optional.of(varSig);
+        return atLeastOneUnblockedExpression?Optional.of(varSig):Optional.empty();
     }
 
     private Expr generateMagicFieldBound(Expr x) {
+        if (x.type().is_int() || x.type().is_small_int()) {
+            Expr intSig = (Expr) Sig.PrimSig.SIGINT.clone();
+            intSig.newID();
+            return ExprUnary.Op.SETOF.make(null, intSig);
+        }
         if (x.type().arity() == 1 || x.type().is_bool)
             return ExprUnary.Op.SETOF.make(null, Sig.UNIV);
         else {

@@ -20,14 +20,14 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
     public ParentRelationshipFixer(Expr a, CompModule context) {
         boolean found = false;
         for (Pair<String, Expr> namedAssertion : context.getAllAssertions()) {
-            if (namedAssertion.b.equals(a)) {
+            if (Browsable.equals(namedAssertion.b, a)) {
                 found = true;
                 break;
             }
         }
         if (!found) {
             for (Pair<String, Expr> namedFact : context.getAllFacts()) {
-                if (namedFact.b.equals(a)) {
+                if (Browsable.equals(namedFact.b, a)) {
                     found = true;
                     break;
                 }

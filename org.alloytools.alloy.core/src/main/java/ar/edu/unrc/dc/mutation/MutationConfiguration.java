@@ -274,6 +274,8 @@ public class MutationConfiguration {
 
     public void loadSystemProperties() {
         for (ConfigKey ck : ConfigKey.values()) {
+            if (ck.equals(ConfigKey.REPAIR_VARIABILIZATION))
+                continue;
             String propValue = System.getenv(ck.toString());
             if (propValue != null) {
                 if (ck.getValueType().equals(Boolean.class)) {

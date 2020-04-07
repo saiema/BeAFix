@@ -591,8 +591,17 @@ public abstract class Sig extends Expr implements Clause {
 
         @Override
         public Object clone() {
+            return clone(null);
+        }
+
+        private Object clone(PrimSig parent) {
             PrimSig clone;
-            PrimSig parentClone = (PrimSig) (this.parent != null ? this.parent.clone() : null);
+            PrimSig parentClone;
+            if (parent == null) {
+                parentClone = (PrimSig) (this.parent != null ? this.parent.clone() : null);
+            } else {
+                parentClone = parent;
+            }
             if (constructorUsed == 0) {
                 clone = new PrimSig(this.label, parentClone, this.constructor0Add);
             } else if (constructorUsed == 1) {
@@ -600,6 +609,12 @@ public abstract class Sig extends Expr implements Clause {
             } else {
                 throw new IllegalStateException("This instance was not built with neither constructor");
             }
+            //List<PrimSig> childrenCopy = new LinkedList<>();
+            for (PrimSig child : children) {
+                child.clone(clone);
+                //childrenCopy.add((PrimSig) child.clone(clone));
+            }
+            //clone.children.addAll(childrenCopy);
             clone.setID(getID());
             clone.setIDEnv(getIDEnv());
             clone.mutGenLimit(directMutGenLimit());
@@ -720,6 +735,23 @@ public abstract class Sig extends Expr implements Clause {
     /** Mutable; represents a field. */
 
     public static final class Field extends ExprHasName implements Clause {
+
+        private static int NEXT_FIELD_ID = 0;
+        private int FIELD_ID = NEXT_FIELD_ID++;
+
+        @Override
+        public int hashCode() {
+            return FIELD_ID;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (other == null)
+                return false;
+            if (!(other instanceof Field))
+                return false;
+            return FIELD_ID == ((Field)other).FIELD_ID;
+        }
 
         /** The sig that this field belongs to; never null. */
         public final Sig     sig;
@@ -847,6 +879,7 @@ public abstract class Sig extends Expr implements Clause {
             Field clone = new Field(this.pos, this.isPrivate, this.isMeta, null, null, sigClone, this.label, boundClone);
             clone.setID(getID());
             clone.setIDEnv(getIDEnv());
+            clone.FIELD_ID = FIELD_ID;
             return clone;
         }
 
@@ -1071,6 +1104,40 @@ public abstract class Sig extends Expr implements Clause {
         for (Field rfield : this.realFields) {
             clone.addField(rfield.label, rfield.type().toExpr());
         }
+    }
+
+    public boolean isBuiltInSig() {
+        switch (label) {
+            case "univ"     :
+            case "Int"      :
+            case "seq/Int"  :
+            case "String"   :
+            case "none"     :
+            case "Univ"     : return true;
+            default         : return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return label.hashCode();
+//        if (isBuiltInSig())
+//            return label.hashCode();
+//        return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null)
+            return false;
+        if (o instanceof Sig) {
+            Sig other = (Sig) o;
+            return label.equals(other.label);
+//            if (isBuiltInSig() && other.isBuiltInSig()) {
+//                return label.equals(other.label);
+//            }
+        }
+        return super.equals(o);
     }
 
 }

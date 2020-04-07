@@ -9,6 +9,7 @@ import edu.mit.csail.sdg.alloy4.Triplet;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 
+
 import java.util.*;
 
 public class Candidate {
@@ -69,7 +70,7 @@ public class Candidate {
         if (context == null)
             throw new IllegalArgumentException("from candidate doesn't have a context associated");
         Candidate newCandidate;
-        if (from.mutation != null && from.mutation.mutant().equals(mutation.original())) {
+        if (from.mutation != null && Browsable.equals(from.mutation.mutant(), mutation.original())) {
             Mutation merged = new Mutation(Ops.MULTI, from.mutation.original(), mutation.mutant());
             newCandidate = new Candidate(from.parent, merged, from.getContext());
         } else {
@@ -118,7 +119,7 @@ public class Candidate {
     public Optional<Expr> getMutatedExpr(Expr x) {
         if (mutation != null) {
             if (!isAlreadyMutated) {
-                if (mutation.original().equals(x))
+                if (Browsable.equals(mutation.original(), x))
                     return Optional.of(mutation.mutant());
                 else {
                     Expr replacement = isFromFact?findSubExpressionMatchFrom(mutation.original(), x, mutation.mutant()):null;
@@ -134,7 +135,7 @@ public class Candidate {
     }
 
     private Expr findSubExpressionMatchFrom(Expr from, Expr target, Expr replacement) {
-         if (from.equals(target))
+         if (Browsable.equals(from, target))
              return replacement;
          if (from instanceof ExprUnary && ((ExprUnary)from).op.equals(ExprUnary.Op.NOOP)) {
              if (replacement instanceof ExprUnary && ((ExprUnary)replacement).op.equals(ExprUnary.Op.NOOP))
@@ -166,7 +167,7 @@ public class Candidate {
 
     public void markAsAlreadyMutated(Expr x) {
         if (mutation != null) {
-            if (mutation.original().equals(x) && !isAlreadyMutated)
+            if (Browsable.equals(mutation.original(), x) && !isAlreadyMutated)
                 isAlreadyMutated = true;
             else if (findSubExpressionMatchFrom(mutation.original(), x, mutation.mutant()) != null && !isAlreadyMutated)
                 isAlreadyMutated = true;

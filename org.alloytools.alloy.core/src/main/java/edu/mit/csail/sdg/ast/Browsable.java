@@ -135,6 +135,8 @@ public abstract class Browsable {
         this.ID = NEXT_ID++;
     }
 
+    public void newIDEnv() {this.ID_Env = NEXT_ID_Env++;}
+
     public int getIDEnv() {
         return this.ID_Env;
     }
@@ -156,6 +158,18 @@ public abstract class Browsable {
             return false;
         Browsable other = (Browsable) o;
         return this.getIDEnv() == other.getIDEnv();
+    }
+
+    public static boolean equals(Object a, Object b) {
+        if (a == null) return b == null;
+        else if (b == null) return false;
+        if (!(a instanceof Browsable))
+            return false;
+        if (!(b instanceof Browsable))
+            return false;
+        Browsable aB = (Browsable) a;
+        Browsable bB = (Browsable) b;
+        return aB.getIDEnv() == bB.getIDEnv();
     }
 
     public Browsable getBrowsableParent() {

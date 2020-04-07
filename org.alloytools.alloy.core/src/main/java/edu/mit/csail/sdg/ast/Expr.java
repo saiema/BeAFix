@@ -161,13 +161,13 @@ public abstract class Expr extends Browsable {
 
     /** {@inheritDoc} */
     @Override
-    public final int hashCode() {
+    public /*final* @ASTRYKER*/ int hashCode() {
         return super.hashCode();
     }
 
     /** {@inheritDoc} */
     @Override
-    public final boolean equals(Object other) {
+    public /*final* @ASTRYKER*/ boolean equals(Object other) {
         return super.equals(other);
     }
 

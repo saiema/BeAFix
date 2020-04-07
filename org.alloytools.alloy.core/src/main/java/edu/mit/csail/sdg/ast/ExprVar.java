@@ -33,6 +33,23 @@ import static edu.mit.csail.sdg.alloy4.TableView.clean;
 
 public final class ExprVar extends ExprHasName implements Clause {
 
+    private static int NEXT_VAR_ID = 0;
+    private int VAR_ID = NEXT_VAR_ID++;
+
+    @Override
+    public boolean equals(Object other) {
+        if (other == null)
+            return false;
+        if (!(other instanceof ExprVar))
+            return false;
+        return VAR_ID == ((ExprVar)other).VAR_ID;
+    }
+
+    @Override
+    public int hashCode() {
+        return VAR_ID;
+    }
+
     /** {@inheritDoc} */
     @Override
     public void toString(StringBuilder out, int indent) {
@@ -110,6 +127,7 @@ public final class ExprVar extends ExprHasName implements Clause {
         ExprVar clone = new ExprVar(this.pos, this.label, this.type);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.VAR_ID = VAR_ID;
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
         return clone;

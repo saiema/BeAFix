@@ -45,28 +45,28 @@ public final class Cheats {
         return clone;
     }
 
-    public static void changeBinaryLeftField(ExprBinary original, Expr left) throws CheatingIsBadMkay {
+    public static void changeBinaryLeftField(ExprBinary original, Expr leftReplacement) throws CheatingIsBadMkay {
         Field leftField = getField(ExprBinary.class, "left");
         if (leftField == null)
             throw new CheatingIsBadMkay("Couldn't find left field");
         try {
             boolean oldAccessibleStatus = setAccessibleStatus(leftField, true);
-            leftField.set(original, left);
-            left.setBrowsableParent(original);
+            leftField.set(original, leftReplacement);
+            leftReplacement.setBrowsableParent(original);
             setAccessibleStatus(leftField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("There was a problem while trying to change left field", e);
         }
     }
 
-    public static void changeBinaryRightField(ExprBinary original, Expr right) throws CheatingIsBadMkay {
+    public static void changeBinaryRightField(ExprBinary original, Expr rightReplacement) throws CheatingIsBadMkay {
         Field rightField = getField(ExprBinary.class, "right");
         if (rightField == null)
             throw new CheatingIsBadMkay("Couldn't find right field");
         try {
             boolean oldAccessibleStatus = setAccessibleStatus(rightField, true);
-            rightField.set(original, right);
-            right.setBrowsableParent(original);
+            rightField.set(original, rightReplacement);
+            rightReplacement.setBrowsableParent(original);
             setAccessibleStatus(rightField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("There was a problem while trying to change right field", e);
@@ -87,21 +87,21 @@ public final class Cheats {
         }
     }
 
-    public static void changeQtFormulaField(ExprQt original, Expr formula) throws CheatingIsBadMkay {
+    public static void changeQtFormulaField(ExprQt original, Expr formulaReplacement) throws CheatingIsBadMkay {
         Field subField = getField(ExprQt.class, "sub");
         if (subField == null)
             throw new CheatingIsBadMkay("Couldn't find sub field");
         try {
             boolean oldAccessibleStatus = setAccessibleStatus(subField, true);
-            subField.set(original, formula);
-            formula.setBrowsableParent(original);
+            subField.set(original, formulaReplacement);
+            formulaReplacement.setBrowsableParent(original);
             setAccessibleStatus(subField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("There was a problem while trying to change sub field", e);
         }
     }
 
-    public static void changeQtBoundFieldFor(ExprQt original, Expr bound, Decl target) throws CheatingIsBadMkay {
+    public static void changeQtBoundFieldFor(ExprQt original, Expr boundReplacement, Decl target) throws CheatingIsBadMkay {
         boolean targetFound = false;
         for (Decl d : original.decls) {
             if (d.equals(target)) {
@@ -111,8 +111,8 @@ public final class Cheats {
                 try {
                     targetFound = true;
                     boolean oldAccessibleStatus = setAccessibleStatus(boundField, true);
-                    boundField.set(target, bound);
-                    bound.setBrowsableParent(original);
+                    boundField.set(target, boundReplacement);
+                    boundReplacement.setBrowsableParent(original);
                     setAccessibleStatus(boundField, oldAccessibleStatus);
                 } catch (IllegalAccessException e) {
                     throw new CheatingIsBadMkay("There was a problem while trying to change expr field for target decl", e);
@@ -121,6 +121,44 @@ public final class Cheats {
         }
         if (!targetFound)
             throw new CheatingIsBadMkay("Couldn't find target decl in quantified expression");
+    }
+
+    public static void changeQtVar(ExprQt original, ExprHasName target, ExprVar replacement) throws CheatingIsBadMkay {
+        boolean targetFound = false;
+        for (Decl d : original.decls) {
+            if (hasVar(d, target)) {
+                targetFound = true;
+                List<ExprHasName> varsCopy = new LinkedList<>();
+                for (ExprHasName dvar : d.names) {
+                    if (dvar.getID() == target.getID()) {
+                        varsCopy.add(replacement);
+                        replacement.setBrowsableParent(original);
+                    } else {
+                        varsCopy.add(dvar);
+                    }
+                }
+                Field namesField = getField(Decl.class, "names");
+                if (namesField == null)
+                    throw new CheatingIsBadMkay("Couldn't find names field for current decl");
+                try {
+                    boolean oldAccessibleStatus = setAccessibleStatus(namesField, true);
+                    namesField.set(d, ConstList.make(varsCopy));
+                    setAccessibleStatus(namesField, oldAccessibleStatus);
+                } catch (IllegalAccessException e) {
+                    throw new CheatingIsBadMkay("There was a problem while trying to change names field for current decl", e);
+                }
+            }
+        }
+        if (!targetFound)
+            throw new CheatingIsBadMkay("Couldn't find target var in quantified expression");
+    }
+
+    private static boolean hasVar(Decl d, ExprHasName var) {
+        for (Expr dvar : d.names) {
+            if (dvar.getID() == var.getID())
+                return true;
+        }
+        return false;
     }
 
     public static void changeLetExpr(ExprLet original, Expr replacement) throws CheatingIsBadMkay {
