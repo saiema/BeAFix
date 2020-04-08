@@ -12,11 +12,17 @@ public class ExprToString extends VisitReturn<Void> {
     private StringBuilder sb;
     private int indent;
     private Candidate candidate;
+    private boolean nicePrint;
 
     public ExprToString(Candidate candidate) {
+        this(candidate, false);
+    }
+
+    public ExprToString(Candidate candidate, boolean nicePrint) {
         sb = new StringBuilder();
         indent = 0;
         this.candidate = candidate;
+        this.nicePrint = nicePrint;
     }
 
     public String getStringRepresentation() {
@@ -25,10 +31,12 @@ public class ExprToString extends VisitReturn<Void> {
 
     @Override
     public Void visitThis(Expr x) throws Err {
-        Optional<Expr> mutatedExpr = candidate.getMutatedExpr(x);
-        if (mutatedExpr.isPresent()) {
-            candidate.markAsAlreadyMutated(x);
-            return visitThis(mutatedExpr.get());
+        if (candidate != null) {
+            Optional<Expr> mutatedExpr = candidate.getMutatedExpr(x);
+            if (mutatedExpr.isPresent()) {
+                candidate.markAsAlreadyMutated(x);
+                return visitThis(mutatedExpr.get());
+            }
         }
         return super.visitThis(x);
     }
@@ -139,12 +147,16 @@ public class ExprToString extends VisitReturn<Void> {
 
     @Override
     public Void visit(ExprUnary x) throws Err {
-        addIndent();
-        sb.append(x.op.toString()).append(" ");
-        int oldIndent = indent;
-        indent = 0;
-        visitThis(x.sub);
-        indent = oldIndent;
+        if (nicePrint && x.op.equals(ExprUnary.Op.NOOP)) {
+            visitThis(x.sub);
+        } else {
+            addIndent();
+            sb.append(x.op.toString()).append(" ");
+            int oldIndent = indent;
+            indent = 0;
+            visitThis(x.sub);
+            indent = oldIndent;
+        }
         return null;
     }
 

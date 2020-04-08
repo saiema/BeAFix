@@ -187,6 +187,20 @@ public class MutantLab {
         return cmds.stream().filter(Command::isVariabilizationTest).collect(Collectors.toList());
     }
 
+    public List<Expr> getModifiedAssertionsFunctionsAndFacts(Candidate candidate) {
+        List<Expr> result = new LinkedList<>();
+        context.getAllAssertions().forEach(namedAssertion -> {
+            candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, namedAssertion.b)).forEach(b -> result.add((Expr)b));
+        });
+        context.getAllFacts().forEach(namedFact -> {
+            candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, namedFact.b)).forEach(b -> result.add((Expr)b));
+        });
+        context.getAllFunc().forEach(func -> {
+            candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, func)).forEach(b -> result.add((Expr)b));
+        });
+        return result;
+    }
+
     public synchronized boolean applyCandidateToAst(Candidate candidate) {
         ASTMutator astMutator = ASTMutator.getInstance();
         candidate.getMutations().forEach(astMutator::pushNewMutation);

@@ -926,11 +926,13 @@ final class SimpleReporter extends A4Reporter {
                         logger.info("Current mutant does not repair the model, some commands do not results as expected");
                     } else {
                         // fix found, break the search
-                        rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
-                        logger.info("Current mutant repair the model, all commands results as expected");
-                        logger.info("MODEL REPAIRED!");
+                        current.get().clearMutatedStatus();
                         RepairReport.getInstance().setRepair(current.get());
                         mutantLab.stopSearch();
+                        rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
+                        cb(out,  "RepairSubTittle", "Repair:\n" + RepairReport.getInstance().getRepairRepresentation());
+                        logger.info("Current mutant repair the model, all commands results as expected");
+                        logger.info("MODEL REPAIRED!");
                         break;
                     }
                 }

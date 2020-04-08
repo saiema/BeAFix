@@ -3,6 +3,8 @@ package ar.edu.unrc.dc.mutation.util;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
+import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
+import ar.edu.unrc.dc.mutation.visitors.ExprToString;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 
@@ -190,6 +192,36 @@ public class RepairReport {
         this.time=System.currentTimeMillis()-this.time;
     }
 
+    private String repairRepresentation = null;
+    private void generateRepairRepresentation() {
+        if (repairRepresentation != null)
+            return;
+        if (repair == null)
+            return;
+        StringBuilder sb = new StringBuilder();
+        for (Expr e : MutantLab.getInstance().getModifiedAssertionsFunctionsAndFacts(repair)) {
+            sb.append("Original:\n");
+            ExprToString exprToString = new ExprToString(null, true);
+            exprToString.visitThis(e);
+            sb.append(exprToString.getStringRepresentation()).append("\n");
+            sb.append("Repaired:\n");
+            exprToString = new ExprToString(repair, true);
+            exprToString.visitThis(e);
+            sb.append(exprToString.getStringRepresentation()).append("\n");
+            sb.append("\n");
+        }
+        sb.append("\n");
+        repairRepresentation = sb.toString();
+    }
+
+    public String getRepairRepresentation() {
+        if (repair == null) {
+            throw new IllegalStateException("There was no repair found!");
+        }
+        generateRepairRepresentation();
+        return repairRepresentation;
+    }
+
     @Override
     public String toString() {
         calculateAvgMutations();
@@ -197,7 +229,8 @@ public class RepairReport {
         StringBuilder sb = new StringBuilder("***AStryker report***\n");
         if (repair != null) {
             sb.append("REPAIR FOUND\n");
-            sb.append(repair.toString()).append("\n");
+            generateRepairRepresentation();
+            sb.append(repairRepresentation);
         } else {
             sb.append("REPAIR NOT FOUND\n");
         }
