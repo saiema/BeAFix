@@ -134,6 +134,45 @@ public class Candidate {
         return Optional.empty();
     }
 
+    public boolean[] getAllMutatedStatus() {
+        boolean[] mutatedStatus = new boolean[mutations()];
+        Arrays.fill(mutatedStatus, false);
+        int idx = 0;
+        Candidate current = this;
+        while (current != null) {
+            if (current.mutation != null) {
+                mutatedStatus[idx] = current.isAlreadyMutated;
+            } else {
+                break;
+            }
+            current = current.parent;
+            idx++;
+        }
+        if (idx != mutations())
+            throw new IllegalStateException("There are " + mutations() + " mutations but only " + idx + " candidates with mutations were found");
+        return mutatedStatus;
+    }
+
+    public void restoreMutatedStatus(boolean[] mutatedStatusBackup) {
+        if (mutatedStatusBackup == null)
+            throw new IllegalArgumentException("Mutated status backup can't be null");
+        if (mutatedStatusBackup.length != mutations())
+            throw new IllegalArgumentException("Mutated status backup has length " + mutatedStatusBackup.length + " but this candidate has " + mutations() + " mutations");
+        int idx = 0;
+        Candidate current = this;
+        while (current != null) {
+            if (current.mutation != null) {
+                current.isAlreadyMutated = mutatedStatusBackup[idx];
+            } else {
+                break;
+            }
+            current = current.parent;
+            idx++;
+        }
+        if (idx != mutations())
+            throw new IllegalStateException("The backup correspond to " + mutatedStatusBackup.length + " mutations but only " + idx + " candidates with mutations were found");
+    }
+
     private Expr findSubExpressionMatchFrom(Expr from, Expr target, Expr replacement) {
          if (Browsable.equals(from, target))
              return replacement;

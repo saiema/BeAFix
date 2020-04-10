@@ -115,14 +115,6 @@ public abstract class Browsable {
         return getMarkedExpression().isPresent() && !isBlockedForMutation();
     }
 
-    public boolean isMarkedExpression() {
-        return mutGenLimit > 0 && isNotChildOfMarkedExpression();
-    }
-
-    public boolean hasMutGenLimit() {
-        return getMarkedExpression().isPresent();
-    }
-
     public int getID() {
         return ID;
     }

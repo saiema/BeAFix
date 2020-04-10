@@ -9,6 +9,7 @@ import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
@@ -196,7 +197,10 @@ public class MutantLab {
             candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, namedFact.b)).forEach(b -> result.add((Expr)b));
         });
         context.getAllFunc().forEach(func -> {
-            candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, func)).forEach(b -> result.add((Expr)b));
+            candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, func)).forEach(b -> {
+                    Func f = (Func) b;
+                    result.add(f.getBody());
+            });
         });
         return result;
     }
