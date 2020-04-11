@@ -321,9 +321,25 @@ public class Candidate {
     }
 
     public int mutations() {
+        if (mutation != null && mutation.operator().equals(Ops.VAR))
+            return variabilizationMutation();
         int totalMutations = 0;
         for (int i = 1; i <= markedExpressions; i++)
             totalMutations += mutationsForIndex(i);
+        return totalMutations;
+    }
+
+    private int variabilizationMutation() {
+        int totalMutations = 0;
+        Candidate current = this;
+        while (current != null) {
+            if (current.mutation != null) {
+                if (!current.mutation.operator().equals(Ops.VAR))
+                    throw new IllegalStateException("This method should only be called for Variabilization candidates");
+                totalMutations++;
+            }
+            current = current.parent;
+        }
         return totalMutations;
     }
 

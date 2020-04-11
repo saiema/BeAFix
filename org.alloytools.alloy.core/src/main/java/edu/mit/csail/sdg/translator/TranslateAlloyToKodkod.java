@@ -993,10 +993,14 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         Env<ExprVar,Object> oldenv = env;
         env = newenv;
         current_function.add(f);
-        boolean[] mutatedStatusBackup = currentCandidate.getAllMutatedStatus();
-        currentCandidate.clearMutatedStatus();
+        boolean[] mutatedStatusBackup = new boolean[0];
+        if (currentCandidate != null) {
+            mutatedStatusBackup = currentCandidate.getAllMutatedStatus();
+            currentCandidate.clearMutatedStatus();
+        }
         Object ans = visitThis(body);
-        currentCandidate.restoreMutatedStatus(mutatedStatusBackup);
+        if (currentCandidate != null)
+            currentCandidate.restoreMutatedStatus(mutatedStatusBackup);
         env = oldenv;
         current_function.remove(current_function.size() - 1);
         if (ans instanceof Formula)
