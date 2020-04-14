@@ -130,6 +130,7 @@ public final class ExprVar extends ExprHasName implements Clause {
         clone.VAR_ID = VAR_ID;
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
     }
 }

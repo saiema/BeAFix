@@ -172,6 +172,7 @@ public final class ExprITE extends Expr {
         Expr resolvedExpr = (cond == this.cond && left == this.left && right == this.right) ? this : make(pos, cond, left, right);
         resolvedExpr.mutGenLimit(directMutGenLimit());
         resolvedExpr.skipBlockMutation = skipBlockMutation;
+        resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
         return resolvedExpr;
     }
 
@@ -220,6 +221,7 @@ public final class ExprITE extends Expr {
         clone.setIDEnv(getIDEnv());
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
     }
 

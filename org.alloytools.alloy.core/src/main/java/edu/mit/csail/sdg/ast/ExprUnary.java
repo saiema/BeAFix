@@ -387,6 +387,7 @@ public final class ExprUnary extends Expr {
         Expr resolvedExpr = (sub == this.sub) ? this : op.make(pos, sub, null, weight - (this.sub.weight));
         resolvedExpr.mutGenLimit(directMutGenLimit());
         resolvedExpr.skipBlockMutation = skipBlockMutation;
+        resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
         return resolvedExpr;
     }
 
@@ -504,13 +505,11 @@ public final class ExprUnary extends Expr {
     }
 
     public ExprUnary mutateExpression(Expr replacement) {
-//        if (op == Op.NOOP)
-//            throw new IllegalArgumentException("Shouldn't be mutating the expression of a unary expression with NOOP");
-//        return new ExprUnary(pos, op, (Expr) replacement.clone(), type, weight, errors);
         Expr subExprClone = (Expr) replacement.clone();
         ExprUnary mutant = (ExprUnary) op.make(pos, subExprClone);
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -519,6 +518,7 @@ public final class ExprUnary extends Expr {
         ExprUnary mutant = (ExprUnary) op.make(pos, subClone);
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -535,6 +535,7 @@ public final class ExprUnary extends Expr {
         clone.setIDEnv(getIDEnv());
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
     }
 }

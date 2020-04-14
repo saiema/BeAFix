@@ -402,6 +402,7 @@ public final class ExprQt extends Expr {
         ExprQt mutant = (ExprQt) op.make(pos, closingBracket, declsClone, subClone);
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -424,6 +425,7 @@ public final class ExprQt extends Expr {
         ExprQt mutant = (ExprQt) op.make(pos, closingBracket, ConstList.make(newDecls), subClone);
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -440,6 +442,7 @@ public final class ExprQt extends Expr {
         ExprQt mutant = (ExprQt) op.make(pos, closingBracket, ConstList.make(declsClone), (Expr) replacement.clone());
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -460,6 +463,7 @@ public final class ExprQt extends Expr {
         clone.setIDEnv(getIDEnv());
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
     }
 }

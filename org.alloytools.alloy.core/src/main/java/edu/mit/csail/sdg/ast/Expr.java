@@ -200,6 +200,7 @@ public abstract class Expr extends Browsable {
             Expr castedExpr = cast2int();
             castedExpr.mutGenLimit(directMutGenLimit());
             castedExpr.skipBlockMutation = skipBlockMutation;
+            castedExpr.setVariabilizationVariables(directVariabilizationVariables());
             return castedExpr;
         }
         // else: error
@@ -262,6 +263,7 @@ public abstract class Expr extends Browsable {
         Expr resolvedExpr = typecheck_as_formula().resolve(Type.FORMULA, warnings).typecheck_as_formula();
         resolvedExpr.mutGenLimit(directMutGenLimit());
         resolvedExpr.skipBlockMutation = skipBlockMutation;
+        resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
         return resolvedExpr;
     }
 
@@ -284,6 +286,7 @@ public abstract class Expr extends Browsable {
         Expr resolvedExpr = typecheck_as_int().resolve(Type.smallIntType(), warnings).typecheck_as_int();
         resolvedExpr.mutGenLimit(directMutGenLimit());
         resolvedExpr.skipBlockMutation = skipBlockMutation;
+        resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
         return resolvedExpr;
     }
 
@@ -308,6 +311,7 @@ public abstract class Expr extends Browsable {
         Expr resolvedExpr = x.resolve(Type.removesBoolAndInt(t), warnings).typecheck_as_set();
         resolvedExpr.mutGenLimit(directMutGenLimit());
         resolvedExpr.skipBlockMutation = skipBlockMutation;
+        resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
         return resolvedExpr;
     }
 

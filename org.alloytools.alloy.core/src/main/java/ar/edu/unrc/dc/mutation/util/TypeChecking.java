@@ -260,8 +260,13 @@ public final class TypeChecking {
             case NO :
             case ONE :
             case SOME :
-            case CARDINALITY :
-                return true;
+            case CARDINALITY : {
+                if (replacementType.is_small_int())
+                    return true;
+                if (replacementType.is_int())
+                    return true;
+                return replacementType.size() > 0;
+            }
             case EXACTLYOF :
             case SETOF : {
                 Type resType = Type.removesBoolAndInt(replacementType);

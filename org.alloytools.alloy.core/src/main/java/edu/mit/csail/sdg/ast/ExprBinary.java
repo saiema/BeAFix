@@ -714,6 +714,7 @@ public final class ExprBinary extends Expr {
         Expr resolvedExpr = (left == this.left && right == this.right) ? this : op.make(pos, closingBracket, left, right);
         resolvedExpr.mutGenLimit(directMutGenLimit());
         resolvedExpr.skipBlockMutation = skipBlockMutation;
+        resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
         return resolvedExpr;
     }
 
@@ -753,6 +754,7 @@ public final class ExprBinary extends Expr {
         ExprBinary mutant = (ExprBinary) op.make(pos, closingBracket, (Expr) replacement.clone(), (Expr) right.clone());
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -760,6 +762,7 @@ public final class ExprBinary extends Expr {
         ExprBinary mutant = (ExprBinary) op.make(pos, closingBracket, (Expr) left.clone(), (Expr) replacement.clone());
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -769,6 +772,7 @@ public final class ExprBinary extends Expr {
         Expr mutant = op.make (pos, closingBracket, leftClone, rightClone);
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -787,6 +791,7 @@ public final class ExprBinary extends Expr {
         clone.setIDEnv(getIDEnv());
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
     }
 

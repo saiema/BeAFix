@@ -254,6 +254,7 @@ public final class ExprChoice extends Expr {
             Expr resolvedExpr = resolveHelper(true, t, choices, reasons, warns);
             resolvedExpr.mutGenLimit(directMutGenLimit());
             resolvedExpr.skipBlockMutation = skipBlockMutation;
+            resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
             return resolvedExpr;
         }
     }
@@ -309,6 +310,7 @@ public final class ExprChoice extends Expr {
         clone.setIDEnv(getIDEnv());
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
     }
 }

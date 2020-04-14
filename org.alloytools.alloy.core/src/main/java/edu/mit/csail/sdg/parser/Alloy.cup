@@ -479,7 +479,7 @@ terminal Pos SUM;              //  sum       // The filter enables us to disambi
 terminal Pos THIS;             //  this
 terminal Pos TILDE;            //  ~
 terminal Pos UNIV;             //  univ
-terminal Pos MUTABLE;             //  #m#
+terminal Pos MUTABLE;           //  #m#
 terminal Pos VARTEST;           // #t#
 
 terminal ExprVar ID;
@@ -572,6 +572,8 @@ nonterminal Expr                       UnopExprA;
 nonterminal Expr                       UnopExprB;
 nonterminal Pos                        Vis;
 nonterminal Boolean                    VarTest;
+nonterminal List<String>               Mutable;
+nonterminal List<String>               Identifiers;
 
 //===========================================================================//
 
@@ -845,9 +847,13 @@ Expr ::= OrExprA:x                    {: RESULT = x;                            
 Expr ::= OrExprB:x                    {: RESULT = x;                                  :};
 Expr ::= Bind:x                       {: RESULT = x;                                  :};
 //-> ------- MUTATION MARK
-Expr ::= MUTABLE:m OrExprA:x                    {: x.mutGenLimit(1);parser.alloymodule.addMarkedExprToMutate(x);  RESULT = x;                                  :};
-Expr ::= MUTABLE:m OrExprB:x                    {: x.mutGenLimit(1);parser.alloymodule.addMarkedExprToMutate(x); RESULT = x;                                  :};
-Expr ::= MUTABLE:m Bind:x                       {: x.mutGenLimit(1);parser.alloymodule.addMarkedExprToMutate(x); RESULT = x;                                  :};
+Mutable ::= MUTABLE:m LPAREN RPAREN                           {: RESULT = null; :};
+Mutable ::= MUTABLE:m LPAREN Identifiers:ids RPAREN           {: RESULT = ids; :};
+Identifiers ::= ID:id                           {: RESULT = new ArrayList<String>(); RESULT.add(id.label); :};
+Identifiers ::= Identifiers:ids COMMA ID:id     {: ids.add(id.label); RESULT = ids; :};
+Expr ::= Mutable:m OrExprA:x                    {: x.mutGenLimit(1);x.setVariabilizationVariables(m);parser.alloymodule.addMarkedExprToMutate(x);  RESULT = x; :};
+Expr ::= Mutable:m OrExprB:x                    {: x.mutGenLimit(1);x.setVariabilizationVariables(m);parser.alloymodule.addMarkedExprToMutate(x); RESULT = x;  :};
+Expr ::= Mutable:m Bind:x                       {: x.mutGenLimit(1);x.setVariabilizationVariables(m);parser.alloymodule.addMarkedExprToMutate(x); RESULT = x;  :};
 //-> ------- END MUTATION MARK
 Bind ::= LET     Let:x                {: RESULT = x;                                  :};
 Bind ::= ALL2:o  Declp:a SuperOrBar:b {: RESULT = ExprQt.Op.ALL .make(o, null, a, b); :};

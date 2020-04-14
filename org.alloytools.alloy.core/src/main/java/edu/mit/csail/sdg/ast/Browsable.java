@@ -42,11 +42,38 @@ public abstract class Browsable {
     private static int NEXT_ID_Env = 0;
     private int        ID_Env      = NEXT_ID_Env++;
     protected boolean skipBlockMutation = false;
+    protected List<String> variabilizationVariables = null;
 
     public void mutGenLimit(int m) {
         if (m < 0)
             throw new IllegalArgumentException("Can't use a negative value with mutGenLimit");
         this.mutGenLimit = m;
+    }
+
+    public void setVariabilizationVariables(List<String> varVariables) {
+        if (directMutGenLimit() < 1 && varVariables != null) {
+            throw new IllegalStateException("Can't set variabilization variables for an expression without mutGenLimit > 0");
+        }
+        this.variabilizationVariables = varVariables != null && varVariables.isEmpty()?null:varVariables;
+    }
+
+    public Optional<List<String>> getVariabilizationVariables() {
+        Browsable current = this;
+        while (current != null) {
+            if (current.mutGenLimit > 0 && current.isNotChildOfMarkedExpression())
+                return Optional.ofNullable(current.variabilizationVariables);
+            Browsable parent = current.getBrowsableParent();
+            if (parent != null) {
+                if (parent instanceof Sig || parent instanceof Sig.Field)
+                    return Optional.empty();
+            }
+            current = parent;
+        }
+        return Optional.empty();
+    }
+
+    public List<String> directVariabilizationVariables() {
+        return variabilizationVariables;
     }
 
     public int mutGenLimit() {
@@ -274,6 +301,7 @@ public abstract class Browsable {
                 clone.setIDEnv(getIDEnv());
                 clone.mutGenLimit(directMutGenLimit());
                 clone.skipBlockMutation = this.skipBlockMutation;
+                clone.variabilizationVariables = this.variabilizationVariables;
                 return clone;
             }
 

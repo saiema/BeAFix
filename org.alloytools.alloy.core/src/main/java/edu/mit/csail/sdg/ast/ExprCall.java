@@ -384,6 +384,7 @@ public final class ExprCall extends Expr {
         Expr resolvedExpr = changed ? make(pos, closingBracket, fun, args.makeConst(), extraWeight) : this;
         resolvedExpr.mutGenLimit(directMutGenLimit());
         resolvedExpr.skipBlockMutation = skipBlockMutation;
+        resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
         return resolvedExpr;
     }
 
@@ -452,6 +453,7 @@ public final class ExprCall extends Expr {
         clone.setIDEnv(getIDEnv());
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
     }
 

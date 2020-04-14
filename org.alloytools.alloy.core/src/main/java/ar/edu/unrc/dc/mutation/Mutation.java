@@ -39,12 +39,19 @@ public class Mutation {
         this.original = original;
         this.mutant = mutant;
         updateMarkedStatus();
+        updateVariabilizationVars();
     }
 
     private void updateMarkedStatus() {
         if (original.directMutGenLimit() > 0) {
             mutant.directBlockStatus(original.directBlockStatus());
             mutant.mutGenLimit(original.directMutGenLimit());
+        }
+    }
+
+    private void updateVariabilizationVars() {
+        if (original.directMutGenLimit() > 0) {
+            mutant.setVariabilizationVariables(original.directVariabilizationVariables());
         }
     }
 

@@ -399,6 +399,7 @@ public final class CompModule extends Browsable implements Module {
             Expr newExpr = ExprList.make(x.pos, x.closingBracket, x.op, temp.makeConst());;
             newExpr.mutGenLimit(x.directMutGenLimit());
             newExpr.directBlockStatus(x.directBlockStatus());
+            newExpr.setVariabilizationVariables(x.directVariabilizationVariables());
             return newExpr;
         }
 
@@ -411,6 +412,7 @@ public final class CompModule extends Browsable implements Module {
             Expr newExpr = ExprITE.make(x.pos, f, a, b);
             newExpr.mutGenLimit(x.directMutGenLimit());
             newExpr.directBlockStatus(x.directBlockStatus());
+            newExpr.setVariabilizationVariables(x.directVariabilizationVariables());
             return newExpr;
         }
 
@@ -435,6 +437,7 @@ public final class CompModule extends Browsable implements Module {
             }
             newExpr.mutGenLimit(x.directMutGenLimit());
             newExpr.directBlockStatus(x.directBlockStatus());
+            newExpr.setVariabilizationVariables(x.directVariabilizationVariables());
             return newExpr;
         }
 
@@ -462,6 +465,7 @@ public final class CompModule extends Browsable implements Module {
                 newExpr = x.op.make(x.pos, x.closingBracket, left, right);
             newExpr.mutGenLimit(x.directMutGenLimit());
             newExpr.directBlockStatus(x.directBlockStatus());
+            newExpr.setVariabilizationVariables(x.directVariabilizationVariables());
             return newExpr;
         }
 
@@ -477,6 +481,7 @@ public final class CompModule extends Browsable implements Module {
             Expr newExpr = ExprLet.make(x.pos, left, right, sub);
             newExpr.mutGenLimit(x.directMutGenLimit());
             newExpr.directBlockStatus(x.directBlockStatus());
+            newExpr.setVariabilizationVariables(x.directVariabilizationVariables());
             return newExpr;
         }
 
@@ -552,6 +557,7 @@ public final class CompModule extends Browsable implements Module {
                     warns = saved;
                     returnValue.mutGenLimit(x.directMutGenLimit());
                     returnValue.directBlockStatus(x.directBlockStatus());
+                    returnValue.setVariabilizationVariables(x.directVariabilizationVariables());
                     return returnValue;
                 }
                 // Above is a special case to allow more fine-grained
@@ -575,6 +581,7 @@ public final class CompModule extends Browsable implements Module {
             Expr newExpr = x.op.make(x.pos, x.closingBracket, decls.makeConst(), sub);
             newExpr.mutGenLimit(x.directMutGenLimit());
             newExpr.directBlockStatus(x.directBlockStatus());
+            newExpr.setVariabilizationVariables(x.directVariabilizationVariables());
             return newExpr;
         }
 
@@ -600,10 +607,12 @@ public final class CompModule extends Browsable implements Module {
                 });
                 instantiated.mutGenLimit(x.directMutGenLimit());
                 instantiated.directBlockStatus(x.directBlockStatus());
+                instantiated.setVariabilizationVariables(x.directVariabilizationVariables());
                 return instantiated;
             } else {
                 obj.mutGenLimit(x.directMutGenLimit());
                 obj.directBlockStatus(x.directBlockStatus());
+                obj.setVariabilizationVariables(x.directVariabilizationVariables());
                 return obj;
             }
         }
@@ -614,6 +623,7 @@ public final class CompModule extends Browsable implements Module {
             Expr newExpr = x.op.make(x.pos, visitThis(x.sub));
             newExpr.mutGenLimit(x.directMutGenLimit());
             newExpr.directBlockStatus(x.directBlockStatus());
+            newExpr.setVariabilizationVariables(x.directVariabilizationVariables());
             return newExpr;
         }
 

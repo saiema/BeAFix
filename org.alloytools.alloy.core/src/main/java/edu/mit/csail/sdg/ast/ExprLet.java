@@ -123,6 +123,7 @@ public final class ExprLet extends Expr {
         Expr resolvedExpr = (sub == newSub) ? this : make(pos, var, expr, newSub);
         resolvedExpr.mutGenLimit(directMutGenLimit());
         resolvedExpr.skipBlockMutation = skipBlockMutation;
+        resolvedExpr.setVariabilizationVariables(directVariabilizationVariables());
         return resolvedExpr;
     }
 
@@ -172,6 +173,7 @@ public final class ExprLet extends Expr {
         ExprLet mutant = new ExprLet(this.pos, varClone, replacement, subClone, this.errors);;
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -181,6 +183,7 @@ public final class ExprLet extends Expr {
         ExprLet mutant = new ExprLet(this.pos, varClone, exprClone, replacement, this.errors);;
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
@@ -194,6 +197,7 @@ public final class ExprLet extends Expr {
         clone.setIDEnv(getIDEnv());
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
     }
 
