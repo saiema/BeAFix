@@ -750,16 +750,16 @@ public final class ExprBinary extends Expr {
 
     //methods needed for mutation
 
-    public ExprBinary mutateLeft(Expr replacement) {
-        ExprBinary mutant = (ExprBinary) op.make(pos, closingBracket, (Expr) replacement.clone(), (Expr) right.clone());
+    public Expr mutateLeft(Expr replacement) {
+        Expr mutant = op.make(pos, closingBracket, (Expr) replacement.clone(), (Expr) right.clone());
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
         mutant.setVariabilizationVariables(directVariabilizationVariables());
         return mutant;
     }
 
-    public ExprBinary mutateRight(Expr replacement) {
-        ExprBinary mutant = (ExprBinary) op.make(pos, closingBracket, (Expr) left.clone(), (Expr) replacement.clone());
+    public Expr mutateRight(Expr replacement) {
+        Expr mutant = op.make(pos, closingBracket, (Expr) left.clone(), (Expr) replacement.clone());
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
         mutant.setVariabilizationVariables(directVariabilizationVariables());

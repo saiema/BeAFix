@@ -78,8 +78,13 @@ public class MutationTask implements Runnable {
                 if (run) {
                     Optional<Candidate> current = inputChannel.getAndAdvance();
                     lock.lock();
-                    if (run)
+                    if (run) {
                         current.ifPresent(this::checkAndGenerateNewCandidates);
+                        if (mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
+                            outputChannel.insert(Candidate.STOP);
+                            MutantLab.getInstance().stopSearch();
+                        }
+                    }
                     lock.unlock();
                 }
             } catch (Exception e) {
@@ -108,7 +113,9 @@ public class MutationTask implements Runnable {
         }
     }
 
+    private int mutationsAdded = 0;
     private void checkAndGenerateNewCandidates(Candidate from) {
+        mutationsAdded = 0;
         logger.info("***Variabilization check started***");
         if (!from.isValid()) {
             logger.info("candidate was invalid, returning");
@@ -184,6 +191,7 @@ public class MutationTask implements Runnable {
         if (!MutantLab.getInstance().undoChangesToAst())
             outputChannel.insert(Candidate.INVALID);
         else {
+            mutationsAdded += newCandidates.size();
             RepairReport.getInstance().addMutations(newCandidates.size(), from.getCurrentMarkedExpression());
             outputChannel.insertBulk(newCandidates);
         }

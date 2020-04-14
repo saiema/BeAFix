@@ -135,42 +135,43 @@ public class Candidate {
     }
 
     public boolean[] getAllMutatedStatus() {
-        boolean[] mutatedStatus = new boolean[markedExpressions];
-        Arrays.fill(mutatedStatus, false);
-        int idx = 0;
+        List<Boolean> mutatedStatus = new ArrayList<>();
         Candidate current = this;
         while (current != null) {
             if (current.mutation != null) {
-                mutatedStatus[idx] = current.isAlreadyMutated;
+                mutatedStatus.add(current.isAlreadyMutated);
             } else {
                 break;
             }
             current = current.parent;
+        }
+        boolean[] result = new boolean[mutatedStatus.size()];
+        int idx = 0;
+        for (boolean b : mutatedStatus) {
+            result[idx] = b;
             idx++;
         }
-//        if (idx != mutations())
-//            throw new IllegalStateException("There are " + mutations() + " mutations but only " + idx + " candidates with mutations were found");
-        return mutatedStatus;
+        return result;
     }
 
     public void restoreMutatedStatus(boolean[] mutatedStatusBackup) {
         if (mutatedStatusBackup == null)
             throw new IllegalArgumentException("Mutated status backup can't be null");
-        if (mutatedStatusBackup.length != markedExpressions)
-            throw new IllegalArgumentException("Mutated status backup has length " + mutatedStatusBackup.length + " but there are " + markedExpressions + " marked expressions");
+        int candidateWithMutations = 0;
         int idx = 0;
         Candidate current = this;
         while (current != null) {
             if (current.mutation != null) {
                 current.isAlreadyMutated = mutatedStatusBackup[idx];
+                candidateWithMutations++;
             } else {
                 break;
             }
             current = current.parent;
             idx++;
         }
-//        if (idx != mutations())
-//            throw new IllegalStateException("The backup correspond to " + mutatedStatusBackup.length + " mutations but only " + idx + " candidates with mutations were found");
+        if (mutatedStatusBackup.length != candidateWithMutations)
+            throw new IllegalStateException("The backup correspond to " + mutatedStatusBackup.length + " mutations but " + candidateWithMutations + " candidates with mutations were found");
     }
 
     private Expr findSubExpressionMatchFrom(Expr from, Expr target, Expr replacement) {

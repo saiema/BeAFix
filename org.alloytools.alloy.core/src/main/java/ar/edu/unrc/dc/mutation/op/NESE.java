@@ -71,6 +71,8 @@ public class NESE extends Mutator {
     private Optional<List<Mutation>> generateMutation(Expr x) throws Err {
         if (!mutGenLimitCheck(x))
             return Optional.empty();
+        if (x.type().is_bool)
+            return Optional.empty();
         try {
             Optional<Expr> mutant = generateMutant(x);
             if (mutant.isPresent())

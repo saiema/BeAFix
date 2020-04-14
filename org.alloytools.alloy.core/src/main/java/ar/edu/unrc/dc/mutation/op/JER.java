@@ -3,6 +3,7 @@ package ar.edu.unrc.dc.mutation.op;
 import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprBinary;
@@ -63,12 +64,14 @@ public class JER extends JEX {
             for (Expr r : replacements.get()) {
                 r = (Expr) r.clone();
                 r.newID();
-                ExprBinary mutant = null;
+                Expr mutant = null;
                 if (original.left.getID() == replace.getID() && checkJoin(original, replace, r))
                     mutant = original.mutateLeft(r);
                 if (original.right.getID() == replace.getID() && checkJoin(original, replace, r))
                     mutant = original.mutateRight(r);
                 if (mutant == null || from.toString().equals(mutant.toString()))
+                    continue;
+                if (!TypeChecking.canReplace(from, mutant, strictTypeCheck()))
                     continue;
                 mutations.add(new Mutation(whoiam(), from, mutant));
             }
