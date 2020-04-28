@@ -181,7 +181,7 @@ public enum Ops {
 
                      @Override
                      public int getComplexity() {
-                         return 3;
+                         return 4;
                      }
 
                  },
@@ -306,7 +306,7 @@ public enum Ops {
 
                      @Override
                      public int getComplexity() {
-                         return 4;
+                         return 5;
                      }
 
                  },

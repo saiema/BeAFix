@@ -184,15 +184,23 @@ public class MutationTask implements Runnable {
                 RepairReport.getInstance().incGeneratedCandidates();
                 if (mutantsHashes.add(newCandidate)) {
                     newCandidate.clearMutatedStatus();
+                    RepairReport.getInstance().addMutations(1, from.getCurrentMarkedExpression());
+                    if (from.isPartialRepair()) {
+                        newCandidate.markAsPartialRepair();
+                        for (int i = 1; i <= MutantLab.getInstance().getMarkedExpressions(); i++) {
+                            if (from.isIndexBlocked(i))
+                                newCandidate.blockIndex(i);
+                        }
+                    }
                     newCandidates.add(newCandidate);
                 }
             }));
         }
         if (!MutantLab.getInstance().undoChangesToAst())
             outputChannel.insert(Candidate.INVALID);
-        else {
+        else if (!newCandidates.isEmpty()) {
+            RepairReport.getInstance().incGenerations(from.getCurrentMarkedExpression());
             mutationsAdded += newCandidates.size();
-            RepairReport.getInstance().addMutations(newCandidates.size(), from.getCurrentMarkedExpression());
             outputChannel.insertBulk(newCandidates);
         }
     }

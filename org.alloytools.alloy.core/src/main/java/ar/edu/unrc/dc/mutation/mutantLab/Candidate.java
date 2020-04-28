@@ -9,14 +9,13 @@ import edu.mit.csail.sdg.alloy4.Triplet;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 
-
 import java.util.*;
 
 public class Candidate {
 
     private Candidate parent;
     private Mutation mutation;
-    private CompModule context;
+    private final CompModule context;
     List<Browsable> relatedAssertionsAndFunctions;
     private boolean isAlreadyMutated;
     private boolean markedAsInvalid;
@@ -25,7 +24,11 @@ public class Candidate {
     private int markedExpressions;
     private int currentMarkedExpression;
     private int[] mutationsPerIndex;
+    private boolean[] blockedIndexes;
     private boolean isFromFact;
+    private Map<Command, Boolean> commandsResults;
+    private boolean hasPartialResults;
+    private boolean isPartialRepair;
 
     static {
         Candidate invalid = new Candidate(null);
@@ -50,7 +53,9 @@ public class Candidate {
         markedExpressions = MutantLab.getInstance().getMarkedExpressions();
         currentMarkedExpression = 0;
         mutationsPerIndex = new int[markedExpressions];
+        blockedIndexes = new boolean[markedExpressions];
         Arrays.fill(mutationsPerIndex, 0);
+        Arrays.fill(blockedIndexes, Boolean.FALSE);
     }
 
     public static Candidate original(CompModule context) {
@@ -77,8 +82,10 @@ public class Candidate {
             newCandidate = new Candidate(from, mutation, context);
         }
         newCandidate.currentMarkedExpression = from.currentMarkedExpression;
-        if (from.markedExpressions >= 0)
+        if (from.markedExpressions >= 0) {
             System.arraycopy(from.mutationsPerIndex, 0, newCandidate.mutationsPerIndex, 0, from.markedExpressions);
+            System.arraycopy(from.blockedIndexes, 0, newCandidate.blockedIndexes, 0, from.markedExpressions);
+        }
         return newCandidate;
     }
 
@@ -107,7 +114,11 @@ public class Candidate {
     }
 
     public void currentMarkedExpressionInc() {
-        setCurrentMarkedExpression(currentMarkedExpression + 1);
+        int nextIndex = currentMarkedExpression + 1;
+        while (nextIndex <= currentMarkedExpression && isIndexBlocked(nextIndex)) {
+            nextIndex++;
+        }
+        setCurrentMarkedExpression(nextIndex);
     }
 
     public CompModule getContext() {
@@ -227,6 +238,14 @@ public class Candidate {
         markedAsInvalid = true;
     }
 
+    public void markAsPartialRepair() {
+        isPartialRepair = true;
+    }
+
+    public boolean isPartialRepair() {
+        return isPartialRepair;
+    }
+
     public boolean isValid() {
         return !markedAsInvalid;
     }
@@ -293,10 +312,20 @@ public class Candidate {
 
     @Override
     public String toString() {
-        return "CANDIDATE {" +
-                "INDEX : " + currentMarkedExpression +
-                " FROM RANGE [0.." + (markedExpressions + 1) + "] ; " + Arrays.toString(mutationsPerIndex) + " mutations}\n" +
-                toString(this);
+        StringBuilder sb = new StringBuilder();
+        sb.append("CANDIDATE {").append("INDEX : ");
+        sb.append(currentMarkedExpression);
+        sb.append(" FROM RANGE [0..");
+        sb.append(markedExpressions + 1).append("] ;");
+        sb.append(Arrays.toString(mutationsPerIndex)).append(" mutations}");
+        if (isPartialRepair) {
+            sb.append("\n");
+            sb.append("PARTIAL REPAIR OF ");
+            sb.append(Arrays.toString(blockedIndexes));
+        }
+        sb.append("\n");
+        sb.append(toString(this));
+        return sb.toString();
     }
 
     private String toString(Candidate current) {
@@ -350,6 +379,49 @@ public class Candidate {
         mutationsPerIndex[index-1]++;
     }
 
+    public void blockIndex(int index) {
+        if (index < 1 || index > markedExpressions)
+            throw new IllegalArgumentException("Index must go between 1 and " + markedExpressions);
+        blockedIndexes[index-1] = true;
+    }
+
+    public void unblockIndex(int index) {
+        if (index < 1 || index > markedExpressions)
+            throw new IllegalArgumentException("Index must go between 1 and " + markedExpressions);
+        blockedIndexes[index-1] = false;
+    }
+
+    public boolean isIndexBlocked(int index) {
+        if (index < 1 || index > markedExpressions)
+            throw new IllegalArgumentException("Index must go between 1 and " + markedExpressions);
+        return blockedIndexes[index-1];
+    }
+
+    public void setCommandsResults(Map<Command, Boolean> commandsResults) {
+        if (commandsResults == null)
+            throw new IllegalArgumentException("commands results map can't be null");
+        this.commandsResults = commandsResults;
+        this.hasPartialResults = !commandsResults.isEmpty();
+    }
+
+    public boolean hasPartialResults() {
+        return hasPartialResults;
+    }
+
+    public Map<Command, Boolean> getCommandsResults() {
+        if (commandsResults == null)
+            throw new IllegalStateException("This method should only be called if #hasRepairedCommandsResults() returned true");
+        return commandsResults;
+    }
+
+    public void clearPartialResultsData() {
+        if (!hasPartialResults())
+            throw new IllegalStateException("This is not a candidate with partial results");
+        commandsResults = null;
+        hasPartialResults = false;
+        Arrays.fill(blockedIndexes, false);
+    }
+
     public List<Mutation> getMutations() {
         List<Mutation> mutations = new LinkedList<>();
         if (mutation != null) {
@@ -361,10 +433,6 @@ public class Candidate {
 
     public void copyMutationsFrom(Candidate from) {
         System.arraycopy(from.mutationsPerIndex, 0, mutationsPerIndex ,0, markedExpressions);
-    }
-
-    public Optional<Mutation> getLastMutation() {
-        return Optional.ofNullable(mutation);
     }
 
     /**
@@ -398,7 +466,11 @@ public class Candidate {
         clone.currentMarkedExpression = currentMarkedExpression;
         clone.parent = parent != null? parent.copy() : null;
         clone.mutationsPerIndex = new int[markedExpressions];
+        clone.blockedIndexes = new boolean[markedExpressions];
+        clone.hasPartialResults = hasPartialResults;
+        clone.isPartialRepair = isPartialRepair;
         System.arraycopy(mutationsPerIndex, 0, clone.mutationsPerIndex, 0, markedExpressions);
+        System.arraycopy(blockedIndexes, 0, clone.blockedIndexes, 0, markedExpressions);
         return clone;
     }
 

@@ -6,6 +6,8 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.util.DependencyGraph;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
+import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
@@ -14,6 +16,7 @@ import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -42,21 +45,21 @@ public class MutantLab {
         instance = new MutantLab(context, maxDepth, ops);
     }
 
-    public synchronized static void initialize(CompModule context, Ops...ops) {
-        initialize(context, Integer.MAX_VALUE, ops);
-    }
-
     public synchronized static MutantLab getInstance() {
         if (instance == null)
             throw new IllegalStateException("MutantLab is not yet initialized");
         return instance;
     }
 
-    private CompModule context;
-    private SortedSet<Ops> ops;
+    private final CompModule context;
+    private final SortedSet<Ops> ops;
     private boolean searchStarted;
-    private int maxDepth;
-    private int markedExpressions;
+    private final int maxDepth;
+    private final int markedExpressions;
+    //fields for partial repair for multiple bugged and independent functions (preds/fun/assertions)
+    private final List<Browsable> affectedFunctionsPredicatesAndAssertions;
+    private boolean partialRepairSupported = false;
+    private Map<Browsable, Pair<Integer,Integer>> indexesPerFPAs;
 
     private MutantLab(CompModule context, Ops...ops) {
         this(context, Integer.MAX_VALUE, ops);
@@ -79,20 +82,86 @@ public class MutantLab {
         searchStarted = false;
         Optional<List<Expr>> initialMarkedExpressions = Variabilization.getInstance().getMarkedExpressions(context);
         markedExpressions = initialMarkedExpressions.map(List::size).orElse(0);
+        AtomicBoolean factsAffected = new AtomicBoolean(false);
+        affectedFunctionsPredicatesAndAssertions = new LinkedList<>();
+        boolean independent = false;
         initialMarkedExpressions.ifPresent(mes -> mes.forEach(e -> RepairReport.getInstance().addMarkedExpression(e)));
-        //initialMarkedExpressions.ifPresent(this::checkMarkedExpressionsForVariabilizationCompatibility);
+        initialMarkedExpressions.ifPresent(mes -> factsAffected.set(isAnyFactBugged(this.context, mes)));
+        initialMarkedExpressions.ifPresent(mes -> affectedFunctionsPredicatesAndAssertions.addAll(functionsPredicatesAndAssertionsInvolved(this.context, mes)));
+        if (!factsAffected.get() && affectedFunctionsPredicatesAndAssertions.size() > 1) {
+            independent = doesFunctionsPredicatesAndAssertionsInvolvedHaveIndependentTests(affectedFunctionsPredicatesAndAssertions);
+        }
+        partialRepairSupported = !factsAffected.get() && affectedFunctionsPredicatesAndAssertions.size() > 1 && independent;
     }
 
-    private void checkMarkedExpressionsForVariabilizationCompatibility(List<Expr> markedExpressions) {
-        if (!isVariabilizationEnabled())
-            return;
-        for (Expr x : markedExpressions) {
-            if (x.type().is_bool) {
-                logger.info("Marked expression " + x.toString() + " is of bool type: variabilization will be disabled");
-                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, Boolean.FALSE);
-                return;
+    public boolean isPartialRepairSupported() {
+        return partialRepairSupported;
+    }
+
+    private boolean isAnyFactBugged(CompModule context, List<Expr> initialMarkedExpressions) {
+        if (context == null)
+            throw new IllegalArgumentException("context can't be null");
+        if (initialMarkedExpressions == null)
+            throw new IllegalArgumentException("marked expressions list can't be null");
+        for (Expr me : initialMarkedExpressions) {
+            Expr mayorExpr = TypeChecking.getMayorExpression(me);
+            for (Pair<String, Expr> namedFact : context.getAllFacts()) {
+                if (Browsable.equals(mayorExpr, namedFact.b))
+                    return true;
             }
         }
+        return false;
+    }
+
+    private List<Browsable> functionsPredicatesAndAssertionsInvolved(CompModule context, List<Expr> initialMarkedExpressions) {
+        if (context == null)
+            throw new IllegalArgumentException("context can't be null");
+        if (initialMarkedExpressions == null)
+            throw new IllegalArgumentException("marked expressions list can't be null");
+        List<Browsable> involved = new LinkedList<>();
+        indexesPerFPAs = new HashMap<>();
+        int currentIdx = 0;
+        start:
+        for (Expr me : initialMarkedExpressions) {
+            Expr mayorExpr = TypeChecking.getMayorExpression(me);
+            currentIdx++;
+            for (Pair<String, Expr> namedAssertions : context.getAllAssertions()) {
+                if (Browsable.equals(namedAssertions.b, mayorExpr)) {
+                    updateInvolvedAndIndexPerFPA(involved, namedAssertions.b, currentIdx);
+                    continue start;
+                }
+            }
+            for (Func f : context.getAllFunc()) {
+                if (Browsable.equals(f.getBody(), mayorExpr)) {
+                    updateInvolvedAndIndexPerFPA(involved, f, currentIdx);
+                    continue start;
+                }
+            }
+        }
+        return involved;
+    }
+
+    private void updateInvolvedAndIndexPerFPA(List<Browsable> involved, Browsable b, int index) {
+        if (!involved.contains(b)) {
+            involved.add(b);
+            indexesPerFPAs.put(b, new Pair<>(index, index));
+        } else if (!indexesPerFPAs.containsKey(b)) {
+            throw new IllegalStateException("If " + b.toString() +  " is already in the involved list, then it must be in the indexes map");
+        } else {
+            Pair<Integer, Integer> indexes = indexesPerFPAs.get(b);
+            if (index <= indexes.b)
+                throw new IllegalStateException("Indexes for " + b.toString() + " are being updated with a index which is less than the current max index: " + indexes.toString() + "(" + index + ")");
+            indexesPerFPAs.put(b, new Pair<>(indexes.a, index));
+        }
+    }
+
+    private boolean doesFunctionsPredicatesAndAssertionsInvolvedHaveIndependentTests(List<Browsable> involvedFPAs) {
+        for (Browsable involvedFPA : involvedFPAs) {
+            if (DependencyGraph.getInstance().getDirectIndependentCommandsFor(involvedFPA, involvedFPAs).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public int getMaxDepth() {
@@ -138,13 +207,59 @@ public class MutantLab {
                 return false;
             }
             logger.info("Inserting current to mutation task input channel");
-            input.insert(current.get());
-            return output.current().isPresent();
+            sendCandidateToInput(current.get());
+            return true;//output.current().isPresent();
         } catch (InterruptedException e) {
             e.printStackTrace();
             logger.severe("Got interrupted exception when trying to advance");
             return false;
         }
+    }
+
+    private void sendCandidateToInput(Candidate current) {
+        if (current.hasPartialResults()) { //partial repair
+            List<Integer> indexesToBlock = new LinkedList<>();
+            Map<Command, Boolean> testsResults = current.getCommandsResults();
+            for (Browsable affectedFPA : affectedFunctionsPredicatesAndAssertions) {
+                boolean affectedFPAFixed = true;
+                for (Command affectedFPARelatedCommnand : DependencyGraph.getInstance().getDirectIndependentCommandsFor(affectedFPA, affectedFunctionsPredicatesAndAssertions)) {
+                    if (!testsResults.containsKey(affectedFPARelatedCommnand) || !testsResults.get(affectedFPARelatedCommnand)) {
+                        affectedFPAFixed = false;
+                        break;
+                    }
+                }
+                if (affectedFPAFixed) {
+                    for (int i = indexesPerFPAs.get(affectedFPA).a; i <= indexesPerFPAs.get(affectedFPA).b; i++) {
+                        indexesToBlock.add(i);
+                    }
+                }
+            }
+            if (!indexesToBlock.isEmpty()) {
+                Candidate partiallyFixedCandidate = current.copy();
+                for (int indexToBlock : indexesToBlock) {
+                    partiallyFixedCandidate.blockIndex(indexToBlock);
+                }
+                if (goToFirstUnblockedIndex(partiallyFixedCandidate)) {
+                    partiallyFixedCandidate.markAsPartialRepair();
+                    input.priorityInsert(partiallyFixedCandidate);
+                }
+            }
+        }
+        input.insert(current); //the default behaviour must be kept
+    }
+
+    private boolean goToFirstUnblockedIndex(Candidate candidate) {
+        if (!candidate.hasPartialResults())
+            throw new IllegalStateException("Candidate is not partially fixed");
+        int blockedIndexes = 0;
+        for (int i = 1; i <= markedExpressions; i++) {
+            if (!candidate.isIndexBlocked(i)) {
+                candidate.setCurrentMarkedExpression(i);
+                blockedIndexes++;
+                break;
+            }
+        }
+        return blockedIndexes > 0 && blockedIndexes < markedExpressions;
     }
 
     public void stopSearch() {
@@ -188,20 +303,52 @@ public class MutantLab {
         return cmds.stream().filter(Command::isVariabilizationTest).collect(Collectors.toList());
     }
 
+    public static final Browsable PARTIAL_REPAIR_PRIORITY = Browsable.make(null, (Browsable) null);
+    public static final Browsable PARTIAL_REPAIR_NON_PRIORITY = Browsable.make(null, (Browsable) null);
+    public Map<Browsable, List<Command>> getCommandsToRunUsingPartialRepairFor(Candidate candidate) {
+        List<Browsable> partiallyFixedPFAs = partiallyFixedPFAs(candidate);
+        Map<Browsable, List<Command>> commands = new HashMap<>();
+        List<Command> lastPriorityCommandsToRun = new LinkedList<>();
+        for (Browsable relatedPFA : candidate.getRelatedAssertionsAndFunctions()) {
+            List<Command> independentTests;
+            if (partiallyFixedPFAs.contains(relatedPFA)) {
+                independentTests = new LinkedList<>();
+            } else {
+                independentTests = DependencyGraph.getInstance().getDirectIndependentCommandsFor(relatedPFA);
+            }
+            DependencyGraph.getInstance().getPriorityCommands(relatedPFA).stream().parallel().filter(c -> !independentTests.contains(c) && !lastPriorityCommandsToRun.contains(c)).forEach(lastPriorityCommandsToRun::add);
+            commands.put(relatedPFA, independentTests);
+        }
+        commands.put(PARTIAL_REPAIR_PRIORITY, lastPriorityCommandsToRun);
+        commands.put(PARTIAL_REPAIR_NON_PRIORITY, DependencyGraph.getInstance().getNonPriorityCommands(candidate.getRelatedAssertionsAndFunctions()));
+        return commands;
+    }
+
+    private List<Browsable> partiallyFixedPFAs(Candidate candidate) {
+        if (!partialRepairSupported)
+            throw new IllegalStateException("This method shouldn't be called when partial repairs are not supprted");
+        List<Browsable> partiallyFixedFPAs = new LinkedList<>();
+        for (int i = 1; i <= markedExpressions; i++) {
+            if (candidate.isIndexBlocked(i)) {
+                for (Map.Entry<Browsable, Pair<Integer, Integer>> indexesPFA : indexesPerFPAs.entrySet()) {
+                    Pair<Integer, Integer> indexes = indexesPFA.getValue();
+                    if (i >= indexes.a && i <= indexes.b && !partiallyFixedFPAs.contains(indexesPFA.getKey())) {
+                        partiallyFixedFPAs.add(indexesPFA.getKey());
+                    }
+                }
+            }
+        }
+        return partiallyFixedFPAs;
+    }
+
     public List<Expr> getModifiedAssertionsFunctionsAndFacts(Candidate candidate) {
         List<Expr> result = new LinkedList<>();
-        context.getAllAssertions().forEach(namedAssertion -> {
-            candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, namedAssertion.b)).forEach(b -> result.add((Expr)b));
-        });
-        context.getAllFacts().forEach(namedFact -> {
-            candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, namedFact.b)).forEach(b -> result.add((Expr)b));
-        });
-        context.getAllFunc().forEach(func -> {
-            candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, func)).forEach(b -> {
-                    Func f = (Func) b;
-                    result.add(f.getBody());
-            });
-        });
+        context.getAllAssertions().forEach(namedAssertion -> candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, namedAssertion.b)).forEach(b -> result.add((Expr)b)));
+        context.getAllFacts().forEach(namedFact -> candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, namedFact.b)).forEach(b -> result.add((Expr)b)));
+        context.getAllFunc().forEach(func -> candidate.getRelatedAssertionsAndFunctions().stream().filter(b -> Browsable.equals(b, func)).forEach(b -> {
+                Func f = (Func) b;
+                result.add(f.getBody());
+        }));
         return result;
     }
 
@@ -240,11 +387,6 @@ public class MutantLab {
     private boolean useDependencyGraphForChecking() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING);
         return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING.defaultValue());
-    }
-
-    private boolean isVariabilizationEnabled() {
-        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION);
-        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION.defaultValue());
     }
 
 }

@@ -7,15 +7,16 @@ import java.util.Optional;
 
 public class BlockingCollection<V> {
 
-    private List<V> internalCollection;
-    private INSERTION_POLICY insertionPolicy;
+    private final List<V> internalCollection;
+    private final List<V> priorityCollection;
+    private final INSERTION_POLICY insertionPolicy;
     public enum INSERTION_POLICY {
         FIFO, FILO
     }
     private static final INSERTION_POLICY DEFAULT_INSERTION_POLICY = INSERTION_POLICY.FIFO;
     private long timeout = 0;
-    private List<Object> decreaseAssociatedObjects;
-    private List<Object> increaseAssociatedObjects;
+    private final List<Object> decreaseAssociatedObjects;
+    private final List<Object> increaseAssociatedObjects;
 
     public BlockingCollection() {
         this(DEFAULT_INSERTION_POLICY, 0);
@@ -36,6 +37,7 @@ public class BlockingCollection<V> {
             throw new IllegalArgumentException("timeout can't be a negative value");
         this.insertionPolicy = insertionPolicy;
         internalCollection = new LinkedList<>();
+        priorityCollection = new LinkedList<>();
         this.timeout = timeout;
         decreaseAssociatedObjects = new LinkedList<>();
         increaseAssociatedObjects = new LinkedList<>();
@@ -74,6 +76,12 @@ public class BlockingCollection<V> {
                 break;
             }
         }
+        notifyAll();
+        notifyAllIncreaseAssociatedObjects();
+    }
+
+    public synchronized void priorityInsert(V value) {
+        priorityCollection.add(priorityCollection.size(), value);
         notifyAll();
         notifyAllIncreaseAssociatedObjects();
     }
@@ -120,6 +128,8 @@ public class BlockingCollection<V> {
         if (isEmpty()) {
             return Optional.empty();
         }
+        if (!priorityCollection.isEmpty())
+            return Optional.of(priorityCollection.get(0));
         return Optional.of(internalCollection.get(0));
     }
 
@@ -130,6 +140,8 @@ public class BlockingCollection<V> {
         Optional<V> res;
         if (isEmpty()) {
             res = Optional.empty();
+        } else if (!priorityCollection.isEmpty()) {
+            res = Optional.of(priorityCollection.remove(0));
         } else {
             res = Optional.of(internalCollection.remove(0));
         }
@@ -138,11 +150,11 @@ public class BlockingCollection<V> {
     }
 
     public synchronized boolean isEmpty() {
-        return internalCollection.isEmpty();
+        return internalCollection.isEmpty() && priorityCollection.isEmpty();
     }
 
     public synchronized int size() {
-        return internalCollection.size();
+        return internalCollection.size() + priorityCollection.size();
     }
 
 }

@@ -21,18 +21,20 @@ public class ASTMutator {
             throw new IllegalStateException("Already instantiated");
         instance = new ASTMutator(original);
     }
+
     public synchronized static void destroyInstance() {
         instance = null;
     }
+
     public synchronized static ASTMutator getInstance() {
         if (instance == null)
             throw new IllegalStateException("You need to execute startInstance first");
         return instance;
     }
 
-    private Stack<Mutation> unappliedMutations;
-    private Stack<Mutation> appliedMutations;
-    private CompModule ast;
+    private final Stack<Mutation> unappliedMutations;
+    private final Stack<Mutation> appliedMutations;
+    private final CompModule ast;
 
     private ASTMutator(CompModule original) {
         if (original == null)

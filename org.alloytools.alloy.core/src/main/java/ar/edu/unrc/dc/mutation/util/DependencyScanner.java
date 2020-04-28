@@ -32,6 +32,7 @@ public class DependencyScanner {
         module.getAllFacts().forEach(fact -> {
             dependencyGraph.addDependencies(fact.b, temporalGraph.getRelatedCommands(fact.b));
         });
+        temporalGraph.directCommands.forEach(dependencyGraph::addDirectDependencies);
         for (Command c : temporalGraph.commands) {
             dependencyGraph.setCommandComplexity(c, temporalGraph.commandComplexity.getOrDefault(c, 1));
         }
@@ -140,6 +141,7 @@ public class DependencyScanner {
         private Map<Command, Integer> commandComplexity;
         private List<Command> commands;
         private CompModule context;
+        private Map<Browsable, List<Command>> directCommands;
 
         public TemporalGraph(List<Command> commands, CompModule context) {
             funcDependencyGraph = new HashMap<>();
@@ -147,6 +149,7 @@ public class DependencyScanner {
             assertRelatedCommands = new HashMap<>();
             assertRelatedFunctions = new HashMap<>();
             commandComplexity = new HashMap<>();
+            directCommands = new HashMap<>();
             this.commands = commands;
             this.context = context;
         }
@@ -173,6 +176,7 @@ public class DependencyScanner {
             }
             if (!associatedCommands.contains(c))
                 associatedCommands.add(c);
+            addDirectedRelatedCommand(f, c);
         }
 
         public void addAssertDependency(Expr a, Func f) {
@@ -194,6 +198,19 @@ public class DependencyScanner {
             } else {
                 associatedCommands = new LinkedList<>();
                 assertRelatedCommands.put(a, associatedCommands);
+            }
+            if (!associatedCommands.contains(c))
+                associatedCommands.add(c);
+            addDirectedRelatedCommand(a, c);
+        }
+
+        private void addDirectedRelatedCommand(Browsable b, Command c) {
+            List<Command> associatedCommands;
+            if (directCommands.containsKey(b)) {
+                associatedCommands = directCommands.get(b);
+            } else {
+                associatedCommands = new LinkedList<>();
+                directCommands.put(b, associatedCommands);
             }
             if (!associatedCommands.contains(c))
                 associatedCommands.add(c);

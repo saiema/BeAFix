@@ -217,10 +217,13 @@ public class Variabilization {
             int idx = 1;
             for (Expr me : markedExpressions.get()) {
                 Boolean toReplace;
-                if (idx > from.getCurrentMarkedExpression())
+                if (from.isIndexBlocked(idx)) {
+                  toReplace = Boolean.FALSE;
+                } else if (idx > from.getCurrentMarkedExpression()) {
                     toReplace = Boolean.TRUE;
-                else
+                } else {
                     toReplace = Boolean.FALSE;
+                }
                 result.add(new Pair<>(me, toReplace));
                 idx++;
             }

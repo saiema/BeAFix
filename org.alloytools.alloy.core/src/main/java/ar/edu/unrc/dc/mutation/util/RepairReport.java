@@ -139,9 +139,18 @@ public class RepairReport {
         int[] avgMuts = mutationsPerIndex.get(index);
         if (avgMuts == null)
             throw new IllegalStateException("No average mutations information available for valid index (" + index + ")");
-        avgMuts[0]++;
         avgMuts[1] += mutations;
         totalMutations += mutations;
+
+    }
+
+    public void incGenerations(int index) {
+        if (index < 1 || index > markedExpressions)
+            throw new IllegalArgumentException("index must be between 1 and " + markedExpressions + " (" + index + ")");
+        int[] avgMuts = mutationsPerIndex.get(index);
+        if (avgMuts == null)
+            throw new IllegalStateException("No average mutations information available for valid index (" + index + ")");
+        avgMuts[0]++;
         generationCount++;
     }
 

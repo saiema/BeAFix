@@ -31,7 +31,7 @@ public class MutantsHashes {
         }
     }
 
-    private Set<byte[]> hashes;
+    private final Set<byte[]> hashes;
 
     public MutantsHashes() {
         hashes = new TreeSet<>((left, right) -> {
@@ -61,7 +61,7 @@ public class MutantsHashes {
             c.clearMutatedStatus();
         }
         String stringToHash = sb.toString();
-        MessageDigest messageDigest = null;
+        MessageDigest messageDigest;
         try {
             messageDigest = MessageDigest.getInstance("MD5");
             messageDigest.update(stringToHash.getBytes());

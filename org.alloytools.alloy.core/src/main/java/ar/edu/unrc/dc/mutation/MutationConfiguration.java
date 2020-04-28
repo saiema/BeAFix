@@ -249,6 +249,20 @@ public class MutationConfiguration {
                 return Boolean.FALSE;
             }
 
+        },
+
+        REPAIR_PARTIAL_REPAIR {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
         }
 
         ;
