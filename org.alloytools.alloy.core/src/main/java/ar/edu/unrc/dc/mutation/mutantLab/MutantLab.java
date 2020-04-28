@@ -47,8 +47,14 @@ public class MutantLab {
 
     public synchronized static MutantLab getInstance() {
         if (instance == null)
-            throw new IllegalStateException("MutantLab is not yet initialized");
+            throw new IllegalStateException("MutantLab is not initialized");
         return instance;
+    }
+
+    public synchronized static void destroyInstance() {
+        if (instance == null)
+            throw new IllegalStateException("MutantLab is not initialized");
+        instance = null;
     }
 
     private final CompModule context;
@@ -260,6 +266,11 @@ public class MutantLab {
             }
         }
         return blockedIndexes > 0 && blockedIndexes < markedExpressions;
+    }
+
+    public void timeout() {
+        logger.info("Timeout reached (some candidates may still be analyzed)");
+        output.insert(Candidate.TIMEOUT);
     }
 
     public void stopSearch() {

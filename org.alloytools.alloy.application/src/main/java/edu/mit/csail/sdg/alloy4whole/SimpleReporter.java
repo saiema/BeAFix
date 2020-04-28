@@ -808,7 +808,10 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
             MutationConfiguration.getInstance().loadSystemProperties();
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, A4Preferences.AStrykerVariabilization.get()); //update the variabilization Repair option
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, Boolean.TRUE);
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, A4Preferences.AStrykerPartialRepair.get());
+            int timeoutInMinutes = A4Preferences.AStrykerRepairTimeout.get();
+            long timeout = (timeoutInMinutes * 60) * 1000;
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
             logger.info(MutationConfiguration.getInstance().toString());
         }
 
@@ -848,6 +851,12 @@ final class SimpleReporter extends A4Reporter {
             RepairReport.getInstance().clockStart();
             //======================== mutants test cycle ===========
             int count =1;
+            boolean repairFound = false;
+            boolean timeoutReached = false;
+            Timer timeoutTimer = new Timer("AStrykerRepairTimeoutTimer");
+            if (repairTimeout() > 0) {
+                timeoutTimer.schedule(new RepairTimeOut(), repairTimeout());
+            }
             while (mutantLab.advance()) {
                 cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + world.getAllCommands().size() + " commands...\n");
                 count++;
@@ -861,6 +870,15 @@ final class SimpleReporter extends A4Reporter {
                     logger.info("Received STOP signal.. stopping search");
                     break;
                 }
+                if (current.get() == Candidate.CANT_REPAIR) {
+                    logger.info("Variabilization deemed this specification as non repairable... stopping search");
+                    break;
+                }
+                if (current.get() == Candidate.TIMEOUT) {
+                    timeoutReached = true;
+                    logger.info("Timeout signal received... stopping search");
+                    break;
+                }
                 current.get().clearMutatedStatus();
                 RepairReport.getInstance().incExaminedCandidates();
                 for (Triplet<String, String, String> em : current.get().getCurrentMutationsInfo()) {
@@ -869,8 +887,6 @@ final class SimpleReporter extends A4Reporter {
                 logger.info("Validating mutant");
                 logger.info(current.get().toString());
                 // check all commands
-                boolean discarded = false;
-                boolean repaired = true;
                 MutantLab.getInstance().lockCandidateGeneration();
                 Browsable.freezeParents();
                 EvaluationResults results;
@@ -891,6 +907,7 @@ final class SimpleReporter extends A4Reporter {
                     current.get().clearMutatedStatus();
                     mutantLab.reportCurrentAsInvalid();
                 } else if (results.isRepaired()) {
+                    repairFound = true;
                     cb(out, "RepairResults", Collections.singletonList("R"));
                     current.get().clearMutatedStatus();
                     RepairReport.getInstance().setRepair(current.get());
@@ -910,12 +927,22 @@ final class SimpleReporter extends A4Reporter {
                 Browsable.unfreezeParents();
                 MutantLab.getInstance().unlockCandidateGeneration();
             }
+            if (!repairFound) {
+                cb(out, "RepairTittle", "Model couldn't be repaired\n");
+                if (timeoutReached)
+                    cb(out, "RepairSubTittle", "Timeout reached\n");
+            } else {
+                cb(out, "RepairTittle", "Model repaired\n");
+            }
+            timeoutTimer.cancel();
             RepairReport.getInstance().clockEnd();
             logger.info(RepairReport.getInstance().toString());
             mutantLab.stopSearch();
             ASTMutator.destroyInstance();
             DependencyGraph.destroyInstance();
             Variabilization.destroyInstance();
+            MutantLab.destroyInstance();
+            RepairReport.destroyInstance();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
         }
@@ -1062,6 +1089,11 @@ final class SimpleReporter extends A4Reporter {
             Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR);
             boolean repairConfigValue = configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR.defaultValue());
             return repairConfigValue && MutantLab.getInstance().isPartialRepairSupported();
+        }
+
+        private long repairTimeout() {
+            Optional<Object> timeoutConfigValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_TIMEOUT);
+            return timeoutConfigValue.map(o -> (Long) o).orElse((Long) ConfigKey.REPAIR_TIMEOUT.defaultValue());
         }
 
     }

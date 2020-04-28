@@ -143,8 +143,8 @@ public class MutationTask implements Runnable {
         } else {
             logger.info("variabilization check FAILED");
             if (from.isFirst()) {
-                logger.info("current candidate had index 0, sending stop signal");
-                outputChannel.insert(Candidate.STOP);
+                logger.info("current candidate had index 0, sending CANT REPAIR signal");
+                outputChannel.insert(Candidate.CANT_REPAIR);
                 return;
             }
         }

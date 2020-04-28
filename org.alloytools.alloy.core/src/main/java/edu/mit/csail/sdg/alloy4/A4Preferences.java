@@ -1,6 +1,5 @@
 package edu.mit.csail.sdg.alloy4;
 
-import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import edu.mit.csail.sdg.translator.A4Options.SatSolver;
 
 import javax.swing.*;
@@ -671,7 +670,8 @@ public class A4Preferences {
 
     /** Set Variabilization for the repair process */
     public static final BooleanPref AStrykerVariabilization = new BooleanPref("AStrykerVariabilization", "AStryker | Use Variabilization");
-
+    public static final BooleanPref AStrykerPartialRepair = new BooleanPref("AStrykerPartialRepair", "AStryker | Use Partial Repair");
+    public static final IntChoicePref AStrykerRepairTimeout = new IntChoicePref("AStrykerRepairTimeout",Arrays.asList(0, 5, 10, 30, 60, 120, 180, 240, 360, 480, 720, 1440, 2880), 0);
     //==================================================================
 
     public enum Verbosity {
@@ -747,27 +747,5 @@ public class A4Preferences {
             ans.remove(p);
         return ans;
     }
-
-
-    //@Mutants
-    public static MutationConfiguration mutationConfiguration = MutationConfiguration.getInstance();
-//    public static final BooleanPref                  OPERATOR_BES_STRICT_TYPE_CHECK   = new BooleanPref("OPERATOR_BES_STRICT_TYPE_CHECK", "OPERATOR_BES_STRICT_TYPE_CHECK"){
-//        @Override
-//        public void toggle() {
-//              mutationConfiguration.setConfig(OPERATOR_BES_STRICT_TYPE_CHECK ); set(!get());
-//        }
- //   };
-
-
-
-    // /** The visualization algorithm */
-    // public static final StringChoicePref VisualizationAlgorithm = new
-    // StringChoicePref("VizAlg", "Visualization algorightm",
-    // Arrays.asList("Sugiyama", "Circle", "Grid"), "Sugiyama");
-    //
-    // public static final IntPref GridLayoutRows = new
-    // IntPref("GridLayoutRows", 1, 5, 100);
-    // public static final IntPref GridLayoutCols = new
-    // IntPref("GridLayoutCols", 1, 5, 100);
 
 }

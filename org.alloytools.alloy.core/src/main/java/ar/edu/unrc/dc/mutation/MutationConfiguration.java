@@ -263,6 +263,20 @@ public class MutationConfiguration {
                 return Boolean.FALSE;
             }
 
+        },
+
+        REPAIR_TIMEOUT {
+
+            @Override
+            public Class<?> getValueType() {
+                return Long.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return 0L;
+            }
+
         }
 
         ;

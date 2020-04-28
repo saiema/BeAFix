@@ -19,7 +19,13 @@ public class RepairReport {
         return instance;
     }
 
-    private int mutationDepth;
+    public synchronized static void destroyInstance() {
+        if (instance == null)
+            throw new IllegalStateException("RepairReport not initialized");
+        instance = null;
+    }
+
+    private final int mutationDepth;
 
     private int examinedCandidates;
     private int generatedCandidates;
