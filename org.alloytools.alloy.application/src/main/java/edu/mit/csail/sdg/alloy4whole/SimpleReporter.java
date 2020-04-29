@@ -848,7 +848,6 @@ final class SimpleReporter extends A4Reporter {
             RepairReport.getInstance().setCommands(DependencyGraph.getInstance().getAllCommands().size());
             RepairReport.getInstance().setVariabilizationRelatedCommands((int) DependencyGraph.getInstance().getAllCommands().stream().filter(Command::isVariabilizationTest).count());
             RepairReport.getInstance().setMarkedExpressions(MutantLab.getInstance().getMarkedExpressions());
-            RepairReport.getInstance().clockStart();
             //======================== mutants test cycle ===========
             int count =1;
             boolean repairFound = false;
@@ -857,6 +856,7 @@ final class SimpleReporter extends A4Reporter {
             if (repairTimeout() > 0) {
                 timeoutTimer.schedule(new RepairTimeOut(), repairTimeout());
             }
+            RepairReport.getInstance().clockStart();
             while (mutantLab.advance()) {
                 cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + world.getAllCommands().size() + " commands...\n");
                 count++;
@@ -936,6 +936,7 @@ final class SimpleReporter extends A4Reporter {
             }
             timeoutTimer.cancel();
             RepairReport.getInstance().clockEnd();
+            cb(out, "RepairSubTittle", "Repair time: " + RepairReport.getInstance().getTime() + "ms\n");
             logger.info(RepairReport.getInstance().toString());
             mutantLab.stopSearch();
             ASTMutator.destroyInstance();

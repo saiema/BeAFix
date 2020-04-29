@@ -46,11 +46,13 @@ public class RepairReport {
     private int totalMutations;
     private int generationCount;
     private int averageMutations;
+    private boolean repairEnded;
 
     private Candidate repair;
-    private List<String> initialMarkedExpressions;
+    private final List<String> initialMarkedExpressions;
 
     private RepairReport() {
+        repairEnded = false;
         examinedCandidates = 0;
         generatedCandidates = 0;
         invalidCandidates = 0;
@@ -204,7 +206,14 @@ public class RepairReport {
     }
 
     public void clockEnd() {
+        repairEnded = true;
         this.time=System.currentTimeMillis()-this.time;
+    }
+
+    public long getTime() {
+        if (!repairEnded)
+            throw new IllegalStateException("Repair process has not ended");
+        return time;
     }
 
     private String repairRepresentation = null;
