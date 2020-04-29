@@ -36,16 +36,16 @@ public class AStryker {
         }
     }
 
-    private List<Command> commands;
-    private String sourcefile;
-    private String source;
-    private boolean initSuccessfull;
+    private final List<Command> commands;
+    private final String sourcefile;
+    private final String source;
+    private boolean initSuccessful;
 
     public AStryker(List<Command> commands, String sourcefile, String source) {
         this.commands = commands;
         this.sourcefile = sourcefile;
         this.source = source;
-        initSuccessfull = false;
+        initSuccessful = false;
     }
 
     public void init() {
@@ -67,14 +67,14 @@ public class AStryker {
         } catch (Throwable ex) {
             ex.printStackTrace();
         }
-        initSuccessfull = true;
+        initSuccessful = true;
     }
 
     /**
      * This method executes a reparation on a marked source.
      */
     public void doRepair() {
-        if (!initSuccessfull) {
+        if (!initSuccessful) {
             logger.severe("Either the initialization was not made or it was not successful");
             return;
         }
@@ -89,6 +89,7 @@ public class AStryker {
             return;
         }
         SimpleCallback cb = new SimpleCallback(logger);
+        cb.setRepairing(true);
         SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
         A4Options opt = new A4Options();
         opt.tempDirectory = alloyHome() + fs + "tmp";
@@ -173,32 +174,6 @@ public class AStryker {
     }
 
     /**
-     * Return the number of bytes used by the Temporary Directory (or return -1 if
-     * the answer exceeds "long")
-     */
-    private static long computeTemporarySpaceUsed() {
-        long ans = iterateTemp(null, false);
-        if (ans < 0)
-            return -1;
-        else
-            return ans;
-    }
-
-    /** Delete every file in the Temporary Directory. */
-    private static void clearTemporarySpace() {
-        iterateTemp(null, true);
-        // Also clear the temp dir from previous versions of Alloy4
-        String temp = System.getProperty("java.io.tmpdir");
-        if (temp == null || temp.length() == 0)
-            return;
-        String username = System.getProperty("user.name");
-        if (username == null)
-            username = "";
-        for (int i = 1; i < 40; i++)
-            iterateTemp(temp + File.separatorChar + "alloy4tmp" + i + "-" + username, true);
-    }
-
-    /**
      * Helper method for performing either computeTemporarySpaceUsed() or
      * clearTemporarySpace()
      */
@@ -262,8 +237,12 @@ public class AStryker {
 
     public static final class SimpleCallback implements WorkerEngine.WorkerCallback {
 
-        private Logger logger;
+        private final Logger logger;
         private final Set<ErrorWarning> warnings = new HashSet<>();
+        private boolean repairing = false;
+        public void setRepairing(boolean v) {
+            repairing = v;
+        }
 
         public SimpleCallback(Logger logger) {
             this.logger = logger;
@@ -294,7 +273,6 @@ public class AStryker {
             if (msg instanceof Err) {
                 Err ex = (Err) msg;
                 String text;
-                boolean fatal = false;
                 if (ex instanceof ErrorSyntax)
                     text = "syntax";
                 else if (ex instanceof ErrorType)
@@ -322,6 +300,45 @@ public class AStryker {
             if (!(msg instanceof Object[]))
                 return;
             Object[] array = (Object[]) msg;
+            if (repairing) {
+                StringBuilder sb = new StringBuilder();
+                if (array[0].equals("RepairTittle")) {
+                    sb.append("#########\n");
+                    sb.append(array[1]);
+                    sb.append("#########\n");
+                } else if (array[0].equals("RepairSubTittle")) {
+                    sb.append("*********\n");
+                    sb.append(array[1]);
+                    sb.append("*********\n");
+                } else if (array[0].equals("RepairExprOrig->Mut")) {
+                    sb.append(array[1]).append("\n");
+                    sb.append("|<\t");
+                    sb.append(array[2]).append("\n");
+                    sb.append("|>\t");
+                    sb.append(array[3]).append("\n");
+                } else if (array[0].equals("RepairResults")) {
+                    sb.append("Evaluation result: ");
+                    List<String> l = (List<String>) array[1];
+                    int i=1;
+                    for (String r:l){
+                        switch (r){
+                            case "E": sb.append("Invalid candidate");break;
+                            case "V":
+                            case "R": sb.append("Repair");break;
+                            case "F":
+                            case "X": sb.append("Not a repair");break;
+                            case "PR": sb.append("Partial Repair");break;
+                            default:break;
+                        }
+                        if (i<l.size()) sb.append(",");
+                        i++;
+                    }
+                    sb.append("\n\n");
+                }
+                if (!sb.toString().trim().isEmpty())
+                    logger.info(sb.toString());
+                return;
+            }
             if (!array[0].equals("warnings")) {
                 logger.info(Arrays.toString(array));
                 return;
@@ -347,15 +364,14 @@ public class AStryker {
                 if (!warnings.add(e))
                     return;
                 Pos p = e.pos;
-                StringBuilder sb = new StringBuilder();
-                sb.append("Warning #").append(warnings.size()).append(" at ");
-                sb.append(p.x).append(" ");
-                sb.append(p.y).append(" ");
-                sb.append(p.x2).append(" ");
-                sb.append(p.y2).append(" ");
-                sb.append(p.filename).append("\n");
-                sb.append(e.msg.trim());
-                logger.warning(sb.toString());
+                String sb = "Warning #" + warnings.size() + " at " +
+                        p.x + " " +
+                        p.y + " " +
+                        p.x2 + " " +
+                        p.y2 + " " +
+                        p.filename + "\n" +
+                        e.msg.trim();
+                logger.warning(sb);
                 return;
             }
             if (array[0].equals("sat")) {
