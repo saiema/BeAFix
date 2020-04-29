@@ -1404,6 +1404,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerVariabilization);
                 addToMenu(optmenu, AStrykerPartialRepair);
                 addToMenu(optmenu, AStrykerRepairTimeout);
+                addToMenu(optmenu, AStrykerRepairDepth);
                // addToMenu(optmenu,OPERATOR_BES_STRICT_TYPE_CHECK);
 
 

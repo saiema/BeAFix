@@ -803,12 +803,12 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.FALSE);                     //+
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR, Boolean.TRUE);     //+
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, 2);                                 //+
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
             MutationConfiguration.getInstance().loadSystemProperties();
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, A4Preferences.AStrykerVariabilization.get()); //update the variabilization Repair option
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, A4Preferences.AStrykerPartialRepair.get());
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, A4Preferences.AStrykerRepairDepth.get());
             int timeoutInMinutes = A4Preferences.AStrykerRepairTimeout.get();
             long timeout = (timeoutInMinutes * 60) * 1000;
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
