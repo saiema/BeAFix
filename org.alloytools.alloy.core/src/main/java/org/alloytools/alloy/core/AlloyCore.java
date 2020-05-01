@@ -13,7 +13,7 @@ public class AlloyCore {
         void run() throws Exception;
     }
 
-    final static boolean debug;
+    public static boolean debug;
     static {
         debug = "yes".equalsIgnoreCase(System.getProperty("debug")) || "true".equalsIgnoreCase(System.getProperty("debug"));
     }

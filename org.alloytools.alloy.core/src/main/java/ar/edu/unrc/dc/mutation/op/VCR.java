@@ -33,6 +33,20 @@ public class VCR extends Mutator {
         return generateMutations(x);
     }
 
+    @Override
+    public Optional<List<Mutation>> visit(Sig x) throws Err {
+        if (parentIsBinaryJoinExpression(x))
+            return Optional.empty();
+        return generateMutations(x);
+    }
+
+    @Override
+    public Optional<List<Mutation>> visit(Sig.Field x) throws Err {
+        if (parentIsBinaryJoinExpression(x))
+            return Optional.empty();
+        return generateMutations(x);
+    }
+
     private Optional<List<Mutation>> generateMutations(Expr x) throws Err {
         if (!mutGenLimitCheck(x))
             return Optional.empty();

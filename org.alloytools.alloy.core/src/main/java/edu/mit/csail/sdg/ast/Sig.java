@@ -774,9 +774,10 @@ public abstract class Sig extends Expr implements Clause {
             return decl;
         }
 
+        protected static boolean doNotMergeBoundWithSig = false;
         /** Constructs a new Field object. */
         private Field(Pos pos, Pos isPrivate, Pos isMeta, Pos disjoint, Pos disjoint2, Sig sig, String label, Expr bound) throws Err {
-            super(pos, label, sig.type.product(bound.type));
+            super(pos, label, doNotMergeBoundWithSig?bound.type:sig.type.product(bound.type));
             this.defined = bound.mult() == ExprUnary.Op.EXACTLYOF;
             if (sig.builtin)
                 throw new ErrorSyntax(pos, "Builtin sig \"" + sig + "\" cannot have fields.");
@@ -877,7 +878,9 @@ public abstract class Sig extends Expr implements Clause {
         public Object clone() {
             Sig sigClone = (Sig) this.sig.clone();
             Expr boundClone = (Expr) (this.decl != null ? this.decl.expr.clone() : this.type.toExpr());
+            Field.doNotMergeBoundWithSig = true;
             Field clone = new Field(this.pos, this.isPrivate, this.isMeta, null, null, sigClone, this.label, boundClone);
+            Field.doNotMergeBoundWithSig = false;
             clone.setID(getID());
             clone.setIDEnv(getIDEnv());
             clone.FIELD_ID = FIELD_ID;

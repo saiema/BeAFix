@@ -6,6 +6,7 @@ import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.parser.CompUtil;
+import org.alloytools.alloy.core.AlloyCore;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +20,7 @@ public class AStrykerCLI {
 
 
     public static void main(String[] args) throws IOException {
+        AlloyCore.debug = false;
         if (args.length == 0) throw new IllegalArgumentException("At least one argument (the module to repair) is required");
         String sourcefile = args[0];
         if (args.length > 1)
@@ -80,7 +82,7 @@ public class AStrykerCLI {
             case PARTIALREPAIR : {
                 Optional<Boolean> varValue = parseBooleanValue(value);
                 if (varValue.isPresent()) {
-                    if (value.equals(VARIABILIZATION))
+                    if (key.equals(VARIABILIZATION))
                         varValue.ifPresent(A4Preferences.AStrykerVariabilization::set);
                     else
                         varValue.ifPresent(A4Preferences.AStrykerPartialRepair::set);

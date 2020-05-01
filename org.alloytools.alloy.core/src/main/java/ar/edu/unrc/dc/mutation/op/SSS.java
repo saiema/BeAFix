@@ -74,6 +74,16 @@ public class SSS extends Mutator {
         return generateMutationsFor(x);
     }
 
+    @Override
+    public Optional<List<Mutation>> visit(Sig x) throws Err {
+        return generateMutationsFor(x);
+    }
+
+    @Override
+    public Optional<List<Mutation>> visit(Sig.Field x) throws Err {
+        return generateMutationsFor(x);
+    }
+
     private Optional<List<Mutation>> generateMutationsFor(Expr x) throws Err {
         if (!mutGenLimitCheck(x))
             return Optional.empty();
