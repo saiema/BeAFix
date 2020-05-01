@@ -418,7 +418,7 @@ public final class TypeChecking {
         return false;
     }
 
-    private static Optional<Expr> getContext(Expr target) {
+    static Optional<Expr> getContext(Expr target) {
         if (isMinor(target)) {
             return Optional.of((Expr)target.getBrowsableParent());
         }

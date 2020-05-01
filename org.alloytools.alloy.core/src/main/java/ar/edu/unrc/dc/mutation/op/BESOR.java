@@ -19,7 +19,6 @@ import static ar.edu.unrc.dc.mutation.util.TypeChecking.emptyOrNone;
  * <li>union(+)</li>
  * <li>diff<(-)/li>
  * <li>intersection (&)</li>
- * <li>membership(in)</li>
  * <li>overriding(++)</li>
  *
  */
@@ -53,8 +52,6 @@ public class BESOR extends BinOpReplacer {
                 return !emptyOrNone(left.unionWithCommonArity(right));
             case MINUS:
                 return !emptyOrNone(left.pickCommonArity(right));
-            case IN:
-                return left.hasCommonArity(right);
             default: throw new IllegalArgumentException("The new operator is not a supported one by this mutator");
         }
     }

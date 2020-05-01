@@ -20,7 +20,7 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     protected static final List<Op>                 CONDITIONAL_OPS       = Arrays.asList(Op.AND, Op.OR, Op.IMPLIES, Op.IFF);
     protected static final List<Op>                 ARITHMETIC_BINARY_OPS = Arrays.asList(Op.DIV, Op.MUL, Op.REM, Op.IPLUS, Op.IMINUS);
     protected static final List<ExprUnary.Op>       RELATIONAL_UNARY_OPS  = Arrays.asList(ExprUnary.Op.CLOSURE, ExprUnary.Op.RCLOSURE, ExprUnary.Op.TRANSPOSE);
-    protected static final List<Op>                 SET_OPERATORS         = Arrays.asList(Op.JOIN, Op.PLUS, Op.MINUS, Op.INTERSECT, Op.IN, Op.PLUSPLUS);
+    protected static final List<Op>                 SET_OPERATORS         = Arrays.asList(Op.JOIN, Op.PLUS, Op.MINUS, Op.INTERSECT, Op.PLUSPLUS);
     protected static final List<ExprUnary.Op>       MULTIPLICITY_OPERATORS = Arrays.asList(ExprUnary.Op.NO, ExprUnary.Op.SOME, ExprUnary.Op.LONE, ExprUnary.Op.ONE);
     //Comprehension is not yet considered
     protected static final List<ExprQt.Op>          QUANTIFIER_OPERATORS  = Arrays.asList(ExprQt.Op.ALL, ExprQt.Op.LONE, ExprQt.Op.NO, ExprQt.Op.ONE, ExprQt.Op.SOME);
@@ -83,26 +83,26 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
 
     //UTILITIES
 
-    protected final boolean isRelationalExpression(Expr e) {
+    public static boolean isRelationalExpression(Expr e) {
         if (!(e instanceof ExprBinary))
             return false;
         return RELATIONAL_OPS.contains(((ExprBinary) e).op);
     }
 
-    protected final boolean isConditionalExpression(Expr e) {
+    public static boolean isConditionalExpression(Expr e) {
         if (!(e instanceof ExprBinary))
             return false;
         return CONDITIONAL_OPS.contains(((ExprBinary) e).op);
     }
 
     //for the moment only binary expressions are considered
-    protected final boolean isArithmeticBinaryExpression(Expr e) {
+    public static boolean isArithmeticBinaryExpression(Expr e) {
         if (!(e instanceof ExprBinary))
             return false;
         return ARITHMETIC_BINARY_OPS.contains(((ExprBinary) e).op);
     }
 
-    protected final boolean isArithmeticUnaryExpression(Expr x) {
+    public static boolean isArithmeticUnaryExpression(Expr x) {
         if (!(x instanceof ExprUnary))
             return false;
         ExprUnary xAsUnary = (ExprUnary) x;
@@ -116,19 +116,19 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         }
     }
 
-    protected final boolean isUnaryRelationalExpression(Expr e) {
+    public static boolean isUnaryRelationalExpression(Expr e) {
         if (!(e instanceof ExprUnary))
             return false;
         return RELATIONAL_UNARY_OPS.contains(((ExprUnary) e).op);
     }
 
-    protected final boolean isSetBinaryExpression(Expr e) {
+    public static boolean isSetBinaryExpression(Expr e) {
         if (!(e instanceof ExprBinary))
             return false;
         return SET_OPERATORS.contains(((ExprBinary) e).op);
     }
 
-    protected final boolean isMultiplicityExpression(Expr e) {
+    public static boolean isMultiplicityExpression(Expr e) {
         if (!(e instanceof ExprUnary))
             return false;
         return MULTIPLICITY_OPERATORS.contains(((ExprUnary) e).op);

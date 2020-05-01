@@ -30,6 +30,7 @@ public class RepairReport {
     private int examinedCandidates;
     private int generatedCandidates;
     private int invalidCandidates;
+    private int irrelevantMutationsSkipped;
     private int variabilizationChecks;
     private int variabilizationChecksPassed;
     private int variabilizationChecksFailed;
@@ -56,6 +57,7 @@ public class RepairReport {
         examinedCandidates = 0;
         generatedCandidates = 0;
         invalidCandidates = 0;
+        irrelevantMutationsSkipped = 0;
         variabilizationChecks = 0;
         variabilizationChecksPassed = 0;
         variabilizationChecksFailed = 0;
@@ -80,6 +82,8 @@ public class RepairReport {
     public void incInvalidCandidates() {
         invalidCandidates++;
     }
+
+    public void incIrrelevantMutationsSkipped() { irrelevantMutationsSkipped++; }
 
     public void incVariabilizationChecks() {
         variabilizationChecks++;
@@ -278,6 +282,7 @@ public class RepairReport {
         sb.append("Examined:").append("\t").append(examinedCandidates).append("\n");
         sb.append("Generated:").append("\t").append(generatedCandidates).append("\n");
         sb.append("Invalid:").append("\t").append(invalidCandidates).append("\n");
+        sb.append("Irrelevant mutations skipped:").append("\t").append(irrelevantMutationsSkipped).append("\n");
         sb.append("Average mutations per generation:").append("\t").append(averageMutations).append("\n");
         sb.append("Average mutations per generation, per marked expression:").append("\t").append(Arrays.toString(averageMutationsPerIndex)).append("\n");
         sb.append("\n");

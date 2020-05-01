@@ -437,6 +437,10 @@ public class Candidate {
         return mutations;
     }
 
+    public Optional<Mutation> getLastMutation() {
+        return Optional.ofNullable(mutation);
+    }
+
     public void copyMutationsFrom(Candidate from) {
         System.arraycopy(from.mutationsPerIndex, 0, mutationsPerIndex ,0, markedExpressions);
     }

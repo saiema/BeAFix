@@ -14,7 +14,6 @@ import java.util.Optional;
 /**
  * Quantifier Operator Replacer
  * <p>
- * ExprQt.Op.ALL, ExprQt.Op.LONE, ExprQt.Op.NO, ExprQt.Op.ONE, ExprQt.Op.SOME
  * Replaces the operator in a quantifier expression, these operators are
  * <li>all</li>
  * <li>lone</li>

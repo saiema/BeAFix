@@ -29,10 +29,10 @@ import java.util.Optional;
  */
 public class Mutation {
 
-    private Ops                operator;
-    private Expr               original;
-    private Expr               mutant;
-    private Optional<Mutation> parent = Optional.empty();
+    private final Ops                operator;
+    private final Expr               original;
+    private final Expr               mutant;
+    private Mutation parent = null;
 
     public Mutation(Ops operator, Expr original, Expr mutant) {
         this.operator = operator;
@@ -68,7 +68,7 @@ public class Mutation {
     }
 
     public Optional<Mutation> parent() {
-        return this.parent;
+        return parent != null?Optional.of(parent):Optional.empty();
     }
 
     public Expr getMayorAffectedExpression() {
@@ -78,13 +78,13 @@ public class Mutation {
     protected void setParent(Mutation parent) {
         if (parent == null)
             throw new IllegalArgumentException("Can't add a null parent");
-        this.parent = Optional.of(parent);
+        this.parent = parent;
     }
 
     @Override
     protected Object clone() {
         Mutation clonedMutation = new Mutation(operator, original, mutant);
-        parent.ifPresent(mutation -> clonedMutation.setParent((Mutation) mutation.clone()));
+        parent().ifPresent(mutation -> clonedMutation.setParent((Mutation) mutation.clone()));
         return clonedMutation;
     }
 
@@ -105,7 +105,7 @@ public class Mutation {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        parent.ifPresent(mutation -> sb.append("FROM ").append(mutation.toString()).append("\n\t"));
+        parent().ifPresent(mutation -> sb.append("FROM ").append(mutation.toString()).append("\n\t"));
         sb.append("(");
         sb.append(operator.toString());
         sb.append(", ");
@@ -153,8 +153,15 @@ public class Mutation {
     }
 
     private boolean useFullToString() {
+        if (overrideFullToString)
+            return true;
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.MUTATION_TOSTRING_FULL);
         return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.MUTATION_TOSTRING_FULL.defaultValue());
+    }
+
+    private static boolean overrideFullToString = false;
+    public static void overrideFullToString(boolean v) {
+        overrideFullToString = v;
     }
 
 }

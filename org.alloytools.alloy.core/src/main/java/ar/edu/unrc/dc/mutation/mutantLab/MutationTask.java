@@ -4,6 +4,7 @@ import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.IrrelevantMutationChecker;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.parser.CompModule;
 
@@ -37,14 +38,14 @@ public class MutationTask implements Runnable {
         }
     }
 
-    private BlockingCollection<Candidate> outputChannel;
-    private BlockingCollection<Candidate> inputChannel;
-    private SortedSet<Ops> ops;
+    private final BlockingCollection<Candidate> outputChannel;
+    private final BlockingCollection<Candidate> inputChannel;
+    private final SortedSet<Ops> ops;
     private final int outputMinThreshold;
     private final static int DEFAULT_OUTPUT_MIN_THRESHOLD = 3;
     private final Object thresholdLock = new Object();
-    private MutantsHashes mutantsHashes;
-    private Lock lock = new ReentrantLock();
+    private final MutantsHashes mutantsHashes;
+    private final Lock lock = new ReentrantLock();
     public Lock getLock() {
         return lock;
     }
@@ -183,16 +184,28 @@ public class MutationTask implements Runnable {
                 newCandidate.increaseMutations(newCandidate.getCurrentMarkedExpression());
                 RepairReport.getInstance().incGeneratedCandidates();
                 if (mutantsHashes.add(newCandidate)) {
-                    newCandidate.clearMutatedStatus();
-                    RepairReport.getInstance().addMutations(1, from.getCurrentMarkedExpression());
-                    if (from.isPartialRepair()) {
-                        newCandidate.markAsPartialRepair();
-                        for (int i = 1; i <= MutantLab.getInstance().getMarkedExpressions(); i++) {
-                            if (from.isIndexBlocked(i))
-                                newCandidate.blockIndex(i);
+                    Optional<Mutation> lastMutation = newCandidate.getLastMutation();
+                    if (lastMutation.isPresent()) {
+                        if (IrrelevantMutationChecker.isIrrelevant(lastMutation.get())) {
+                            Mutation.overrideFullToString(true);
+                            logger.info("Irrelevant mutation detected: " + lastMutation.get().toString());
+                            Mutation.overrideFullToString(false);
+                            RepairReport.getInstance().incIrrelevantMutationsSkipped();
+                        } else {
+                            newCandidate.clearMutatedStatus();
+                            RepairReport.getInstance().addMutations(1, from.getCurrentMarkedExpression());
+                            if (from.isPartialRepair()) {
+                                newCandidate.markAsPartialRepair();
+                                for (int i = 1; i <= MutantLab.getInstance().getMarkedExpressions(); i++) {
+                                    if (from.isIndexBlocked(i))
+                                        newCandidate.blockIndex(i);
+                                }
+                            }
+                            newCandidates.add(newCandidate);
                         }
+                    } else {
+                        throw new IllegalStateException("A new candidate was created with no mutations " + newCandidate.toString());
                     }
-                    newCandidates.add(newCandidate);
                 }
             }));
         }
