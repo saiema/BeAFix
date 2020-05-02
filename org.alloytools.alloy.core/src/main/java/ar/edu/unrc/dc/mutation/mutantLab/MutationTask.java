@@ -81,7 +81,7 @@ public class MutationTask implements Runnable {
                     lock.lock();
                     if (run) {
                         current.ifPresent(this::checkAndGenerateNewCandidates);
-                        if (mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
+                        if (run && mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
                             outputChannel.insert(Candidate.STOP);
                             MutantLab.getInstance().stopSearch();
                         }
@@ -98,7 +98,7 @@ public class MutationTask implements Runnable {
         }
     }
 
-    public void stop() {
+    public synchronized void stop() {
         run = false;
         synchronized (thresholdLock) {
             thresholdLock.notify();

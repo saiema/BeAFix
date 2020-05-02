@@ -46,8 +46,8 @@ public class Variabilization {
         instance = null;
     }
 
-    private A4Reporter reporter;
-    private A4Options options;
+    private final A4Reporter reporter;
+    private final A4Options options;
 
     private Variabilization(A4Reporter reporter, A4Options options) {
         if (options == null)
@@ -81,12 +81,13 @@ public class Variabilization {
                 Candidate variabilizationCandidate = generateCandidateForVariabilization(from.getContext(), variabilizationMutations);
                 logger.info("Reporter available: " + (reporter != null));
                 logger.info("variabilization candidate:\n" + variabilizationCandidate.toString());
+                logger.info("Magic signature:\n" + magicSig.toExtendedString());
                 try {
                     Cheats.addSigToModule(context, magicSig);
                 } catch (CheatingIsBadMkay e) {
                     throw new Error("There was a problem while adding the magic signature to the module", e);
                 }
-                solverResult = runSolver(from.getContext(), commands, variabilizationCandidate);
+                solverResult = runSolver(from.getContext(), commands, variabilizationCandidate, logger);
                 logger.info("solver returned: " + solverResult + "\n");
                 if (solverResult)
                     RepairReport.getInstance().incVariabilizationChecksPassed();
@@ -120,8 +121,9 @@ public class Variabilization {
         }
     }
 
-    private boolean runSolver(CompModule module, List<Command> commands, Candidate variabilizationCandidate) {
+    private boolean runSolver(CompModule module, List<Command> commands, Candidate variabilizationCandidate, Logger logger) {
         boolean repaired = true;
+        int commandsPassed = 0;
         for (Command cmd : commands) {
             try {
                 Browsable.freezeParents();
@@ -147,6 +149,10 @@ public class Variabilization {
                 Browsable.unfreezeParents();
             }
             if (!repaired) break;
+            else {
+                commandsPassed++;
+                logger.info("Passed " + commandsPassed + " of " + commands.size());
+            }
         }
         return repaired;
     }
@@ -337,25 +343,37 @@ public class Variabilization {
         return generateMagicFieldLastBound(x,  false);
     }
 
+    private Expr univ() {
+        Expr univ = (Expr) Sig.PrimSig.UNIV.clone();
+        univ.newID();
+        return univ;
+    }
+
+    private Expr sigint() {
+        Expr siginit = (Expr) Sig.PrimSig.SIGINT.clone();
+        siginit.newID();
+        return siginit;
+    }
+
     private Expr generateMagicFieldLastBound(Expr x, boolean noSet) {
         if (x.type().is_int() || x.type().is_small_int()) {
-            Expr intSig = (Expr) Sig.PrimSig.SIGINT.clone();
+            Expr intSig = sigint();
             intSig.newID();
             return noSet?intSig:ExprUnary.Op.SETOF.make(null, intSig);
         }
         if (x.type().arity() == 1 && !x.type().is_bool) {
             if (noSet) {
-                Expr univSig = (Expr) Sig.PrimSig.UNIV.clone();
+                Expr univSig = univ();
                 univSig.newID();
                 return univSig;
             }
-            return ExprUnary.Op.SETOF.make(null, Sig.UNIV);
+            return ExprUnary.Op.SETOF.make(null, univ());
         } else if (x.type().is_bool) {
-            return ExprUnary.Op.LONEOF.make(null, Sig.UNIV);
+            return ExprUnary.Op.LONEOF.make(null, univ());
         } else {
-            Expr current = Sig.UNIV;
+            Expr current = univ();
             for (int i = 1; i < x.type().arity(); i++) {
-                current = ExprBinary.Op.ARROW.make(null, null, current, Sig.UNIV);
+                current = ExprBinary.Op.ARROW.make(null, null, current, univ());
             }
             return current;
         }

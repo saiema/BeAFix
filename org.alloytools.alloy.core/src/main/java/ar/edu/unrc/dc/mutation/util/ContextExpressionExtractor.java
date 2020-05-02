@@ -180,6 +180,8 @@ public final class ContextExpressionExtractor {
             parent = current.getBrowsableParent();
             searcher = new SearchExpr((Expr) current);
         }
+        Optional<Func> containerFunc = getContainerFunc(x);
+        containerFunc.ifPresent(f -> f.decls.forEach(d -> localVariablesFound.addAll(d.names)));
         Optional<List<Expr>> result;
         if (localVariablesFound.isEmpty()) {
             result = Optional.empty();

@@ -220,7 +220,18 @@ public final class TypeChecking {
                 }
                 return true;
             }
-            case ARROW :
+            case ARROW : {
+                Type xType = x.type();
+                if (lor && !emptyOrNone(replacementType.product(xType))) {
+                    Optional<Expr> opParent = getContext(x);
+                    return opParent.map(o -> canReplace(o, replacementType.product(xType), strictCheck)).orElse(true);
+                } else if (!emptyOrNone(xType.product(replacementType))) {
+                    Optional<Expr> opParent = getContext(x);
+                    return opParent.map(o -> canReplace(o, xType.product(replacementType), strictCheck)).orElse(true);
+                } else {
+                    return false;
+                }
+            }
             case ANY_ARROW_LONE :
             case ANY_ARROW_ONE :
             case ANY_ARROW_SOME :

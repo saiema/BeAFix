@@ -52,6 +52,8 @@ public class BESOR extends BinOpReplacer {
                 return !emptyOrNone(left.unionWithCommonArity(right));
             case MINUS:
                 return !emptyOrNone(left.pickCommonArity(right));
+            case ARROW:
+                return !emptyOrNone(original.left.type().product(original.right.type()));
             default: throw new IllegalArgumentException("The new operator is not a supported one by this mutator");
         }
     }

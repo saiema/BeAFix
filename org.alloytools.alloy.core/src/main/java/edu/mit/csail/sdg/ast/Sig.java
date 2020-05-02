@@ -106,7 +106,8 @@ public abstract class Sig extends Expr implements Clause {
         String del = "";
         for (Field f : realFields) {
             sb.append(del);
-            sb.append(f.label);
+            f.toString(sb, 1);
+            //sb.append(f.label);
             del = ", ";
         }
         sb.append("}");
