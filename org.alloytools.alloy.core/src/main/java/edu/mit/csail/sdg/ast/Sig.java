@@ -875,11 +875,19 @@ public abstract class Sig extends Expr implements Clause {
             }
         }
 
+        public Object fullCopy() {
+            return makeClone(true);
+        }
+
         @Override
         public Object clone() {
+            return makeClone(false);
+        }
+
+        private Object makeClone(boolean mergeBoundWithSig) {
             Sig sigClone = (Sig) this.sig.clone();
             Expr boundClone = (Expr) (this.decl != null ? this.decl.expr.clone() : this.type.toExpr());
-            Field.doNotMergeBoundWithSig = true;
+            Field.doNotMergeBoundWithSig = !mergeBoundWithSig;
             Field clone = new Field(this.pos, this.isPrivate, this.isMeta, null, null, sigClone, this.label, boundClone);
             Field.doNotMergeBoundWithSig = false;
             clone.setID(getID());

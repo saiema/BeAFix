@@ -148,6 +148,7 @@ public class Variabilization {
                 variabilizationCandidate.clearMutatedStatus();
                 Browsable.unfreezeParents();
             }
+            logger.info("Command " + cmd.toString() + (repaired?" SUCCEED":" FAILED"));
             if (!repaired) break;
             else {
                 commandsPassed++;
@@ -165,12 +166,9 @@ public class Variabilization {
             if (!me.b) {
                 continue;
             }
-            Optional<Field> magicField = getMarkedExpressionReplacement(magicSig, me.a);
-            if (!magicField.isPresent())
-                throw new IllegalStateException("Not magic field found for " + me.a.toString());
-            Expr magicExpr = generateMagicExpr(magicSig, magicField.get(), me.a);
+            Expr magicExpr = generateVariabilizationExpression(me.a, magicSig);
             Mutation varMut;
-            if (me.a.type().is_bool) {
+            if (me.a.type().is_bool && !onlyBooleanVars(me.a)) {
                 ExprUnary boolCheck = (ExprUnary) ExprUnary.Op.ONE.make(null, magicExpr);
                 varMut = new Mutation(Ops.VAR, me.a, boolCheck);
             } else {
@@ -181,12 +179,51 @@ public class Variabilization {
         return variabilizationMutations;
     }
 
+    private Expr generateVariabilizationExpression(Expr x, Sig magicSig) {
+        Expr variabilizationExpression;
+        Expr booleanVarsConjunction = null;
+        if (hasBooleanVars(x)) {
+            Optional<List<Expr>> booleanVariabilizationVars = getBooleanVariablesFor(x);
+            if (!booleanVariabilizationVars.isPresent())
+                throw new IllegalStateException("Expression " + x.toString() + " has boolean variables but non was retrieved");
+            booleanVarsConjunction = generateBooleanVarsConjunction(booleanVariabilizationVars.get());
+        }
+        if (!onlyBooleanVars(x)) {
+            Optional<Field> magicField = getMarkedExpressionReplacement(magicSig, x);
+            if (!magicField.isPresent())
+                throw new IllegalStateException("Not magic field found for " + x.toString());
+            Expr magicExpr = generateMagicExpr(magicSig, magicField.get(), x);
+            if (booleanVarsConjunction != null) {
+                variabilizationExpression = ExprITE.make(null, booleanVarsConjunction, magicExpr, Sig.PrimSig.NONE);
+            } else {
+                variabilizationExpression = magicExpr;
+            }
+        } else {
+            variabilizationExpression = booleanVarsConjunction;
+        }
+        return variabilizationExpression;
+    }
+
+    private Expr generateBooleanVarsConjunction(List<Expr> vars) {
+        Expr conjuntion = null;
+        for (Expr v : vars) {
+            if (!v.type().is_bool)
+                throw new IllegalArgumentException("Non boolean variable found " + v.toString());
+            if (conjuntion == null)
+                conjuntion = v;
+            else
+                conjuntion = ExprBinary.Op.AND.make(null, null, (Expr) v.clone(), (Expr) conjuntion.clone());
+        }
+        return conjuntion;
+    }
+
     private Expr generateMagicExpr(Sig magicSig, Field magicField, Expr x) {
         Sig sig = (Sig) magicSig.clone();
-        Field field = (Field) magicField.clone();
+        Field field = (Field) magicField.fullCopy();
         Expr magicExpr = ExprBinary.Op.JOIN.make(sig.span().merge(field.span()), null, sig, field);
-        if (x.getVariabilizationVariables().isPresent()) {
-            for (Expr vVar : getVariabilizationVariables(x)) {
+        Optional<List<Expr>> nonBooleanVariabilizationVars = getNonBooleanVariablesFor(x);
+        if (nonBooleanVariabilizationVars.isPresent()) {
+            for (Expr vVar : nonBooleanVariabilizationVars.get()) {
                 magicExpr = ExprBinary.Op.JOIN.make(vVar.span().merge(magicExpr.span()), null, vVar, magicExpr);
             }
         }
@@ -249,33 +286,82 @@ public class Variabilization {
         for (Pair<Expr, Boolean> me : expressions) {
             if (!me.b)
                 continue;
-            atLeastOneUnblockedExpression = true;
             Expr x = me.a;
-            String fieldName = VARIABILIZATION_FIELD_PREFIX + x.getID() + "_" + generateRandomName(3);
-            Expr fieldBound = generateMagicFieldBound(x);
-            varSig.addField(fieldName, fieldBound);
+            Optional<Expr> fieldBound = generateMagicFieldBound(x);
+            if (fieldBound.isPresent()) {
+                String fieldName = VARIABILIZATION_FIELD_PREFIX + x.getID() + "_" + generateRandomName(3);
+                atLeastOneUnblockedExpression = true;
+                varSig.addField(fieldName, fieldBound.get());
+            }
         }
         return atLeastOneUnblockedExpression?Optional.of(varSig):Optional.empty();
     }
 
-    private Expr generateMagicFieldBound(Expr x) {
+    private Optional<Expr> generateMagicFieldBound(Expr x) {
+        if (onlyBooleanVars(x))
+            return Optional.empty();
         Expr current = generateMagicFieldLastBound(x);
-        boolean isLast = true;
         if (x.getVariabilizationVariables().isPresent()) {
-            for (Expr vVar : getVariabilizationVariables(x)) {
+            List<Expr> variabilizationVariables = getVariabilizationVariables(x);
+            for (Expr vVar : variabilizationVariables) {
+                if (vVar.type().is_bool)
+                    continue;
                 Expr vVarBound = generateMagicFieldLastBound(vVar, true);
-                current = mergeIntoArrowExpression(vVarBound, current, isLast);
-                isLast = false;
+                current = mergeIntoArrowExpression(vVarBound, current);
             }
         }
-        return current;
+        return Optional.of(current);
     }
 
-    private Expr mergeIntoArrowExpression(Expr a, Expr b, boolean isLast) {
+    private Optional<List<Expr>> getBooleanVariablesFor(Expr x) {
+        return getVariabilizationVariablesFor(x, true);
+    }
+
+    private Optional<List<Expr>> getNonBooleanVariablesFor(Expr x) {
+        return getVariabilizationVariablesFor(x, false);
+    }
+
+    private Optional<List<Expr>> getVariabilizationVariablesFor(Expr x, boolean bool) {
+        if (!x.getVariabilizationVariables().isPresent())
+            return Optional.empty();
+        List<Expr> vars = new LinkedList<>();
+        for (Expr vVar : getVariabilizationVariables(x)) {
+            if (vVar.type().is_bool == bool)
+                vars.add(vVar);
+        }
+        if (!vars.isEmpty())
+            return Optional.of(vars);
+        return Optional.empty();
+    }
+
+    private boolean onlyBooleanVars(Expr x) {
+        boolean atLeastOneNonBooleanVarFound = false;
+        if (!x.getVariabilizationVariables().isPresent())
+            return false;
+        for (Expr vVar : getVariabilizationVariables(x)) {
+            if (!vVar.type().is_bool) {
+                atLeastOneNonBooleanVarFound = true;
+                break;
+            }
+        }
+        return !atLeastOneNonBooleanVarFound;
+    }
+
+    private boolean hasBooleanVars(Expr x) {
+        if (!x.getVariabilizationVariables().isPresent())
+            return false;
+        for (Expr vVar : getVariabilizationVariables(x)) {
+            if (vVar.type().is_bool)
+                return true;
+        }
+        return false;
+    }
+
+    private Expr mergeIntoArrowExpression(Expr a, Expr b) {
         String left = getArrowSubOp(a);
         String right = getArrowSubOp(b);
         Expr leftExpression = removeMultSubExpression(a);
-        Expr rightExpression = (isSet(b) && isLast)?b:removeMultSubExpression(b);
+        Expr rightExpression = removeMultSubExpression(b);
         ExprBinary.Op arrowOp = getArrowOp(left + "->" + right);
         if (arrowOp == null)
             throw new IllegalStateException("No arrow operator found for label " + left + "->" + right);
@@ -299,14 +385,6 @@ public class Variabilization {
             }
         }
         return "";
-    }
-
-    private boolean isSet(Expr x) {
-        if (x instanceof ExprUnary && ((ExprUnary)x).op.equals(ExprUnary.Op.NOOP))
-            return isSet(((ExprUnary)x).sub);
-        else if (x instanceof ExprUnary)
-            return ((ExprUnary)x).op.equals(ExprUnary.Op.SETOF);
-        return false;
     }
 
     private Expr removeMultSubExpression(Expr x) {
