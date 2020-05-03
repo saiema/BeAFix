@@ -168,7 +168,7 @@ public class Variabilization {
             }
             Expr magicExpr = generateVariabilizationExpression(me.a, magicSig);
             Mutation varMut;
-            if (me.a.type().is_bool && !onlyBooleanVars(me.a)) {
+            if (me.a.type().is_bool) {
                 ExprUnary boolCheck = (ExprUnary) ExprUnary.Op.ONE.make(null, magicExpr);
                 varMut = new Mutation(Ops.VAR, me.a, boolCheck);
             } else {
@@ -188,18 +188,14 @@ public class Variabilization {
                 throw new IllegalStateException("Expression " + x.toString() + " has boolean variables but non was retrieved");
             booleanVarsConjunction = generateBooleanVarsConjunction(booleanVariabilizationVars.get());
         }
-        if (!onlyBooleanVars(x)) {
-            Optional<Field> magicField = getMarkedExpressionReplacement(magicSig, x);
-            if (!magicField.isPresent())
-                throw new IllegalStateException("Not magic field found for " + x.toString());
-            Expr magicExpr = generateMagicExpr(magicSig, magicField.get(), x);
-            if (booleanVarsConjunction != null) {
-                variabilizationExpression = ExprITE.make(null, booleanVarsConjunction, magicExpr, Sig.PrimSig.NONE);
-            } else {
-                variabilizationExpression = magicExpr;
-            }
+        Optional<Field> magicField = getMarkedExpressionReplacement(magicSig, x);
+        if (!magicField.isPresent())
+            throw new IllegalStateException("Not magic field found for " + x.toString());
+        Expr magicExpr = generateMagicExpr(magicSig, magicField.get(), x);
+        if (booleanVarsConjunction != null) {
+            variabilizationExpression = ExprITE.make(null, booleanVarsConjunction, magicExpr, Sig.PrimSig.NONE);
         } else {
-            variabilizationExpression = booleanVarsConjunction;
+            variabilizationExpression = magicExpr;
         }
         return variabilizationExpression;
     }
@@ -298,8 +294,6 @@ public class Variabilization {
     }
 
     private Optional<Expr> generateMagicFieldBound(Expr x) {
-        if (onlyBooleanVars(x))
-            return Optional.empty();
         Expr current = generateMagicFieldLastBound(x);
         if (x.getVariabilizationVariables().isPresent()) {
             List<Expr> variabilizationVariables = getVariabilizationVariables(x);
@@ -332,19 +326,6 @@ public class Variabilization {
         if (!vars.isEmpty())
             return Optional.of(vars);
         return Optional.empty();
-    }
-
-    private boolean onlyBooleanVars(Expr x) {
-        boolean atLeastOneNonBooleanVarFound = false;
-        if (!x.getVariabilizationVariables().isPresent())
-            return false;
-        for (Expr vVar : getVariabilizationVariables(x)) {
-            if (!vVar.type().is_bool) {
-                atLeastOneNonBooleanVarFound = true;
-                break;
-            }
-        }
-        return !atLeastOneNonBooleanVarFound;
     }
 
     private boolean hasBooleanVars(Expr x) {
