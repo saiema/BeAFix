@@ -71,6 +71,7 @@ public class Variabilization {
         Optional<List<Pair<Expr, Boolean>>> markedExpressions = getMarkedExpressionsForVariabilizationCheck(from);
         Sig magicSig = null;
         boolean solverResult = true;
+        boolean astRestored = false;
         if (markedExpressions.isPresent()) {
             CompModule context = from.getContext();
             Optional<Sig> magicSigOp = generateMagicSigForExpressions(markedExpressions.get());
@@ -78,6 +79,9 @@ public class Variabilization {
                 magicSig = magicSigOp.get();
                 RepairReport.getInstance().incVariabilizationChecks();
                 List<Mutation> variabilizationMutations = generateVariabilizationMutations(magicSig, markedExpressions.get());
+                restoreAst(from, magicSig, true, false);
+                astRestored = true;
+                variabilizationMutations.addAll(from.getMutations());
                 Candidate variabilizationCandidate = generateCandidateForVariabilization(from.getContext(), variabilizationMutations);
                 logger.info("Reporter available: " + (reporter != null));
                 logger.info("variabilization candidate:\n" + variabilizationCandidate.toString());
@@ -95,7 +99,7 @@ public class Variabilization {
                     RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression());
             }
         }
-        restoreAst(from, magicSig);
+        restoreAst(from, magicSig, !astRestored, true);
         return solverResult;
     }
 
@@ -107,13 +111,13 @@ public class Variabilization {
         return variabilizationCandidate;
     }
 
-    private void restoreAst(Candidate from, Sig magicSig) throws Err {
+    private void restoreAst(Candidate from, Sig magicSig, boolean undoMutations, boolean undoMagicSig) throws Err {
         CompModule context = from.getContext();
         try {
-            if (magicSig != null) {
+            if (undoMagicSig && magicSig != null) {
                 Cheats.removeSigFromModule(context, magicSig);
             }
-            if (!ASTMutator.getInstance().undoMutations()) {
+            if (undoMutations && !ASTMutator.getInstance().undoMutations()) {
                 throw new Error("There was a problem while mutating the ast");
             }
         } catch (CheatingIsBadMkay e) {

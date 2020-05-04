@@ -841,8 +841,10 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR).ifPresent(partialRepair -> {
                 if ((Boolean) partialRepair) {
                     logger.info("Partial Repair is ENABLED " + (MutantLab.getInstance().isPartialRepairSupported()?"AND SUPPORTED":"BUT NOT SUPPORTED"));
-                    MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD, 0);
-                    logger.info("Changing " + ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD.toString() + " to 0");
+                    if (MutantLab.getInstance().isPartialRepairSupported()) {
+                        MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD, 0);
+                        logger.info("Changing " + ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD.toString() + " to 0");
+                    }
                 }
             });
             RepairReport.getInstance().setCommands(DependencyGraph.getInstance().getAllCommands().size());

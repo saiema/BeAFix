@@ -249,8 +249,15 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
             }
             k2pos_enabled = true;
             for (Expr f : s.getFacts()) {
+                boolean[] mutatedStatusBackup = new boolean[0];
+                if (currentCandidate != null) {
+                    mutatedStatusBackup = currentCandidate.getAllMutatedStatus();
+                    currentCandidate.clearMutatedStatus();
+                }
                 Expr form = s.isOne == null ? f.forAll(s.decl) : ExprLet.make(null, (ExprVar) (s.decl.get()), s, f);
                 frame.addFormula(cform(form), f);
+                if (currentCandidate != null)
+                    currentCandidate.restoreMutatedStatus(mutatedStatusBackup);
             }
         }
         k2pos_enabled = true;

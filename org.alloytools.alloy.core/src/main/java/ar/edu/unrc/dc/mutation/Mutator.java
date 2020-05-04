@@ -49,14 +49,14 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     public Optional<List<Mutation>> getMutations() {
         useMutGenLimit = true;
         List<Mutation> mutations = new LinkedList<>();
+        context.getAllFacts().forEach(namedFact -> {
+            visitThis(namedFact.b).ifPresent(mutations::addAll);
+        });
         context.getAllFunc().forEach(f -> {
             visitThis(f.getBody()).ifPresent(mutations::addAll);
         });
         context.getAllAssertions().forEach(namedAssertion -> {
             visitThis(namedAssertion.b).ifPresent(mutations::addAll);
-        });
-        context.getAllFacts().forEach(namedFact -> {
-            visitThis(namedFact.b).ifPresent(mutations::addAll);
         });
         if (!mutations.isEmpty())
             return Optional.of(mutations);
