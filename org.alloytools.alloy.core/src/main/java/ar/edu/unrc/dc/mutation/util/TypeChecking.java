@@ -77,17 +77,44 @@ public final class TypeChecking {
 
     public static boolean checkExprCallArgument(Expr target, ExprCall call, Type replacementType, boolean strictCheck) {
         Func associatedFunc = call.fun;
-        if (call.args.size() != associatedFunc.decls.size())
+        if (call.args.size() != getFunctionArguments(associatedFunc))
             throw new IllegalStateException("The call and the associated function have different number of arguments, but this should never happen");
-        for (int fa = 0; fa < associatedFunc.decls.size(); fa++) {
-            Decl formalArgument = associatedFunc.decls.get(fa);
-            for (Expr formalArg : formalArgument.names) {
-                if (formalArg.toString().compareTo(target.toString()) != 0)
-                    continue;
-                return compatibleVariablesChecker(formalArgument.expr.type(), replacementType, strictCheck);
+        Expr formalArgumentBound = getArgumentFormalParamBound(call, target, associatedFunc);
+        if (formalArgumentBound == null)
+            throw new IllegalStateException("Couldn't get formal argument bound related to call's current argument");
+        return compatibleVariablesChecker(formalArgumentBound.type(), replacementType, strictCheck);
+    }
+
+    private static Expr getArgumentFormalParamBound(ExprCall call, Expr argument, Func f) {
+        int argIndex = 0;
+        for (Expr callArg : call.args) {
+            if (Browsable.equals(argument, callArg)) {
+                break;
             }
+            argIndex++;
         }
-        return true;
+        int formalArg = 0;
+        boolean found = false;
+        for (Decl d : f.decls) {
+            for (Expr ignored : d.names) {
+                if (formalArg == argIndex) {
+                    found = true;
+                    break;
+                }
+                formalArg++;
+            }
+            if (found)
+                return d.expr;
+        }
+        return null;
+    }
+
+    private static int getFunctionArguments(Func f) {
+        int args = 0;
+        for (Decl d : f.decls) {
+            args += d.names.size();
+        }
+        return args;
     }
 
     public static boolean checkExprList(Expr target, ExprList list, Type replacementType) {
