@@ -17,10 +17,7 @@ import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -223,7 +220,9 @@ public class Variabilization {
         Expr magicExpr = ExprBinary.Op.JOIN.make(sig.span().merge(field.span()), null, sig, field);
         Optional<List<Expr>> nonBooleanVariabilizationVars = getNonBooleanVariablesFor(x);
         if (nonBooleanVariabilizationVars.isPresent()) {
-            for (Expr vVar : nonBooleanVariabilizationVars.get()) {
+            List<Expr> reversedVariables = nonBooleanVariabilizationVars.get();
+            Collections.reverse(reversedVariables);
+            for (Expr vVar : reversedVariables) {
                 magicExpr = ExprBinary.Op.JOIN.make(vVar.span().merge(magicExpr.span()), null, vVar, magicExpr);
             }
         }
