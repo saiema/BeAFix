@@ -160,6 +160,20 @@ public class ASTMutator {
                     Cheats.changeLetSub(oParentAsLet, newExpression);
                 } else
                     return Optional.empty();
+            } else if (initialExpressionParent instanceof ExprCall) {
+                //replacement should be an argument of the call
+                ExprCall oParentAsCall = (ExprCall) initialExpressionParent;
+                boolean targetFound = false;
+                for (Expr arg : oParentAsCall.args) {
+                    if (arg.getID() == original.getID()) {
+                        Cheats.changeCallArgument(oParentAsCall, arg, newExpression);
+                        targetFound = true;
+                        break;
+                    }
+                }
+                if (!targetFound) {
+                    return Optional.empty();
+                }
             } else if (initialExpressionParent instanceof Expr){
                 //replacement should be either an assertion's o fact's body
                 boolean assertionFound = false;

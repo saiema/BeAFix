@@ -256,6 +256,10 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
                     //replacement should be the expr associated to the let
                     modifiedParent = oParentAsLet.mutateBody(replacement);
                 }
+            } else if (originalParent instanceof ExprCall) {
+                //replacement should be an argument of the call
+                ExprCall oParentAsCall = (ExprCall) originalParent;
+                modifiedParent = oParentAsCall.mutateArgument(original, replacement);
             } else {
                 //for now we only have to deal with binary and unary expressions
                 //TODO: update as this change

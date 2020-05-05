@@ -83,12 +83,16 @@ public class IrrelevantMutationChecker {
     private static boolean checkRelationalUnaryOperatorRepetitionWithRespectToOriginal(Expr mutant, Expr original) {
         if (isUnaryRelationalExpression(mutant)) {
             ExprUnary mAsUnary = (ExprUnary) mutant;
-            Optional<Expr> context = getContext(original);
-            if (context.isPresent()) {
-                Expr cExpr = context.get();
-                if (cExpr instanceof ExprUnary) {
-                    ExprUnary oAsUnary = getNearestNonNOOPUnaryParent((ExprUnary)cExpr);
-                    return oAsUnary.op.equals(mAsUnary.op);
+            Expr context;
+            if (original instanceof ExprUnary) {
+                context = getNearestNonNOOPUnaryParent((ExprUnary)original).orElse(null);
+            } else {
+                context = getContext(original).orElse(null);
+            }
+            if (context != null) {
+                if (context instanceof ExprUnary) {
+                    ExprUnary oAsUnary = getNearestNonNOOPUnaryParent((ExprUnary) context).orElse(null);
+                    return oAsUnary != null && checkOperatorIrrelevance(oAsUnary.op, mAsUnary.op);
                 }
             }
             return false;
@@ -96,18 +100,26 @@ public class IrrelevantMutationChecker {
         throw new IllegalArgumentException("Mutant expression should be a unary relational expression " + mutant.toString());
     }
 
-    private static ExprUnary getNearestNonNOOPUnaryParent(ExprUnary e) {
+    private static boolean checkOperatorIrrelevance(ExprUnary.Op existingOp, ExprUnary.Op addedOp) {
+        switch (existingOp) {
+            case CLOSURE: return addedOp.equals(ExprUnary.Op.CLOSURE);
+            case RCLOSURE: return addedOp.equals(ExprUnary.Op.CLOSURE) || addedOp.equals(ExprUnary.Op.RCLOSURE);
+        }
+        return false;
+    }
+
+    private static Optional<ExprUnary> getNearestNonNOOPUnaryParent(ExprUnary e) {
+        if (!e.op.equals(ExprUnary.Op.NOOP))
+            return Optional.of(e);
         Optional<Expr> nearestParent = getContext(e);
         if (nearestParent.isPresent()) {
             Expr parent = nearestParent.get();
             if (parent instanceof ExprUnary) {
                 ExprUnary parentAsUnary = (ExprUnary) parent;
-                if (parentAsUnary.op.equals(ExprUnary.Op.NOOP))
-                    return getNearestNonNOOPUnaryParent(parentAsUnary);
-                return parentAsUnary;
+                return getNearestNonNOOPUnaryParent(parentAsUnary);
             }
         }
-        return e;
+        return Optional.empty();
     }
 
     private static Optional<Expr> getNearestBinaryOrListExpression(Expr e) {

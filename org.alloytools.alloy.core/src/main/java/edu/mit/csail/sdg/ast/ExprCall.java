@@ -441,6 +441,23 @@ public final class ExprCall extends Expr {
         this.fun.setBrowsableParent(this);
     }
 
+    public ExprCall mutateArgument(Expr target, Expr replacement) {
+        List<Expr> argsClone = new LinkedList<>();
+        for (Expr a : this.args) {
+            if (Browsable.equals(a, target)) {
+                argsClone.add(replacement);
+            } else {
+                argsClone.add((Expr) a.clone());
+            }
+        }
+        Func funClone = (Func) this.fun.clone();
+        ExprCall clone = new ExprCall(this.pos, this.closingBracket, this.ambiguous, this.type, funClone, ConstList.make(argsClone), this.extraWeight, this.weight, this.errors);
+        clone.mutGenLimit(directMutGenLimit());
+        clone.skipBlockMutation = skipBlockMutation;
+        clone.setVariabilizationVariables(directVariabilizationVariables());
+        return clone;
+    }
+
     @Override
     public Object clone() {
         List<Expr> argsClone = new LinkedList<>();
