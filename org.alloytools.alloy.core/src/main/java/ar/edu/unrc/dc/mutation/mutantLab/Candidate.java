@@ -399,7 +399,7 @@ public class Candidate {
 
     public boolean isIndexBlocked(int index) {
         if (index < 1 || index > markedExpressions)
-            throw new IllegalArgumentException("Index must go between 1 and " + markedExpressions);
+            throw new IllegalArgumentException("Index must go between 1 and " + markedExpressions + " (" + index + ")");
         return blockedIndexes[index-1];
     }
 

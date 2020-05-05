@@ -15,6 +15,8 @@
 
 package edu.mit.csail.sdg.ast;
 
+import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
+import ar.edu.unrc.dc.mutation.Cheats;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.ConstList.TempList;
 import edu.mit.csail.sdg.ast.Attr.AttrType;
@@ -1100,22 +1102,10 @@ public abstract class Sig extends Expr implements Clause {
     }
 
     protected void copyComponentsToClone(Sig clone) {
-        for (Expr f : this.facts) {
-            clone.addFact(f);
-        }
-        for (Decl field : this.fields) {
-            if (field.names.size() > 1) {
-                List<String> names = new LinkedList<>();
-                for (ExprHasName n : field.names) {
-                    names.add(n.label);
-                }
-                clone.addTrickyField(field.names.get(0).pos, field.isPrivate, field.disjoint, field.disjoint2, ((Field) field.names.get(0)).isMeta, names.toArray(new String[names.size()]), field.expr);
-            } else {
-                clone.addField(field.names.get(0).label, field.expr);
-            }
-        }
-        for (Field rfield : this.realFields) {
-            clone.addField(rfield.label, rfield.type().toExpr());
+        try {
+            Cheats.copySigComponents(this, clone);
+        } catch (CheatingIsBadMkay e) {
+            throw new IllegalStateException("Failed to copy components to clone", e);
         }
     }
 

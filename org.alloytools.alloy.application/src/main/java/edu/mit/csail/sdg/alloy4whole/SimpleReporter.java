@@ -19,12 +19,9 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.mutantLab.*;
-import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
-import ar.edu.unrc.dc.mutation.util.DependencyGraph;
-import ar.edu.unrc.dc.mutation.util.DependencyScanner;
-import ar.edu.unrc.dc.mutation.util.RepairReport;
-import ar.edu.unrc.dc.mutation.visitors.ParentRelationshipFixer;
+import ar.edu.unrc.dc.mutation.util.*;
 import ar.edu.unrc.dc.mutation.visitors.NodeAliasingFixer;
+import ar.edu.unrc.dc.mutation.visitors.ParentRelationshipFixer;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerTask;
@@ -807,6 +804,7 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
             MutationConfiguration.getInstance().loadSystemProperties();
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, A4Preferences.AStrykerVariabilization.get()); //update the variabilization Repair option
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, A4Preferences.AStrykerVariabilizationUseSameType.get());
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, A4Preferences.AStrykerPartialRepair.get());
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, A4Preferences.AStrykerRepairDepth.get());
             int timeoutInMinutes = A4Preferences.AStrykerRepairTimeout.get();

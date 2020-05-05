@@ -4,6 +4,7 @@ import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.BlockingCollection;
 import ar.edu.unrc.dc.mutation.util.DependencyGraph;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import ar.edu.unrc.dc.mutation.util.TypeChecking;
@@ -257,15 +258,15 @@ public class MutantLab {
     private boolean goToFirstUnblockedIndex(Candidate candidate) {
         if (!candidate.hasPartialResults())
             throw new IllegalStateException("Candidate is not partially fixed");
-        int blockedIndexes = 0;
+        int unblockedIndexes = 0;
         for (int i = 1; i <= markedExpressions; i++) {
             if (!candidate.isIndexBlocked(i)) {
                 candidate.setCurrentMarkedExpression(i);
-                blockedIndexes++;
+                unblockedIndexes++;
                 break;
             }
         }
-        return blockedIndexes > 0 && blockedIndexes < markedExpressions;
+        return unblockedIndexes > 0;
     }
 
     public void timeout() {

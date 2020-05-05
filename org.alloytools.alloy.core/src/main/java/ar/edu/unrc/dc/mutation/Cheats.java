@@ -467,6 +467,31 @@ public final class Cheats {
         }
     }
 
+    public static void copySigComponents(Sig original, Sig clone) throws CheatingIsBadMkay {
+        Field factsField = getField(Sig.class, "facts");
+        if (factsField == null)
+            throw new CheatingIsBadMkay("Couldn't find facts field");
+        Field fieldsField = getField(Sig.class, "fields");
+        if (fieldsField == null)
+            throw new CheatingIsBadMkay("Couldn't find fields field");
+        Field realFieldsField = getField(Sig.class, "realFields");
+        if (realFieldsField == null)
+            throw new CheatingIsBadMkay("Couldn't find realFields field");
+        copyFieldValue(original, clone, factsField);
+        copyFieldValue(original, clone, fieldsField);
+        copyFieldValue(original, clone, realFieldsField);
+    }
+
+    private static void copyFieldValue(Object original, Object target, Field field) throws CheatingIsBadMkay {
+        boolean oldAccessibleStatus = setAccessibleStatus(field, true);
+        try {
+            field.set(target, field.get(original));
+            setAccessibleStatus(field, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access " + field.getName() + " field");
+        }
+    }
+
     private static boolean setAccessibleStatus(Field f, boolean newValue) {
         boolean oldValue = f.isAccessible();
         f.setAccessible(newValue);

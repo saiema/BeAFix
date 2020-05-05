@@ -4,7 +4,9 @@ import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.BlockingCollection;
 import ar.edu.unrc.dc.mutation.util.IrrelevantMutationChecker;
+import ar.edu.unrc.dc.mutation.util.MutantsHashes;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.parser.CompModule;
 

@@ -1,4 +1,4 @@
-package ar.edu.unrc.dc.mutation.mutantLab;
+package ar.edu.unrc.dc.mutation.util;
 
 import java.util.Collection;
 import java.util.LinkedList;

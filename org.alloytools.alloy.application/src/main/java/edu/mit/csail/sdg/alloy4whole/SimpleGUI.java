@@ -1402,6 +1402,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 optmenu.addSeparator();
                 addToMenu(optmenu, AStrykerVariabilization);
+                addToMenu(optmenu, AStrykerVariabilizationUseSameType);
                 addToMenu(optmenu, AStrykerPartialRepair);
                 addToMenu(optmenu, AStrykerRepairTimeout);
                 addToMenu(optmenu, AStrykerRepairDepth);

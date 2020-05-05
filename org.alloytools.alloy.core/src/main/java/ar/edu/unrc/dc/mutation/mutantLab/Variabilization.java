@@ -1,9 +1,6 @@
 package ar.edu.unrc.dc.mutation.mutantLab;
 
-import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
-import ar.edu.unrc.dc.mutation.Cheats;
-import ar.edu.unrc.dc.mutation.Mutation;
-import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.*;
 import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import ar.edu.unrc.dc.mutation.visitors.MarkedExpressionsCollector;
@@ -16,6 +13,7 @@ import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -256,6 +254,8 @@ public class Variabilization {
         Optional<List<Expr>> markedExpressions = markedExpressionsCollector.getMarkedExpressions();
         List<Pair<Expr, Boolean>> result = new LinkedList<>();
         if (markedExpressions.isPresent()) {
+            if (markedExpressions.get().size() > MutantLab.getInstance().getMarkedExpressions())
+                throw new IllegalStateException("Collected more marked expressions (" + markedExpressions.get().size() + ") than the original amount (" + MutantLab.getInstance().getMarkedExpressions() + ")");
             int idx = 1;
             for (Expr me : markedExpressions.get()) {
                 Boolean toReplace;
@@ -418,16 +418,16 @@ public class Variabilization {
     }
 
     private Expr generateMagicFieldLastBound(Expr x, boolean noSet) {
+        if (useSameTypesForVariabilization() && !x.type().is_bool) {
+            return x.type().toExpr();
+        }
         if (x.type().is_int() || x.type().is_small_int()) {
             Expr intSig = sigint();
-            intSig.newID();
-            return noSet?intSig:ExprUnary.Op.SETOF.make(null, intSig);
+            return noSet?Sig.PrimSig.SIGINT:ExprUnary.Op.SETOF.make(null, intSig);
         }
         if (x.type().arity() == 1 && !x.type().is_bool) {
             if (noSet) {
-                Expr univSig = univ();
-                univSig.newID();
-                return univSig;
+                return univ();
             }
             return ExprUnary.Op.SETOF.make(null, univ());
         } else if (x.type().is_bool) {
@@ -465,6 +465,11 @@ public class Variabilization {
         for (int i = 0; i < length; i++)
             sb.append(SYMBOLS.charAt(rng.nextInt(SYMBOLS.length())));
         return sb.toString();
+    }
+
+    private static boolean useSameTypesForVariabilization() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES.defaultValue());
     }
 
 }

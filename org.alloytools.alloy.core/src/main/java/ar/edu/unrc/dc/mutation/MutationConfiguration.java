@@ -251,6 +251,20 @@ public class MutationConfiguration {
 
         },
 
+        REPAIR_VARIABILIZATION_USE_SAME_TYPES {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
+        },
+
         REPAIR_PARTIAL_REPAIR {
 
             @Override
@@ -303,6 +317,8 @@ public class MutationConfiguration {
     public void loadSystemProperties() {
         for (ConfigKey ck : ConfigKey.values()) {
             if (ck.equals(ConfigKey.REPAIR_VARIABILIZATION))
+                continue;
+            if (ck.equals(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES))
                 continue;
             if (ck.equals(ConfigKey.REPAIR_TIMEOUT))
                 continue;

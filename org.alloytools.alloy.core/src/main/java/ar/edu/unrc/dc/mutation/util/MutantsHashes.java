@@ -1,5 +1,6 @@
-package ar.edu.unrc.dc.mutation.mutantLab;
+package ar.edu.unrc.dc.mutation.util;
 
+import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
 import ar.edu.unrc.dc.mutation.visitors.ExprToString;
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Expr;

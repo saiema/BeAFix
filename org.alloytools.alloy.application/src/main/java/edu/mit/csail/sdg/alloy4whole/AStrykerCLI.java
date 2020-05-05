@@ -73,19 +73,23 @@ public class AStrykerCLI {
     }
 
     private static final String VARIABILIZATION = "variabilization";
+    private static final String VARIABILIZATION_SAME_TYPE = "sametypes";
     private static final String PARTIALREPAIR = "partialrepair";
     private static final String TIMEOUT = "timeout";
     private static final String MAXDEPTH = "maxdepth";
     private static void setConfig(String key, String value) {
         switch (key.toLowerCase()) {
             case VARIABILIZATION :
+            case VARIABILIZATION_SAME_TYPE:
             case PARTIALREPAIR : {
                 Optional<Boolean> varValue = parseBooleanValue(value);
                 if (varValue.isPresent()) {
                     if (key.equals(VARIABILIZATION))
                         varValue.ifPresent(A4Preferences.AStrykerVariabilization::set);
-                    else
+                    else if (key.equals(PARTIALREPAIR))
                         varValue.ifPresent(A4Preferences.AStrykerPartialRepair::set);
+                    else
+                        varValue.ifPresent(A4Preferences.AStrykerVariabilizationUseSameType::set);
                 } else
                     throw new IllegalArgumentException("Invalid value for " + key + " expecting (true/false) but got " + value + " instead");
                 break;

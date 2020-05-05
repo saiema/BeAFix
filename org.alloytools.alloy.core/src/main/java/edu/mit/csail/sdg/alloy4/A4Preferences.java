@@ -670,6 +670,7 @@ public class A4Preferences {
 
     /** Set Variabilization for the repair process */
     public static final BooleanPref AStrykerVariabilization = new BooleanPref("AStrykerVariabilization", "AStryker | Use Variabilization");
+    public static final BooleanPref AStrykerVariabilizationUseSameType = new BooleanPref("AStrykerVariabilizationSameTypes", "AStryker | Use expression type");
     public static final BooleanPref AStrykerPartialRepair = new BooleanPref("AStrykerPartialRepair", "AStryker | Use Partial Repair");
     public static final IntChoicePref AStrykerRepairTimeout = new IntChoicePref("AStrykerRepairTimeout",Arrays.asList(0, 5, 10, 30, 60, 120, 180, 240, 360, 480, 720, 1440, 2880), 0);
     public static final IntChoicePref AStrykerRepairDepth = new IntChoicePref("AStrykerRepairDepth", Arrays.asList(1, 2, 3, 4, 5), 2);
