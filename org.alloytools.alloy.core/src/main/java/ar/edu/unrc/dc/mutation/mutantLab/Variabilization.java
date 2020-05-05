@@ -254,8 +254,19 @@ public class Variabilization {
         Optional<List<Expr>> markedExpressions = markedExpressionsCollector.getMarkedExpressions();
         List<Pair<Expr, Boolean>> result = new LinkedList<>();
         if (markedExpressions.isPresent()) {
-            if (markedExpressions.get().size() > MutantLab.getInstance().getMarkedExpressions())
-                throw new IllegalStateException("Collected more marked expressions (" + markedExpressions.get().size() + ") than the original amount (" + MutantLab.getInstance().getMarkedExpressions() + ")");
+            if (markedExpressions.get().size() > MutantLab.getInstance().getMarkedExpressions()) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("Collected more marked expressions (");
+                sb.append(markedExpressions.get().size());
+                sb.append(") than the original amount (");
+                sb.append(MutantLab.getInstance().getMarkedExpressions());
+                sb.append(")\n");
+                sb.append("Collected expressions are:\n");
+                for (Expr me : markedExpressions.get()) {
+                    sb.append("\t").append(me.toString()).append("\n");
+                }
+                throw new IllegalStateException(sb.toString());
+            }
             int idx = 1;
             for (Expr me : markedExpressions.get()) {
                 Boolean toReplace;

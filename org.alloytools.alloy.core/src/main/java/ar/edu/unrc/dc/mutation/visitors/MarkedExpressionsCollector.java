@@ -11,7 +11,7 @@ import java.util.*;
 public class MarkedExpressionsCollector extends VisitReturn<Optional<List<Expr>>> {
 
     private Candidate from;
-    private CompModule ast;
+    private final CompModule ast;
     private boolean valid = false;
 
     public MarkedExpressionsCollector(Candidate from) {
