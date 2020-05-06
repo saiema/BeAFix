@@ -796,13 +796,12 @@ final class SimpleReporter extends A4Reporter {
             out.callback(objs);
         }
 
-        private void setupMutationConfiguration() {
+        private void setupMutationConfiguration(WorkerCallback out) throws IOException {
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.FALSE);                     //+
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR, Boolean.TRUE);     //+
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
-            MutationConfiguration.getInstance().loadSystemProperties();
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, A4Preferences.AStrykerVariabilization.get()); //update the variabilization Repair option
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, A4Preferences.AStrykerVariabilizationUseSameType.get());
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, A4Preferences.AStrykerPartialRepair.get());
@@ -812,13 +811,14 @@ final class SimpleReporter extends A4Reporter {
             long timeout = (timeoutInMinutes * 60) * 1000;
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
             logger.info(MutationConfiguration.getInstance().toString());
+            cb(out, "RepairTittle", MutationConfiguration.getInstance().toString());
         }
 
         @Override
         public void run(WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Reparing process...\n\n");
             logger.info("Starting repair on model: " + options.originalFilename);
-            setupMutationConfiguration();
+            setupMutationConfiguration(out);
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
             ASTMutator.startInstance(world);
