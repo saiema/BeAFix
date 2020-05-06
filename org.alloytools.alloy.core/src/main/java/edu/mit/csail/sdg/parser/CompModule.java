@@ -1827,7 +1827,7 @@ public final class CompModule extends Browsable implements Module {
 
     /** Add a COMMAND declaration. */
 
-    void addCommand(boolean followUp, Pos pos, ExprVar name, boolean check, int overall, int bitwidth, int seq, int exp, List<CommandScope> scopes, ExprVar label, boolean isTest) throws Err {
+    void addCommand(boolean followUp, Pos pos, ExprVar name, boolean check, int overall, int bitwidth, int seq, int exp, List<CommandScope> scopes, ExprVar label, boolean isTest, boolean isPo) throws Err {
         if (followUp && !Version.experimental)
             throw new ErrorSyntax(pos, "Syntax error encountering => symbol.");
         if (label != null)
@@ -1842,6 +1842,8 @@ public final class CompModule extends Browsable implements Module {
         Command newcommand = new Command(pos, name, labelName, check, overall, bitwidth, seq, exp, scopes, null, name, parent);
         if (isTest)
             newcommand.setAsVariabilizationTest();
+        if (isPo)
+            newcommand.setAsPerfectOracleTest();
         if (parent != null)
             commands.set(commands.size() - 1, newcommand);
         else
@@ -1849,7 +1851,7 @@ public final class CompModule extends Browsable implements Module {
     }
 
     /** Add a COMMAND declaration. */
-    void addCommand(boolean followUp, Pos pos, Expr e, boolean check, int overall, int bitwidth, int seq, int expects, List<CommandScope> scopes, ExprVar label, boolean isTest) throws Err {
+    void addCommand(boolean followUp, Pos pos, Expr e, boolean check, int overall, int bitwidth, int seq, int expects, List<CommandScope> scopes, ExprVar label, boolean isTest, boolean isPo) throws Err {
 
         if (followUp && !Version.experimental)
             throw new ErrorSyntax(pos, "Syntax error encountering => symbol.");
@@ -1868,6 +1870,8 @@ public final class CompModule extends Browsable implements Module {
         Command newcommand = new Command(e.span().merge(pos), e, labelName, check, overall, bitwidth, seq, expects, scopes, null, ExprVar.make(null, n), parent);
         if (isTest)
             newcommand.setAsVariabilizationTest();
+        if (isPo)
+            newcommand.setAsPerfectOracleTest();
         if (parent != null)
             commands.set(commands.size() - 1, newcommand);
         else
@@ -1886,6 +1890,8 @@ public final class CompModule extends Browsable implements Module {
         Command parent = cmd.parent == null ? null : resolveCommand(cmd.parent, exactSigs, globalFacts);
         if (cmd.parent != null && cmd.parent.isVariabilizationTest())
             parent.setAsVariabilizationTest();
+        if (cmd.parent != null && cmd.parent.isPerfectOracleTest())
+            parent.setAsPerfectOracleTest();
         String cname = ((ExprVar) (cmd.formula)).label;
         Expr e;
         Clause declaringClause = null;
@@ -1934,6 +1940,8 @@ public final class CompModule extends Browsable implements Module {
         Command resolvedCommand = new Command(cmd.pos, cmd.nameExpr, cmd.label, cmd.check, cmd.overall, cmd.bitwidth, cmd.maxseq, cmd.expects, sc.makeConst(), exactSigs, globalFacts.and(e), parent);
         if (cmd.isVariabilizationTest())
             resolvedCommand.setAsVariabilizationTest();
+        if (cmd.isPerfectOracleTest())
+            resolvedCommand.setAsPerfectOracleTest();
         return resolvedCommand;
     }
 

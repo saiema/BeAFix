@@ -807,6 +807,7 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, A4Preferences.AStrykerVariabilizationUseSameType.get());
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, A4Preferences.AStrykerPartialRepair.get());
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, A4Preferences.AStrykerRepairDepth.get());
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TESTS_ONLY, A4Preferences.AStrykerUseTestsOnly.get());
             int timeoutInMinutes = A4Preferences.AStrykerRepairTimeout.get();
             long timeout = (timeoutInMinutes * 60) * 1000;
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
@@ -857,6 +858,7 @@ final class SimpleReporter extends A4Reporter {
                 timeoutTimer.schedule(new RepairTimeOut(), repairTimeout());
             }
             RepairReport.getInstance().clockStart();
+            Candidate repair = null;
             while (mutantLab.advance()) {
                 cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + world.getAllCommands().size() + " commands...\n");
                 count++;
@@ -908,6 +910,7 @@ final class SimpleReporter extends A4Reporter {
                     mutantLab.reportCurrentAsInvalid();
                 } else if (results.isRepaired()) {
                     repairFound = true;
+                    repair = current.get();
                     cb(out, "RepairResults", Collections.singletonList("R"));
                     current.get().clearMutatedStatus();
                     RepairReport.getInstance().setRepair(current.get());
@@ -933,6 +936,23 @@ final class SimpleReporter extends A4Reporter {
                     cb(out, "RepairSubTittle", "Timeout reached\n");
             } else {
                 cb(out, "RepairTittle", "Model repaired\n");
+                if (MutantLab.useTestsOnly()) {
+                    List<Command> perfectOracleTests = MutantLab.getInstance().getPerfectOracleCommands();
+                    if (perfectOracleTests.isEmpty()) {
+                        logger.info("No perfect oracle tests to validate repair");
+                        cb(out, "RepairSubTittle", "No perfect oracle tests to validate repair\n");
+                    } else {
+                        repair.clearMutatedStatus();
+                        EvaluationResults spuriousCheck = evaluateCandidate(repair, perfectOracleTests, rep, false);
+                        if (spuriousCheck.isRepaired()) {
+                            logger.info("Perfect oracle tests passed!");
+                            cb(out, "RepairTittle", "Perfect oracle test passed!\n");
+                        } else {
+                            logger.info("Perfect oracle tests not passed, repair is spurious!");
+                            cb(out, "RepairTittle", "Perfect oracle test not passed, repair is spurious!\n");
+                        }
+                    }
+                }
             }
             timeoutTimer.cancel();
             RepairReport.getInstance().clockEnd();

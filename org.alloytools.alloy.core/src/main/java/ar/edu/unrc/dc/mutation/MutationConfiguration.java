@@ -251,6 +251,20 @@ public class MutationConfiguration {
 
         },
 
+        REPAIR_TESTS_ONLY {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
+        },
+
         REPAIR_VARIABILIZATION_USE_SAME_TYPES {
 
             @Override
@@ -301,7 +315,7 @@ public class MutationConfiguration {
     }
 
     private static MutationConfiguration instance;
-    private Map<String, Object> config;
+    private final Map<String, Object> config;
 
     public static MutationConfiguration getInstance() {
         if (instance == null)
@@ -325,6 +339,8 @@ public class MutationConfiguration {
             if (ck.equals(ConfigKey.REPAIR_MAX_DEPTH))
                 continue;
             if (ck.equals(ConfigKey.REPAIR_PARTIAL_REPAIR))
+                continue;
+            if (ck.equals(ConfigKey.REPAIR_TESTS_ONLY))
                 continue;
             String propValue = System.getenv(ck.toString());
             if (propValue != null) {

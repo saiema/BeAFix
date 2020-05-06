@@ -310,9 +310,15 @@ public class MutantLab {
         } else {
             cmds = DependencyGraph.getInstance().getAllCommands();
         }
+        if (useTestsOnly())
+            cmds = cmds.stream().filter(c -> !c.isPerfectOracleTest()).collect(Collectors.toList());
         if (!onlyVariabilizationTests)
             return cmds;
         return cmds.stream().filter(Command::isVariabilizationTest).collect(Collectors.toList());
+    }
+
+    public List<Command> getPerfectOracleCommands() {
+        return DependencyGraph.getInstance().getAllCommands().stream().filter(Command::isPerfectOracleTest).collect(Collectors.toList());
     }
 
     public static final Browsable PARTIAL_REPAIR_PRIORITY = Browsable.make(null, (Browsable) null);
@@ -386,19 +392,24 @@ public class MutantLab {
         }
     }
 
-    private int generatorTriggerThreshold() {
+    private static int generatorTriggerThreshold() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD);
         return configValue.map(o -> (Integer) o).orElse((Integer) ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD.defaultValue());
     }
 
-    private long candidateQueueTimeout() {
+    private static long candidateQueueTimeout() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT);
         return configValue.map(o -> (Long) o).orElse((Long) ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT.defaultValue());
     }
 
-    private boolean useDependencyGraphForChecking() {
+    private static boolean useDependencyGraphForChecking() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING);
         return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_USE_DEPENDENCY_GRAPH_FOR_CHECKING.defaultValue());
+    }
+
+    public static boolean useTestsOnly() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_TESTS_ONLY);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_TESTS_ONLY.defaultValue());
     }
 
 }

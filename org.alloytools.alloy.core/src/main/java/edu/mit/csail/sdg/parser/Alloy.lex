@@ -137,6 +137,7 @@ import java_cup.runtime.*;
 "#"                   { return alloy_sym(yytext(), CompSym.HASH        );}
 "#m#"                 { return alloy_sym(yytext(), CompSym.MUTABLE     );}
 "#t#"                 { return alloy_sym(yytext(), CompSym.VARTEST     );}
+"#po#"                { return alloy_sym(yytext(), CompSym.POTEST      );}
 "&&"                  { return alloy_sym(yytext(), CompSym.AND         );}
 "&"                   { return alloy_sym(yytext(), CompSym.AMPERSAND   );}
 "("                   { return alloy_sym(yytext(), CompSym.LPAREN      );}

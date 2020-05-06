@@ -41,13 +41,16 @@ import java.util.Set;
 public final class Command extends Browsable {
 
     private boolean isVariabilizationTest = false;
+    private boolean isPerfectOracleTest = false;
     public boolean isVariabilizationTest() {
         return isVariabilizationTest;
     }
-
     public void setAsVariabilizationTest() {
         isVariabilizationTest = true;
     }
+    public boolean isPerfectOracleTest() { return isPerfectOracleTest; }
+    public void setAsPerfectOracleTest() { isPerfectOracleTest = true; }
+
 
     /**
      * If nonnull, it means this command depends on this parent command.
@@ -346,6 +349,8 @@ public final class Command extends Browsable {
         clone.setIDEnv(getIDEnv());
         if (isVariabilizationTest())
             clone.setAsVariabilizationTest();
+        if (isPerfectOracleTest())
+            clone.setAsPerfectOracleTest();
         return clone;
     }
 

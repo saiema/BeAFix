@@ -674,6 +674,7 @@ public class A4Preferences {
     public static final BooleanPref AStrykerPartialRepair = new BooleanPref("AStrykerPartialRepair", "AStryker | Use Partial Repair");
     public static final IntChoicePref AStrykerRepairTimeout = new IntChoicePref("AStrykerRepairTimeout",Arrays.asList(0, 5, 10, 30, 60, 120, 180, 240, 360, 480, 720, 1440, 2880), 0);
     public static final IntChoicePref AStrykerRepairDepth = new IntChoicePref("AStrykerRepairDepth", Arrays.asList(1, 2, 3, 4, 5), 2);
+    public static final BooleanPref AStrykerUseTestsOnly = new BooleanPref("AStrykerUseTestsOnly", "AStryker | Use Perfect oracle tests to validate repair");
     //==================================================================
 
     public enum Verbosity {

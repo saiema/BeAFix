@@ -75,6 +75,7 @@ public class AStrykerCLI {
     private static final String VARIABILIZATION = "variabilization";
     private static final String VARIABILIZATION_SAME_TYPE = "sametypes";
     private static final String PARTIALREPAIR = "partialrepair";
+    private static final String USEPOTOVALIDATE = "validatewithpo";
     private static final String TIMEOUT = "timeout";
     private static final String MAXDEPTH = "maxdepth";
     private static void setConfig(String key, String value) {
@@ -84,12 +85,24 @@ public class AStrykerCLI {
             case PARTIALREPAIR : {
                 Optional<Boolean> varValue = parseBooleanValue(value);
                 if (varValue.isPresent()) {
-                    if (key.equals(VARIABILIZATION))
-                        varValue.ifPresent(A4Preferences.AStrykerVariabilization::set);
-                    else if (key.equals(PARTIALREPAIR))
-                        varValue.ifPresent(A4Preferences.AStrykerPartialRepair::set);
-                    else
-                        varValue.ifPresent(A4Preferences.AStrykerVariabilizationUseSameType::set);
+                    switch (key) {
+                        case VARIABILIZATION: {
+                            varValue.ifPresent(A4Preferences.AStrykerVariabilization::set);
+                            break;
+                        }
+                        case PARTIALREPAIR: {
+                            varValue.ifPresent(A4Preferences.AStrykerPartialRepair::set);
+                            break;
+                        }
+                        case USEPOTOVALIDATE: {
+                            varValue.ifPresent(A4Preferences.AStrykerUseTestsOnly::set);
+                            break;
+                        }
+                        case VARIABILIZATION_SAME_TYPE: {
+                            varValue.ifPresent(A4Preferences.AStrykerVariabilizationUseSameType::set);
+                            break;
+                        }
+                    }
                 } else
                     throw new IllegalArgumentException("Invalid value for " + key + " expecting (true/false) but got " + value + " instead");
                 break;

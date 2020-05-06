@@ -271,9 +271,12 @@ public class RepairReport {
         for (Command c : DependencyGraph.getInstance().getAllCommands()) {
             int complexity = DependencyGraph.getInstance().getCommandComplexity(c);
             boolean isVariabilizationTest = c.isVariabilizationTest();
+            boolean isPerfectOracleTest = c.isPerfectOracleTest();
             sb.append(c.toString()).append("\t").append(" complexity (").append(complexity).append(")");
             if (isVariabilizationTest)
                 sb.append(" used as variabilization test");
+            if (isPerfectOracleTest)
+                sb.append(" used as perfect oracle test");
             sb.append("\n");
         }
         sb.append("\n");
