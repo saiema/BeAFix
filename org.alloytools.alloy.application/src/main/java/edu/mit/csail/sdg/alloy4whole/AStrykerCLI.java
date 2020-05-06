@@ -82,6 +82,7 @@ public class AStrykerCLI {
         switch (key.toLowerCase()) {
             case VARIABILIZATION :
             case VARIABILIZATION_SAME_TYPE:
+            case USEPOTOVALIDATE:
             case PARTIALREPAIR : {
                 Optional<Boolean> varValue = parseBooleanValue(value);
                 if (varValue.isPresent()) {
