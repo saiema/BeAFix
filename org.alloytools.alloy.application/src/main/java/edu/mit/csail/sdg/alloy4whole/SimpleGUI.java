@@ -1157,6 +1157,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             int newmem = SubMemory.get(), newstack = SubStack.get();
             if (newmem != subMemoryNow || newstack != subStackNow)
                 WorkerEngine.stop();
+            //TODO: repair run
             if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
                 WorkerEngine.runLocally(repair1, cb);
             else
@@ -1406,6 +1407,36 @@ public final class SimpleGUI implements ComponentListener, Listener {
                     @Override
                     public void stateChanged(ChangeEvent e) {
                         try {
+                            if (e.getSource() instanceof Pref) {
+                                Pref p = (Pref) e.getSource();
+                                AStrykerConfigReader asConfig = AStrykerConfigReader.getInstance();
+                                switch (p.id) {
+                                    case "AStrykerVariabilization" : {
+                                        asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION, AStrykerVariabilization.get());
+                                        break;
+                                    }
+                                    case "AStrykerVariabilizationSameTypes": {
+                                        asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE, AStrykerVariabilizationUseSameType.get());
+                                        break;
+                                    }
+                                    case "AStrykerPartialRepair" : {
+                                        asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, AStrykerPartialRepair.get());
+                                        break;
+                                    }
+                                    case "AStrykerRepairTimeout" : {
+                                        asConfig.setIntArgument(AStrykerConfigReader.Config_key.TIMEOUT, AStrykerRepairTimeout.get());
+                                        break;
+                                    }
+                                    case "AStrykerRepairDepth" : {
+                                        asConfig.setIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH, AStrykerRepairDepth.get());
+                                        break;
+                                    }
+                                    case "AStrykerUseTestsOnly" : {
+                                        asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE, AStrykerUseTestsOnly.get());
+                                        break;
+                                    }
+                                }
+                            }
                             AStrykerConfigReader.getInstance().saveConfig();
                         } catch (IOException ioException) {
                             ioException.printStackTrace();

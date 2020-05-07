@@ -958,6 +958,7 @@ final class SimpleReporter extends A4Reporter {
             }
             timeoutTimer.cancel();
             RepairReport.getInstance().clockEnd();
+            cb(out, "RepairSubTittle", "***REPORT***\n" + RepairReport.getInstance().toString() + "\n*********\n");
             cb(out, "RepairSubTittle", "Repair time: " + RepairReport.getInstance().getTime() + "ms\n");
             logger.info(RepairReport.getInstance().toString());
             mutantLab.stopSearch();
