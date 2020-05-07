@@ -797,17 +797,19 @@ final class SimpleReporter extends A4Reporter {
         }
 
         private void setupMutationConfiguration(WorkerCallback out) throws IOException {
+            AStrykerConfigReader aStrykerConfig = AStrykerConfigReader.getInstance();
+            aStrykerConfig.loadConfig();
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.FALSE);                     //+
             MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR, Boolean.TRUE);     //+
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, A4Preferences.AStrykerVariabilization.get()); //update the variabilization Repair option
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, A4Preferences.AStrykerVariabilizationUseSameType.get());
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, A4Preferences.AStrykerPartialRepair.get());
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, A4Preferences.AStrykerRepairDepth.get());
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TESTS_ONLY, A4Preferences.AStrykerUseTestsOnly.get());
-            int timeoutInMinutes = A4Preferences.AStrykerRepairTimeout.get();
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION)); //update the variabilization Repair option
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE));
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR));
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH));
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TESTS_ONLY, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE));
+            int timeoutInMinutes = aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TIMEOUT);
             long timeout = (timeoutInMinutes * 60) * 1000;
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
             logger.info(MutationConfiguration.getInstance().toString());

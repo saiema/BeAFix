@@ -1,5 +1,6 @@
 package edu.mit.csail.sdg.alloy4whole;
 
+import ar.edu.unrc.dc.mutation.util.AStrykerConfigReader;
 import edu.mit.csail.sdg.alloy4.A4Preferences;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Pair;
@@ -23,8 +24,10 @@ public class AStrykerCLI {
         AlloyCore.debug = false;
         if (args.length == 0) throw new IllegalArgumentException("At least one argument (the module to repair) is required");
         String sourcefile = args[0];
-        if (args.length > 1)
+        if (args.length > 1) {
             parseCommandLine(Arrays.copyOfRange(args, 1, args.length));
+            AStrykerConfigReader.getInstance().saveConfig();
+        }
         String source = toText(sourcefile);
         Pair<ConstList<Command>,ConstList<Expr>> moduleInfo = CompUtil.parseOneModuleToRepair_fromFile(sourcefile);
         if (moduleInfo.a == null || moduleInfo.a.isEmpty() || moduleInfo.b == null || moduleInfo.b.isEmpty()) {
@@ -88,18 +91,19 @@ public class AStrykerCLI {
                 if (varValue.isPresent()) {
                     switch (key) {
                         case VARIABILIZATION: {
-                            varValue.ifPresent(A4Preferences.AStrykerVariabilization::set);
+                            AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION, varValue.get());
                             break;
                         }
                         case PARTIALREPAIR: {
-                            varValue.ifPresent(A4Preferences.AStrykerPartialRepair::set);
+                            AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, varValue.get());
                             break;
                         }
                         case USEPOTOVALIDATE: {
-                            varValue.ifPresent(A4Preferences.AStrykerUseTestsOnly::set);
+                            AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE, varValue.get());
                             break;
                         }
                         case VARIABILIZATION_SAME_TYPE: {
+                            AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE, varValue.get());
                             varValue.ifPresent(A4Preferences.AStrykerVariabilizationUseSameType::set);
                             break;
                         }
@@ -115,9 +119,9 @@ public class AStrykerCLI {
                     if (intValue < 0)
                         throw new IllegalArgumentException("Negative value for " + key + " (" + intValue + ")");
                     if (key.equals(TIMEOUT))
-                        A4Preferences.AStrykerRepairTimeout.set(intValue);
+                        AStrykerConfigReader.getInstance().setIntArgument(AStrykerConfigReader.Config_key.TIMEOUT, intVal.get());
                     else
-                        A4Preferences.AStrykerRepairDepth.set(intValue);
+                        AStrykerConfigReader.getInstance().setIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH, intVal.get());
                 });
                 if (!intVal.isPresent())
                     throw new IllegalArgumentException("Invalid value for " + key + " expecting integer but got " + value + " instead");

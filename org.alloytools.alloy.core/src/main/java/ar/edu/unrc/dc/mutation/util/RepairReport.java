@@ -228,15 +228,15 @@ public class RepairReport {
             return;
         StringBuilder sb = new StringBuilder();
         for (Expr e : MutantLab.getInstance().getModifiedAssertionsFunctionsAndFacts(repair)) {
-            sb.append("Original:\n");
+            sb.append("|ORIGINAL: ");
             ExprToString exprToString = new ExprToString(null, true);
             exprToString.visitThis(e);
             sb.append(exprToString.getStringRepresentation()).append("\n");
-            sb.append("Repaired:\n");
+            sb.append("REPAIRED: ");
             exprToString = new ExprToString(repair, true);
             exprToString.visitThis(e);
             sb.append(exprToString.getStringRepresentation()).append("\n");
-            sb.append("\n");
+            sb.append("|\n");
         }
         sb.append("\n");
         repairRepresentation = sb.toString();

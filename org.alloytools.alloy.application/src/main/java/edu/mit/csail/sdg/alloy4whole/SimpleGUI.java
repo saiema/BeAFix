@@ -15,6 +15,7 @@
 
 package edu.mit.csail.sdg.alloy4whole;
 
+import ar.edu.unrc.dc.mutation.util.AStrykerConfigReader;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.A4Preferences.*;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
@@ -1401,11 +1402,28 @@ public final class SimpleGUI implements ComponentListener, Listener {
             //@Mutants options menu
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 optmenu.addSeparator();
+                ChangeListener astrykerChangeListener = new ChangeListener() {
+                    @Override
+                    public void stateChanged(ChangeEvent e) {
+                        try {
+                            AStrykerConfigReader.getInstance().saveConfig();
+                        } catch (IOException ioException) {
+                            ioException.printStackTrace();
+                        }
+                    }
+                };
                 addToMenu(optmenu, AStrykerVariabilization);
                 addToMenu(optmenu, AStrykerVariabilizationUseSameType);
                 addToMenu(optmenu, AStrykerPartialRepair);
                 addToMenu(optmenu, AStrykerRepairTimeout);
                 addToMenu(optmenu, AStrykerRepairDepth);
+                addToMenu(optmenu, AStrykerUseTestsOnly);
+                AStrykerVariabilization.addChangeListener(astrykerChangeListener);
+                AStrykerVariabilizationUseSameType.addChangeListener(astrykerChangeListener);
+                AStrykerPartialRepair.addChangeListener(astrykerChangeListener);
+                AStrykerRepairTimeout.addChangeListener(astrykerChangeListener);
+                AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
+                AStrykerUseTestsOnly.addChangeListener(astrykerChangeListener);
                // addToMenu(optmenu,OPERATOR_BES_STRICT_TYPE_CHECK);
 
 
