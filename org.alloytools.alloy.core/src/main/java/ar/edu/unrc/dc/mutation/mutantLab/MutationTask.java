@@ -72,6 +72,7 @@ public class MutationTask implements Runnable {
         outputChannel.addDecreaseAssociatedObject(thresholdLock);
     }
 
+    private boolean waitingToBeStopped = false;
     private boolean run = true;
     @Override
     public void run() {
@@ -84,7 +85,7 @@ public class MutationTask implements Runnable {
                     if (run) {
                         current.ifPresent(this::checkAndGenerateNewCandidates);
                         if (run && mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
-                            outputChannel.insert(Candidate.STOP);
+                            outputChannel.priorityInsert(Candidate.STOP);
                             MutantLab.getInstance().stopSearch();
                         }
                     }
@@ -98,6 +99,10 @@ public class MutationTask implements Runnable {
                 return;
             }
         }
+    }
+
+    public synchronized void softStop() {
+        waitingToBeStopped = true;
     }
 
     public synchronized void stop() {
@@ -118,6 +123,8 @@ public class MutationTask implements Runnable {
 
     private int mutationsAdded = 0;
     private void checkAndGenerateNewCandidates(Candidate from) {
+        if (waitingToBeStopped)
+            return;
         mutationsAdded = 0;
         logger.info("***Variabilization check started***");
         if (!from.isValid()) {
@@ -126,7 +133,7 @@ public class MutationTask implements Runnable {
         }
         if (from.isLast()) { //TODO: check if this verification is needed, this method should not be getting called with a last candidate
             logger.info("candidate was last, sending stop signal");
-            outputChannel.insert(Candidate.STOP);
+            outputChannel.priorityInsert(Candidate.STOP);
             return;
         }
         //=============VARIABILIZATION=============
@@ -147,7 +154,7 @@ public class MutationTask implements Runnable {
             logger.info("variabilization check FAILED");
             if (from.isFirst()) {
                 logger.info("current candidate had index 0, sending CANT REPAIR signal");
-                outputChannel.insert(Candidate.CANT_REPAIR);
+                outputChannel.priorityInsert(Candidate.CANT_REPAIR);
                 return;
             }
         }

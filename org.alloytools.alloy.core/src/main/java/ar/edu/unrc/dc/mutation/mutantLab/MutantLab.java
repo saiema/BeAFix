@@ -209,8 +209,11 @@ public class MutantLab {
                 return advance();
             }
             if (current.get() == Candidate.STOP) {
-                mutationTask.stop();
                 logger.info("Received STOP candidate, stopping generation...");
+                return false;
+            }
+            if (current.get() == Candidate.TIMEOUT) {
+                logger.info("Received TIMEOUT candidate, stopping generation...");
                 return false;
             }
             logger.info("Inserting current to mutation task input channel");
@@ -271,7 +274,8 @@ public class MutantLab {
 
     public void timeout() {
         logger.info("Timeout reached (some candidates may still be analyzed)");
-        output.insert(Candidate.TIMEOUT);
+        output.priorityInsert(Candidate.TIMEOUT);
+        mutationTask.softStop();
     }
 
     public void stopSearch() {

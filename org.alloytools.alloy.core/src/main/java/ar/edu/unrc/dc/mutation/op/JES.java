@@ -85,7 +85,8 @@ public class JES extends JEX {
             }
             if (replacements.isPresent()) {
                 for (Expr r : replacements.get()) {
-                    mutations.add(new Mutation(whoiam(), replace, r));
+                    if (canReplace(replace, r, strictTypeCheck()))
+                        mutations.add(new Mutation(whoiam(), replace, r));
                 }
             }
         }
