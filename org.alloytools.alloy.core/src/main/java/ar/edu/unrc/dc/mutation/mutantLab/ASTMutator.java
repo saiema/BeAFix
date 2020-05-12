@@ -58,6 +58,22 @@ public class ASTMutator {
         return true;
     }
 
+    public List<Mutation> appliedMutations() {
+        return appliedMutations;
+    }
+
+    public boolean undoMutations() {
+        if (!unappliedMutations.empty())
+            throw new IllegalStateException("not all mutations where applied");
+        while (!appliedMutations.empty()) {
+            if (!applyMutation(appliedMutations.pop(), true))
+                return false;
+        }
+        return true;
+    }
+
+    //PRIVATE METHODS
+
     private boolean applyMutation(Mutation m, boolean undo) {
         Expr original = undo ? m.mutant() : m.original();
         Expr mutant = undo ? m.original() : m.mutant();
@@ -72,9 +88,8 @@ public class ASTMutator {
                     appliedMutations.push(fullExprMutation);
                 }
                 return processedMutatedExpr.isPresent();
-            } catch (CheatingIsBadMkay cheatingIsBadMkay) {
-                cheatingIsBadMkay.printStackTrace();
-                return false;
+            } catch (CheatingIsBadMkay e) {
+                throw new IllegalStateException("An exception occurred while applying mutation", e);
             }
         }
         return false;
@@ -200,20 +215,6 @@ public class ASTMutator {
             }
         }
         return replacement;
-    }
-
-    public List<Mutation> appliedMutations() {
-        return appliedMutations;
-    }
-
-    public boolean undoMutations() {
-        if (!unappliedMutations.empty())
-            throw new IllegalStateException("not all mutations where applied");
-        while (!appliedMutations.empty()) {
-            if (!applyMutation(appliedMutations.pop(), true))
-                return false;
-        }
-        return true;
     }
 
 }

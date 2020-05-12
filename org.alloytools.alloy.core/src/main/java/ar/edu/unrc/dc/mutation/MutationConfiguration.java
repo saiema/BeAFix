@@ -1,5 +1,8 @@
 package ar.edu.unrc.dc.mutation;
 
+import ar.edu.unrc.dc.mutation.util.AStrykerConfigReader;
+
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -325,46 +328,74 @@ public class MutationConfiguration {
 
     private MutationConfiguration() {
         config = new HashMap<>();
-        //loadSystemProperties();
     }
 
-    public void loadSystemProperties() {
-        for (ConfigKey ck : ConfigKey.values()) {
-            if (ck.equals(ConfigKey.REPAIR_VARIABILIZATION))
-                continue;
-            if (ck.equals(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES))
-                continue;
-            if (ck.equals(ConfigKey.REPAIR_TIMEOUT))
-                continue;
-            if (ck.equals(ConfigKey.REPAIR_MAX_DEPTH))
-                continue;
-            if (ck.equals(ConfigKey.REPAIR_PARTIAL_REPAIR))
-                continue;
-            if (ck.equals(ConfigKey.REPAIR_TESTS_ONLY))
-                continue;
-            String propValue = System.getenv(ck.toString());
-            if (propValue != null) {
-                if (ck.getValueType().equals(Boolean.class)) {
-                    Boolean configValue = Boolean.valueOf(propValue);
-                    setConfig(ck, configValue);
-                } else if (ck.getValueType().equals(Integer.class)) {
-                    try {
-                        Integer configValue = Integer.parseInt(propValue);
-                        setConfig(ck, configValue);
-                    } catch (NumberFormatException e) {
-                        System.err.println("Error while parsing value for property " + ck.toString());
-                    }
-                } else if (ck.getValueType().equals(Long.class)) {
-                    try {
-                        Long configValue = Long.parseLong(propValue);
-                        setConfig(ck, configValue);
-                    } catch (NumberFormatException e) {
-                        System.err.println("Error while parsing value for property " + ck.toString());
-                    }
-                }
+    public void loadConfigFromAStrykerConfig() {
+        AStrykerConfigReader aconfig = AStrykerConfigReader.getInstance();
+        try {
+            aconfig.loadConfig();
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.VARIABILIZATION)) {
+                setConfig(ConfigKey.REPAIR_VARIABILIZATION, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION));
             }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE)) {
+                setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.PARTIAL_REPAIR)) {
+                setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE)) {
+                setConfig(ConfigKey.REPAIR_TESTS_ONLY, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TIMEOUT)) {
+                int to = aconfig.getIntArgument(AStrykerConfigReader.Config_key.TIMEOUT);
+                Long toAsLong = to == 0?0L:(to * 1000) * 60;
+                setConfig(ConfigKey.REPAIR_TIMEOUT, toAsLong);
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.MAX_DEPTH)) {
+                setConfig(ConfigKey.REPAIR_MAX_DEPTH, aconfig.getIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
+
+//    public void loadSystemProperties() {
+//        for (ConfigKey ck : ConfigKey.values()) {
+//            if (ck.equals(ConfigKey.REPAIR_VARIABILIZATION))
+//                continue;
+//            if (ck.equals(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES))
+//                continue;
+//            if (ck.equals(ConfigKey.REPAIR_TIMEOUT))
+//                continue;
+//            if (ck.equals(ConfigKey.REPAIR_MAX_DEPTH))
+//                continue;
+//            if (ck.equals(ConfigKey.REPAIR_PARTIAL_REPAIR))
+//                continue;
+//            if (ck.equals(ConfigKey.REPAIR_TESTS_ONLY))
+//                continue;
+//            String propValue = System.getenv(ck.toString());
+//            if (propValue != null) {
+//                if (ck.getValueType().equals(Boolean.class)) {
+//                    Boolean configValue = Boolean.valueOf(propValue);
+//                    setConfig(ck, configValue);
+//                } else if (ck.getValueType().equals(Integer.class)) {
+//                    try {
+//                        Integer configValue = Integer.parseInt(propValue);
+//                        setConfig(ck, configValue);
+//                    } catch (NumberFormatException e) {
+//                        System.err.println("Error while parsing value for property " + ck.toString());
+//                    }
+//                } else if (ck.getValueType().equals(Long.class)) {
+//                    try {
+//                        Long configValue = Long.parseLong(propValue);
+//                        setConfig(ck, configValue);
+//                    } catch (NumberFormatException e) {
+//                        System.err.println("Error while parsing value for property " + ck.toString());
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     public void setConfig(ConfigKey configKey, Object value) {
         if (!configKey.getValueType().isAssignableFrom(value.getClass()))

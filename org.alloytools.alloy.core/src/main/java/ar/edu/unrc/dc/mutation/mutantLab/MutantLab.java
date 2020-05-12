@@ -63,14 +63,14 @@ public class MutantLab {
     private boolean searchStarted;
     private final int maxDepth;
     private final int markedExpressions;
+
+    public Boolean timeoutReached = false;
+    public Boolean stopRepairProcess = false;
+
     //fields for partial repair for multiple bugged and independent functions (preds/fun/assertions)
     private final List<Browsable> affectedFunctionsPredicatesAndAssertions;
-    private boolean partialRepairSupported = false;
+    private final boolean partialRepairSupported;
     private Map<Browsable, Pair<Integer,Integer>> indexesPerFPAs;
-
-    private MutantLab(CompModule context, Ops...ops) {
-        this(context, Integer.MAX_VALUE, ops);
-    }
 
     private MutantLab(CompModule context, int maxDepth, Ops...ops) {
         if (context == null) throw new IllegalArgumentException("context can't be null");
@@ -196,6 +196,14 @@ public class MutantLab {
         }
         try {
             Optional<Candidate> current = output.getAndAdvance();
+            if (timeoutReached) {
+                logger.info("TIMEOUT reached...");
+                return true;
+            }
+            if (stopRepairProcess) {
+                logger.info("STOP search...");
+                return true;
+            }
             if (!current.isPresent()) {
                 logger.info("Got empty current candidate");
                 return false;
@@ -208,17 +216,9 @@ public class MutantLab {
                 logger.info("Received invalid candidate, skipping candidate");
                 return advance();
             }
-            if (current.get() == Candidate.STOP) {
-                logger.info("Received STOP candidate, stopping generation...");
-                return false;
-            }
-            if (current.get() == Candidate.TIMEOUT) {
-                logger.info("Received TIMEOUT candidate, stopping generation...");
-                return false;
-            }
             logger.info("Inserting current to mutation task input channel");
             sendCandidateToInput(current.get());
-            return true;//output.current().isPresent();
+            return true;
         } catch (InterruptedException e) {
             e.printStackTrace();
             logger.severe("Got interrupted exception when trying to advance");
@@ -274,14 +274,16 @@ public class MutantLab {
 
     public void timeout() {
         logger.info("Timeout reached (some candidates may still be analyzed)");
-        output.priorityInsert(Candidate.TIMEOUT);
+        timeoutReached = true;
         mutationTask.softStop();
     }
 
     public void stopSearch() {
         logger.info("Stopping search");
-        if (searchStarted)
+        if (searchStarted) {
             mutationTask.stop();
+            searchStarted = false;
+        }
     }
 
     public void lockCandidateGeneration() {

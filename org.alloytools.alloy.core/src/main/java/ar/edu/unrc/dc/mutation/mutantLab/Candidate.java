@@ -15,9 +15,7 @@ public class Candidate {
 
     //signals
     public static final Candidate INVALID;
-    public static final Candidate STOP;
     public static final Candidate CANT_REPAIR;
-    public static final Candidate TIMEOUT;
 
     private Candidate parent;
     private Mutation mutation;
@@ -38,9 +36,7 @@ public class Candidate {
         Candidate invalid = new Candidate(null);
         invalid.markAsInvalid();
         INVALID = invalid;
-        STOP = new Candidate(null);
         CANT_REPAIR = new Candidate(null);
-        TIMEOUT = new Candidate(null);
     }
 
     private Candidate(CompModule context) {

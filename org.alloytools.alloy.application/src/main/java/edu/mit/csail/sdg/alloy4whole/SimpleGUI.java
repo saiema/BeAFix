@@ -15,6 +15,7 @@
 
 package edu.mit.csail.sdg.alloy4whole;
 
+import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.util.AStrykerConfigReader;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.A4Preferences.*;
@@ -22,7 +23,6 @@ import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleCallback1;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask1;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask2;
-import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompUtil;
@@ -58,8 +58,8 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.*;
 
+import static ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey.*;
 import static edu.mit.csail.sdg.alloy4.A4Preferences.*;
-import static edu.mit.csail.sdg.alloy4.A4Preferences.AStrykerVariabilization;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menu;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menuItem;
 import static java.awt.event.KeyEvent.*;
@@ -1403,46 +1403,52 @@ public final class SimpleGUI implements ComponentListener, Listener {
             //@Mutants options menu
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 optmenu.addSeparator();
-                ChangeListener astrykerChangeListener = new ChangeListener() {
-                    @Override
-                    public void stateChanged(ChangeEvent e) {
-                        try {
-                            if (e.getSource() instanceof Pref) {
-                                Pref p = (Pref) e.getSource();
-                                AStrykerConfigReader asConfig = AStrykerConfigReader.getInstance();
-                                switch (p.id) {
-                                    case "AStrykerVariabilization" : {
-                                        asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION, AStrykerVariabilization.get());
-                                        break;
-                                    }
-                                    case "AStrykerVariabilizationSameTypes": {
-                                        asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE, AStrykerVariabilizationUseSameType.get());
-                                        break;
-                                    }
-                                    case "AStrykerPartialRepair" : {
-                                        asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, AStrykerPartialRepair.get());
-                                        break;
-                                    }
-                                    case "AStrykerRepairTimeout" : {
-                                        asConfig.setIntArgument(AStrykerConfigReader.Config_key.TIMEOUT, AStrykerRepairTimeout.get());
-                                        break;
-                                    }
-                                    case "AStrykerRepairDepth" : {
-                                        asConfig.setIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH, AStrykerRepairDepth.get());
-                                        break;
-                                    }
-                                    case "AStrykerUseTestsOnly" : {
-                                        asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE, AStrykerUseTestsOnly.get());
-                                        break;
-                                    }
+                ChangeListener astrykerChangeListener = e -> {
+                    try {
+                        if (e.getSource() instanceof Pref) {
+                            Pref p = (Pref) e.getSource();
+                            AStrykerConfigReader asConfig = AStrykerConfigReader.getInstance();
+                            switch (p.id) {
+                                case "AStrykerVariabilization" : {
+                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION, AStrykerVariabilization.get());
+                                    break;
+                                }
+                                case "AStrykerVariabilizationSameTypes": {
+                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE, AStrykerVariabilizationUseSameType.get());
+                                    break;
+                                }
+                                case "AStrykerPartialRepair" : {
+                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, AStrykerPartialRepair.get());
+                                    break;
+                                }
+                                case "AStrykerRepairTimeout" : {
+                                    asConfig.setIntArgument(AStrykerConfigReader.Config_key.TIMEOUT, AStrykerRepairTimeout.get());
+                                    break;
+                                }
+                                case "AStrykerRepairDepth" : {
+                                    asConfig.setIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH, AStrykerRepairDepth.get());
+                                    break;
+                                }
+                                case "AStrykerUseTestsOnly" : {
+                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE, AStrykerUseTestsOnly.get());
+                                    break;
                                 }
                             }
-                            AStrykerConfigReader.getInstance().saveConfig();
-                        } catch (IOException ioException) {
-                            ioException.printStackTrace();
                         }
+                        AStrykerConfigReader.getInstance().saveConfig();
+                    } catch (IOException ioException) {
+                        ioException.printStackTrace();
                     }
                 };
+                MutationConfiguration mconfig = MutationConfiguration.getInstance();
+                mconfig.loadConfigFromAStrykerConfig();
+                AStrykerVariabilization.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION).orElse(REPAIR_VARIABILIZATION.defaultValue()));
+                AStrykerVariabilizationUseSameType.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION_USE_SAME_TYPES).orElse(REPAIR_VARIABILIZATION_USE_SAME_TYPES.defaultValue()));
+                AStrykerPartialRepair.set((Boolean) mconfig.getConfigValue(REPAIR_PARTIAL_REPAIR).orElse(REPAIR_PARTIAL_REPAIR.defaultValue()));
+                Long to = (Long) mconfig.getConfigValue(REPAIR_TIMEOUT).orElse(REPAIR_TIMEOUT.defaultValue());
+                AStrykerRepairTimeout.set(to == 0?0: (int) ((to / 1000) / 60));
+                AStrykerRepairDepth.set((Integer) mconfig.getConfigValue(REPAIR_MAX_DEPTH).orElse(REPAIR_MAX_DEPTH.defaultValue()));
+                AStrykerUseTestsOnly.set((Boolean) mconfig.getConfigValue(REPAIR_TESTS_ONLY).orElse(REPAIR_TESTS_ONLY.defaultValue()));
                 addToMenu(optmenu, AStrykerVariabilization);
                 addToMenu(optmenu, AStrykerVariabilizationUseSameType);
                 addToMenu(optmenu, AStrykerPartialRepair);
@@ -1455,13 +1461,6 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerRepairTimeout.addChangeListener(astrykerChangeListener);
                 AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
                 AStrykerUseTestsOnly.addChangeListener(astrykerChangeListener);
-               // addToMenu(optmenu,OPERATOR_BES_STRICT_TYPE_CHECK);
-
-
-                //JMenuItem y = new JMenuItem("Repair by mutating marked exprs (#m#)", null);
-                //y.addActionListener(doRepair(-1));
-                //runmenu.add(new JSeparator(), runmenu.getItemCount());
-                //runmenu.add(y, runmenu.getItemCount());
             }
 
 

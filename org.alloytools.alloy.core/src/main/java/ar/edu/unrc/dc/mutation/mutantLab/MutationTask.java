@@ -44,17 +44,11 @@ public class MutationTask implements Runnable {
     private final BlockingCollection<Candidate> inputChannel;
     private final SortedSet<Ops> ops;
     private final int outputMinThreshold;
-    private final static int DEFAULT_OUTPUT_MIN_THRESHOLD = 3;
     private final Object thresholdLock = new Object();
     private final MutantsHashes mutantsHashes;
     private final Lock lock = new ReentrantLock();
     public Lock getLock() {
         return lock;
-    }
-    private long thresholdRetryTimeout = 10000L;
-
-    public MutationTask(SortedSet<Ops> ops, BlockingCollection<Candidate> inputChannel, BlockingCollection<Candidate> outputChannel) {
-        this(ops, inputChannel, outputChannel, DEFAULT_OUTPUT_MIN_THRESHOLD);
     }
 
     public MutationTask(SortedSet<Ops> ops, BlockingCollection<Candidate> inputChannel, BlockingCollection<Candidate> outputChannel, int outputMinThreshold) {
@@ -85,8 +79,7 @@ public class MutationTask implements Runnable {
                     if (run) {
                         current.ifPresent(this::checkAndGenerateNewCandidates);
                         if (run && mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
-                            outputChannel.priorityInsert(Candidate.STOP);
-                            MutantLab.getInstance().stopSearch();
+                            MutantLab.getInstance().stopRepairProcess = true;
                         }
                     }
                     lock.unlock();
@@ -95,6 +88,7 @@ public class MutationTask implements Runnable {
                 StringWriter sw = new StringWriter();
                 e.printStackTrace(new PrintWriter(sw));
                 logger.info("Exception in run method\n"+sw.toString());
+                MutantLab.getInstance().stopRepairProcess = true;
                 lock.unlock();
                 return;
             }
@@ -116,7 +110,7 @@ public class MutationTask implements Runnable {
     private void waitForOutputThreshold() throws InterruptedException {
         while (outputChannel.size() > outputMinThreshold) {
             synchronized (thresholdLock) {
-                thresholdLock.wait(thresholdRetryTimeout);
+                thresholdLock.wait(500L);
             }
         }
     }
@@ -131,9 +125,8 @@ public class MutationTask implements Runnable {
             logger.info("candidate was invalid, returning");
             return;
         }
-        if (from.isLast()) { //TODO: check if this verification is needed, this method should not be getting called with a last candidate
-            logger.info("candidate was last, sending stop signal");
-            outputChannel.priorityInsert(Candidate.STOP);
+        if (from.isLast()) {
+            logger.info("candidate was last, ignoring...");
             return;
         }
         //=============VARIABILIZATION=============

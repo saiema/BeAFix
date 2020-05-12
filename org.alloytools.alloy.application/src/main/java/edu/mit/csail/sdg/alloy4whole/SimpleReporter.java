@@ -818,6 +818,15 @@ final class SimpleReporter extends A4Reporter {
 
         @Override
         public void run(WorkerCallback out) throws Exception {
+            try {
+                runRepair(out);
+            } catch (Exception e) {
+                logger.info("Exception in run:\n" + Arrays.toString(e.getStackTrace()).replace( ',', '\n' ));
+                throw e;
+            }
+        }
+
+        public void runRepair(WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Reparing process...\n\n");
             logger.info("Starting repair on model: " + options.originalFilename);
             setupMutationConfiguration(out);
@@ -828,7 +837,7 @@ final class SimpleReporter extends A4Reporter {
             fixParentRelationship(world);
             NodeAliasingFixer nodeAliasingFixer = new NodeAliasingFixer();
             nodeAliasingFixer.fixSigNodes(world);
-            DependencyGraph dependencyGraph = DependencyScanner.scanDependencies(world);
+            DependencyScanner.scanDependencies(world);
             // Generate and build the mutation manager
             cb(out, "RepairSubTittle", world.markedEprsToMutate.size()+  " mutations mark detected Executing \n");
             cb(out, "RepairSubTittle", "Generating mutants... ");
@@ -865,25 +874,24 @@ final class SimpleReporter extends A4Reporter {
                 cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + world.getAllCommands().size() + " commands...\n");
                 count++;
                 //report current mutation
+                if (MutantLab.getInstance().stopRepairProcess) {
+                    logger.info("Received STOP signal.. stopping search");
+                    break;
+                }
+                if (MutantLab.getInstance().timeoutReached) {
+                    timeoutReached = true;
+                    logger.info("Timeout signal received... stopping search");
+                    break;
+                }
                 Optional<Candidate> current = mutantLab.getCurrentCandidate();
                 if (!current.isPresent()) {
                     logger.info("Received an empty candidate");
-                    break;
-                }
-                if (current.get() == Candidate.STOP) {
-                    logger.info("Received STOP signal.. stopping search");
                     break;
                 }
                 if (current.get() == Candidate.CANT_REPAIR) {
                     logger.info("Variabilization deemed this specification as non repairable... stopping search");
                     break;
                 }
-                if (current.get() == Candidate.TIMEOUT) {
-                    timeoutReached = true;
-                    logger.info("Timeout signal received... stopping search");
-                    break;
-                }
-                current.get().clearMutatedStatus();
                 RepairReport.getInstance().incExaminedCandidates();
                 for (Triplet<String, String, String> em : current.get().getCurrentMutationsInfo()) {
                     cb(out, "RepairExprOrig->Mut", em.a, em.b, em.c + "  \n");
@@ -894,11 +902,13 @@ final class SimpleReporter extends A4Reporter {
                 MutantLab.getInstance().lockCandidateGeneration();
                 Browsable.freezeParents();
                 EvaluationResults results;
+                current.get().clearMutatedStatus();
                 if (partialRepair()) {
                     results = evaluateCandidatePartialRepairEvaluation(current.get(), rep);
                 } else {
                     results = evaluateCandidateNormalEvaluation(current.get(), rep);
                 }
+                current.get().clearMutatedStatus();
                 if (partialRepair())
                     current.get().setCommandsResults(results.getCommandResults());
                 if (results.isDiscarded()) {
@@ -908,13 +918,11 @@ final class SimpleReporter extends A4Reporter {
                     results.getException().printStackTrace(new PrintWriter(sw));
                     String exceptionAsString = sw.toString();
                     logger.info(exceptionAsString);
-                    current.get().clearMutatedStatus();
                     mutantLab.reportCurrentAsInvalid();
                 } else if (results.isRepaired()) {
                     repairFound = true;
                     repair = current.get();
                     cb(out, "RepairResults", Collections.singletonList("R"));
-                    current.get().clearMutatedStatus();
                     RepairReport.getInstance().setRepair(current.get());
                     mutantLab.stopSearch();
                     rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
