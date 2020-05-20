@@ -80,11 +80,12 @@ public class MutationTask implements Runnable {
                         current.ifPresent(this::checkAndGenerateNewCandidates);
                         if (run && mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
                             MutantLab.getInstance().stopRepairProcess = true;
+                            outputChannel.insert(Candidate.SEARCH_SPACE_EXHAUSTED);
                         }
                     }
                     lock.unlock();
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 StringWriter sw = new StringWriter();
                 e.printStackTrace(new PrintWriter(sw));
                 logger.info("Exception in run method\n"+sw.toString());

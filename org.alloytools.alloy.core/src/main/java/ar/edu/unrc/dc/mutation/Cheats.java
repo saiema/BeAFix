@@ -6,10 +6,7 @@ import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 /**
@@ -374,6 +371,13 @@ public final class Cheats {
     }
 
     public static void addSigToModule(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        addSigToModule_sigsField(module, sig);
+        addSigToModule_old2fieldsField(module, sig);
+        addSigToModule_sig2moduleField(module, sig);
+        addSigToModule_old2appendedfactsField(module, sig);
+    }
+
+    private static void addSigToModule_sigsField(CompModule module, Sig sig) throws CheatingIsBadMkay {
         Field sigsField = getField(CompModule.class, "sigs");
         if (sigsField == null)
             throw new CheatingIsBadMkay("Couldn't find sigs field");
@@ -391,7 +395,68 @@ public final class Cheats {
         }
     }
 
+    private static void addSigToModule_old2fieldsField(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        Field old2fieldsField = getField(CompModule.class, "old2fields");
+        if (old2fieldsField == null)
+            throw new CheatingIsBadMkay("Couldn't find old2fields field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(old2fieldsField, true);
+            LinkedHashMap<Sig, List<Decl>> old2fields = (LinkedHashMap<Sig, List<Decl>>) old2fieldsField.get(module);
+            if (old2fields.containsKey(sig)) {
+                setAccessibleStatus(old2fieldsField, oldAccessibleStatus);
+                throw new IllegalAccessException("Sig to add (" + sig.label + ") already exists in module");
+            }
+            old2fields.put(sig, sig.getFieldDecls().makeCopy());
+            setAccessibleStatus(old2fieldsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access old2fields field");
+        }
+    }
+
+    private static void addSigToModule_sig2moduleField(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        Field sig2moduleField = getField(CompModule.class, "sig2module");
+        if (sig2moduleField == null)
+            throw new CheatingIsBadMkay("Couldn't find sig2module field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(sig2moduleField, true);
+            HashMap<Sig, CompModule> sig2module = (HashMap<Sig, CompModule>) sig2moduleField.get(module);
+            if (sig2module.containsKey(sig)) {
+                setAccessibleStatus(sig2moduleField, oldAccessibleStatus);
+                throw new IllegalAccessException("Sig to add (" + sig.label + ") already exists in module");
+            }
+            sig2module.put(sig, module);
+            setAccessibleStatus(sig2moduleField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access sig2module field");
+        }
+    }
+
+    private static void addSigToModule_old2appendedfactsField(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        Field old2appendedfactsField = getField(CompModule.class, "old2appendedfacts");
+        if (old2appendedfactsField == null)
+            throw new CheatingIsBadMkay("Couldn't find old2appendedfacts field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(old2appendedfactsField, true);
+            LinkedHashMap<Sig,Expr> old2appendedfacts = (LinkedHashMap<Sig,Expr>) old2appendedfactsField.get(module);
+            if (old2appendedfacts.containsKey(sig)) {
+                setAccessibleStatus(old2appendedfactsField, oldAccessibleStatus);
+                throw new IllegalAccessException("Sig to add (" + sig.label + ") already exists in module");
+            }
+            old2appendedfacts.put(sig, ExprConstant.TRUE);
+            setAccessibleStatus(old2appendedfactsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access old2appendedfacts field");
+        }
+    }
+
     public static void removeSigFromModule(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        removeSigFromModule_sigsField(module, sig);
+        removeSigFromModule_old2fieldsField(module, sig);
+        removeSigFromModule_sig2moduleField(module, sig);
+        removeSigFromModule_old2appendedfactsField(module, sig);
+    }
+
+    private static void removeSigFromModule_sigsField(CompModule module, Sig sig) throws CheatingIsBadMkay {
         Field sigsField = getField(CompModule.class, "sigs");
         if (sigsField == null)
             throw new CheatingIsBadMkay("Couldn't find sigs field");
@@ -406,6 +471,60 @@ public final class Cheats {
             setAccessibleStatus(sigsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("An error ocurred while trying to access sigs field");
+        }
+    }
+
+    private static void removeSigFromModule_old2fieldsField(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        Field old2fieldsField = getField(CompModule.class, "old2fields");
+        if (old2fieldsField == null)
+            throw new CheatingIsBadMkay("Couldn't find old2fields field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(old2fieldsField, true);
+            LinkedHashMap<Sig,List<Decl>> old2fields = (LinkedHashMap<Sig,List<Decl>>) old2fieldsField.get(module);
+            if (!old2fields.containsKey(sig)) {
+                setAccessibleStatus(old2fieldsField, oldAccessibleStatus);
+                throw new IllegalAccessException("Sig to remove (" + sig.label + ") doesn't exists in module");
+            }
+            old2fields.remove(sig);
+            setAccessibleStatus(old2fieldsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access old2fields field");
+        }
+    }
+
+    private static void removeSigFromModule_sig2moduleField(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        Field sigToModuleField = getField(CompModule.class, "sig2module");
+        if (sigToModuleField == null)
+            throw new CheatingIsBadMkay("Couldn't find sig2module field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(sigToModuleField, true);
+            HashMap<Sig,CompModule> sigToModule = (HashMap<Sig,CompModule>) sigToModuleField.get(module);
+            if (!sigToModule.containsKey(sig)) {
+                setAccessibleStatus(sigToModuleField, oldAccessibleStatus);
+                throw new IllegalAccessException("Sig to remove (" + sig.label + ") doesn't exists in module");
+            }
+            sigToModule.remove(sig);
+            setAccessibleStatus(sigToModuleField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access sig2module field");
+        }
+    }
+
+    private static void removeSigFromModule_old2appendedfactsField(CompModule module, Sig sig) throws CheatingIsBadMkay {
+        Field old2appendedfactsField = getField(CompModule.class, "old2appendedfacts");
+        if (old2appendedfactsField == null)
+            throw new CheatingIsBadMkay("Couldn't find old2appendedfacts field");
+        try {
+            boolean oldAccessibleStatus = setAccessibleStatus(old2appendedfactsField, true);
+            LinkedHashMap<Sig,Expr> old2appendedfacts = (LinkedHashMap<Sig,Expr>) old2appendedfactsField.get(module);
+            if (!old2appendedfacts.containsKey(sig)) {
+                setAccessibleStatus(old2appendedfactsField, oldAccessibleStatus);
+                throw new IllegalAccessException("Sig to remove (" + sig.label + ") doesn't exists in module");
+            }
+            old2appendedfacts.remove(sig);
+            setAccessibleStatus(old2appendedfactsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error ocurred while trying to access old2appendedfacts field");
         }
     }
 

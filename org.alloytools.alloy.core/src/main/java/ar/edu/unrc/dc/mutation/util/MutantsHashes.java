@@ -18,6 +18,7 @@ import java.util.logging.SimpleFormatter;
 
 public class MutantsHashes {
 
+    public static boolean logEnable = false;
     private static final Logger logger = Logger.getLogger(MutantsHashes.class.getName());
 
     static {
@@ -68,7 +69,8 @@ public class MutantsHashes {
             messageDigest.update(stringToHash.getBytes());
             byte[] digest = messageDigest.digest();
             boolean exists = !hashes.add(digest);
-            logger.info("candidate : " + c.toString() + "\nhas hash : " + Arrays.toString(digest) + "\n" + (exists?"Already exists":"New candidate"));
+            if (logEnable)
+                logger.info("candidate : " + c.toString() + "\nhas hash : " + Arrays.toString(digest) + "\n" + (exists?"Already exists":"New candidate"));
             return !exists;
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();

@@ -414,7 +414,7 @@ public final class ExprQt extends Expr {
                 dnamesClone.add((ExprHasName) dn.clone());
             Expr bound;
             if (d.equals(target)) {
-                bound = replacement;
+                bound = (Expr) replacement.clone();
             } else {
                 bound = (Expr) d.expr.clone();
             }

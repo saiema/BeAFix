@@ -445,7 +445,7 @@ public final class ExprCall extends Expr {
         List<Expr> argsClone = new LinkedList<>();
         for (Expr a : this.args) {
             if (Browsable.equals(a, target)) {
-                argsClone.add(replacement);
+                argsClone.add((Expr) replacement.clone());
             } else {
                 argsClone.add((Expr) a.clone());
             }

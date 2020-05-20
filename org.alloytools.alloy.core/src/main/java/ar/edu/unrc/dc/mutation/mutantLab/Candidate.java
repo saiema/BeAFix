@@ -16,6 +16,7 @@ public class Candidate {
     //signals
     public static final Candidate INVALID;
     public static final Candidate CANT_REPAIR;
+    public static final Candidate SEARCH_SPACE_EXHAUSTED;
 
     private Candidate parent;
     private Mutation mutation;
@@ -37,6 +38,7 @@ public class Candidate {
         invalid.markAsInvalid();
         INVALID = invalid;
         CANT_REPAIR = new Candidate(null);
+        SEARCH_SPACE_EXHAUSTED = new Candidate(null);
     }
 
     private Candidate(CompModule context) {

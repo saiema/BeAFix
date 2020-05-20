@@ -170,7 +170,7 @@ public final class ExprLet extends Expr {
     public ExprLet mutateBound(Expr replacement) {
         ExprVar varClone = (ExprVar) this.var.clone();
         Expr subClone = (Expr) this.sub.clone();
-        ExprLet mutant = new ExprLet(this.pos, varClone, replacement, subClone, this.errors);;
+        ExprLet mutant = new ExprLet(this.pos, varClone, (Expr) replacement.clone(), subClone, this.errors);;
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
         mutant.setVariabilizationVariables(directVariabilizationVariables());
@@ -180,7 +180,7 @@ public final class ExprLet extends Expr {
     public ExprLet mutateBody(Expr replacement) {
         ExprVar varClone = (ExprVar) this.var.clone();
         Expr exprClone = (Expr) this.expr.clone();
-        ExprLet mutant = new ExprLet(this.pos, varClone, exprClone, replacement, this.errors);;
+        ExprLet mutant = new ExprLet(this.pos, varClone, exprClone, (Expr) replacement.clone(), this.errors);;
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
         mutant.setVariabilizationVariables(directVariabilizationVariables());

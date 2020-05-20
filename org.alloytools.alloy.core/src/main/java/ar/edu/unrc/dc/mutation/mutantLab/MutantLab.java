@@ -208,6 +208,10 @@ public class MutantLab {
                 logger.info("Got empty current candidate");
                 return false;
             }
+            if (current.get() == Candidate.SEARCH_SPACE_EXHAUSTED) {
+                logger.info("Search space exhausted");
+                return true;
+            }
             if (current.get() == Candidate.INVALID) {
                 logger.info("Received INVALID candidate, something went wrong on the generation process, stopping search");
                 return false;

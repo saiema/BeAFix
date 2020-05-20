@@ -221,7 +221,12 @@ public class Variabilization {
             List<Expr> reversedVariables = nonBooleanVariabilizationVars.get();
             Collections.reverse(reversedVariables);
             for (Expr vVar : reversedVariables) {
-                magicExpr = ExprBinary.Op.JOIN.make(vVar.span().merge(magicExpr.span()), null, vVar, magicExpr);
+                magicExpr = ExprBinary.Op.JOIN.make(
+                                                    vVar.span().merge(magicExpr.span()),
+                                        null,
+                                                    (Expr) vVar.clone(),
+                                                    (Expr) magicExpr.clone()
+                );
             }
         }
         return magicExpr;
@@ -284,7 +289,7 @@ public class Variabilization {
         return result.isEmpty()?Optional.empty():Optional.of(result);
     }
 
-    private static final String VARIABILIZATION_SIG_PREFIX = "QF_";
+    private static final String VARIABILIZATION_SIG_PREFIX = "this/QF_";
     private static final String VARIABILIZATION_FIELD_PREFIX = "magic_";
 
     public Optional<Sig> generateMagicSigForExpressions(List<Pair<Expr, Boolean>> expressions) {

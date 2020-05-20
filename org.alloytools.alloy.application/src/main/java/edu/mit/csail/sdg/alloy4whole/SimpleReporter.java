@@ -874,6 +874,7 @@ final class SimpleReporter extends A4Reporter {
                 cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + world.getAllCommands().size() + " commands...\n");
                 count++;
                 //report current mutation
+                Optional<Candidate> current = mutantLab.getCurrentCandidate();
                 if (MutantLab.getInstance().stopRepairProcess) {
                     logger.info("Received STOP signal.. stopping search");
                     break;
@@ -883,9 +884,12 @@ final class SimpleReporter extends A4Reporter {
                     logger.info("Timeout signal received... stopping search");
                     break;
                 }
-                Optional<Candidate> current = mutantLab.getCurrentCandidate();
                 if (!current.isPresent()) {
                     logger.info("Received an empty candidate");
+                    break;
+                }
+                if (current.get() == Candidate.SEARCH_SPACE_EXHAUSTED) {
+                    logger.info("Got SEARCH_SPACE_EXHAUSTED candidate but no other termination condition has been met");
                     break;
                 }
                 if (current.get() == Candidate.CANT_REPAIR) {
@@ -896,7 +900,7 @@ final class SimpleReporter extends A4Reporter {
                 for (Triplet<String, String, String> em : current.get().getCurrentMutationsInfo()) {
                     cb(out, "RepairExprOrig->Mut", em.a, em.b, em.c + "  \n");
                 }
-                logger.info("Validating mutant");
+                logger.info("Validating mutant " + count);
                 logger.info(current.get().toString());
                 // check all commands
                 MutantLab.getInstance().lockCandidateGeneration();
