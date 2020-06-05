@@ -15,73 +15,15 @@
 
 package edu.mit.csail.sdg.translator;
 
-import static edu.mit.csail.sdg.ast.Sig.NONE;
-import static edu.mit.csail.sdg.ast.Sig.SEQIDX;
-import static edu.mit.csail.sdg.ast.Sig.SIGINT;
-import static edu.mit.csail.sdg.ast.Sig.STRING;
-import static edu.mit.csail.sdg.ast.Sig.UNIV;
-import static kodkod.engine.Solution.Outcome.UNSATISFIABLE;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.alloytools.alloy.core.AlloyCore;
-import org.alloytools.util.table.Table;
-
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.ConstMap;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorAPI;
-import edu.mit.csail.sdg.alloy4.ErrorFatal;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.Pair;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.SafeList;
-import edu.mit.csail.sdg.alloy4.TableView;
-import edu.mit.csail.sdg.alloy4.UniqueNameGenerator;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBinary;
-import edu.mit.csail.sdg.ast.ExprConstant;
-import edu.mit.csail.sdg.ast.ExprUnary;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.ast.Func;
-import edu.mit.csail.sdg.ast.Sig;
-import edu.mit.csail.sdg.ast.Sig.Field;
-import edu.mit.csail.sdg.ast.Sig.PrimSig;
-import edu.mit.csail.sdg.ast.Type;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.ast.*;
+import edu.mit.csail.sdg.ast.Sig.*;
 import edu.mit.csail.sdg.translator.A4Options.SatSolver;
-import kodkod.ast.BinaryExpression;
-import kodkod.ast.BinaryFormula;
 import kodkod.ast.Decl;
-import kodkod.ast.Expression;
-import kodkod.ast.Formula;
-import kodkod.ast.IntExpression;
-import kodkod.ast.Node;
-import kodkod.ast.Relation;
-import kodkod.ast.Variable;
+import kodkod.ast.*;
 import kodkod.ast.operator.ExprOperator;
 import kodkod.ast.operator.FormulaOperator;
-import kodkod.engine.CapacityExceededException;
-import kodkod.engine.Evaluator;
-import kodkod.engine.Proof;
-import kodkod.engine.Solution;
-import kodkod.engine.Solver;
+import kodkod.engine.*;
 import kodkod.engine.config.AbstractReporter;
 import kodkod.engine.config.Options;
 import kodkod.engine.config.Reporter;
@@ -90,13 +32,19 @@ import kodkod.engine.fol2sat.Translator;
 import kodkod.engine.satlab.SATFactory;
 import kodkod.engine.ucore.HybridStrategy;
 import kodkod.engine.ucore.RCEStrategy;
-import kodkod.instance.Bounds;
-import kodkod.instance.Instance;
-import kodkod.instance.Tuple;
-import kodkod.instance.TupleFactory;
-import kodkod.instance.TupleSet;
-import kodkod.instance.Universe;
+import kodkod.instance.*;
 import kodkod.util.ints.IndexedEntry;
+import org.alloytools.alloy.core.AlloyCore;
+import org.alloytools.util.table.Table;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static edu.mit.csail.sdg.ast.Sig.*;
+import static kodkod.engine.Solution.Outcome.UNSATISFIABLE;
 
 /**
  * This class stores a SATISFIABLE or UNSATISFIABLE solution. It is also used as
@@ -551,7 +499,7 @@ public final class A4Solution {
     /**
      * Returns a modifiable copy of the Kodkod Bounds object.
      */
-    Bounds getBounds() {
+    public Bounds getBounds() {
         return bounds.clone();
     }
 
@@ -1677,6 +1625,10 @@ public final class A4Solution {
 
         Map<String,Table> table = TableView.toTable(this, eval.instance(), sigs);
         return String.join("\n", table.values().stream().map(x -> x.toString()).collect(Collectors.toSet()));
+    }
+
+    public Evaluator getEvaluator() {
+        return eval;
     }
 
 }

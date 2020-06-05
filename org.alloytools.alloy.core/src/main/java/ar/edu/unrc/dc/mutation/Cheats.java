@@ -338,7 +338,7 @@ public final class Cheats {
                 throw new CheatingIsBadMkay("Couldn't find targeted assertion");
             asserts.put(targetAssertionsName, replacement);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access asserts field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access asserts field");
         }
     }
 
@@ -366,7 +366,7 @@ public final class Cheats {
             factsField.set(inAst, modifiedFacts);
             setAccessibleStatus(factsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access facts field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access facts field");
         }
     }
 
@@ -391,7 +391,7 @@ public final class Cheats {
             sigs.put(sig.label, sig);
             setAccessibleStatus(sigsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access sigs field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access sigs field");
         }
     }
 
@@ -409,7 +409,7 @@ public final class Cheats {
             old2fields.put(sig, sig.getFieldDecls().makeCopy());
             setAccessibleStatus(old2fieldsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access old2fields field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access old2fields field");
         }
     }
 
@@ -427,7 +427,7 @@ public final class Cheats {
             sig2module.put(sig, module);
             setAccessibleStatus(sig2moduleField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access sig2module field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access sig2module field");
         }
     }
 
@@ -445,7 +445,7 @@ public final class Cheats {
             old2appendedfacts.put(sig, ExprConstant.TRUE);
             setAccessibleStatus(old2appendedfactsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access old2appendedfacts field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access old2appendedfacts field");
         }
     }
 
@@ -470,7 +470,7 @@ public final class Cheats {
             sigs.remove(sig.label);
             setAccessibleStatus(sigsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access sigs field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access sigs field");
         }
     }
 
@@ -488,7 +488,7 @@ public final class Cheats {
             old2fields.remove(sig);
             setAccessibleStatus(old2fieldsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access old2fields field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access old2fields field");
         }
     }
 
@@ -506,7 +506,7 @@ public final class Cheats {
             sigToModule.remove(sig);
             setAccessibleStatus(sigToModuleField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access sig2module field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access sig2module field");
         }
     }
 
@@ -524,7 +524,7 @@ public final class Cheats {
             old2appendedfacts.remove(sig);
             setAccessibleStatus(old2appendedfactsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access old2appendedfacts field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access old2appendedfacts field");
         }
     }
 
@@ -550,7 +550,7 @@ public final class Cheats {
             }
             setAccessibleStatus(funcsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access funcs field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access funcs field");
         }
     }
 
@@ -582,7 +582,7 @@ public final class Cheats {
             }
             setAccessibleStatus(funcsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access funcs field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access funcs field");
         }
     }
 
@@ -601,13 +601,42 @@ public final class Cheats {
         copyFieldValue(original, clone, realFieldsField);
     }
 
+    public static void impersonateVariable(ExprVar spy, ExprVar target) throws CheatingIsBadMkay {
+        Field labelField = getField(ExprHasName.class, "label");
+        Field varIDField = getField(ExprVar.class, "VAR_ID");
+        Field typeField = getField(Expr.class, "type");
+        if (labelField == null)
+            throw new CheatingIsBadMkay("Couldn't find label field");
+        if (varIDField == null)
+            throw new CheatingIsBadMkay("Couldn't find VAR_ID field");
+        if (typeField == null)
+            throw new CheatingIsBadMkay("Couldn't find type field");
+        copyFieldValue(spy, target, labelField);
+        copyFieldValue(spy, target, varIDField);
+        copyFieldValue(spy, target, typeField);
+    }
+
+    public static void addCommand(Command cmd, CompModule context) throws CheatingIsBadMkay {
+        Field commandsField = getField(CompModule.class, "commands");
+        if (commandsField == null)
+            throw new CheatingIsBadMkay("Couldn't find commands field");
+        boolean oldAccessibleStatus = setAccessibleStatus(commandsField, true);
+        try {
+            List<Command> commands = (List<Command>) commandsField.get(context);
+            commands.add(cmd);
+            setAccessibleStatus(commandsField, oldAccessibleStatus);
+        } catch (IllegalAccessException e) {
+            throw new CheatingIsBadMkay("An error occurred while trying to access commands field");
+        }
+    }
+
     private static void copyFieldValue(Object original, Object target, Field field) throws CheatingIsBadMkay {
         boolean oldAccessibleStatus = setAccessibleStatus(field, true);
         try {
             field.set(target, field.get(original));
             setAccessibleStatus(field, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
-            throw new CheatingIsBadMkay("An error ocurred while trying to access " + field.getName() + " field");
+            throw new CheatingIsBadMkay("An error occurred while trying to access " + field.getName() + " field");
         }
     }
 
