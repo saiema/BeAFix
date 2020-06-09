@@ -41,12 +41,10 @@ public class DependencyGraph {
         dependencyGraph = new HashMap<>();
         commandComplexity = new HashMap<>();
         directDependencyGraph = new HashMap<>();
-        this.commands = commands;
+        this.commands = new LinkedList<>(commands);
     }
 
-    public void enablePartialRepairMode() {
-    }
-
+    public void addLooseCommand(Command command) {commands.add(command);}
     public void addDependencies(Browsable b, List<Command> commands) {
         dependencyGraph.put(b, commands);
     }

@@ -19,6 +19,7 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.mutantLab.*;
+import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestsGenerator;
 import ar.edu.unrc.dc.mutation.util.*;
 import ar.edu.unrc.dc.mutation.visitors.NodeAliasingFixer;
 import ar.edu.unrc.dc.mutation.visitors.ParentRelationshipFixer;
@@ -805,6 +806,7 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION)); //update the variabilization Repair option
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_TEST_GENERATION));
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE));
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR));
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH));
@@ -870,6 +872,9 @@ final class SimpleReporter extends A4Reporter {
             }
             RepairReport.getInstance().clockStart();
             Candidate repair = null;
+            if (variabilizationTestGeneration()) {
+                generateVariabilizationTests(world, rep);
+            }
             while (mutantLab.advance()) {
                 cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + world.getAllCommands().size() + " commands...\n");
                 count++;
@@ -983,6 +988,42 @@ final class SimpleReporter extends A4Reporter {
             // canceled...
         }
 
+        private void generateVariabilizationTests(CompModule world, SimpleReporter rep) {
+            //check if there are at least one variabilization test
+            if (world.getAllCommands().stream().noneMatch(Command::isVariabilizationTest)) {
+                //we should run the original candidate to try to generate at least one variabilization test
+                boolean atLeastOneTestGenerated = false;
+                Candidate original = Candidate.original(world);
+                for (Command cmd : world.getAllCommands()) {
+                    if (cmd.check || cmd.expects == 0) {
+                        try {
+                            A4Solution result = evaluateCandidateWithCommand(original, cmd, rep);
+                            if (result != null && result.satisfiable()) {
+                                List<Command> variabilizationTests = TestsGenerator.getInstance().generateTestsFor(result, world, cmd);
+                                if (!atLeastOneTestGenerated && !variabilizationTests.isEmpty())
+                                    atLeastOneTestGenerated = true;
+                                for (Command varTest : variabilizationTests) {
+                                    DependencyGraph.getInstance().addLooseCommand(varTest);
+                                }
+                            }
+                        } catch (Exception e) {
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String exceptionAsString = sw.toString();
+                            logger.info("Error while generating variabilization tests\n" +
+                                    "Current candidate (should be original): " + original.toString() + "\n" +
+                                    "Current command (should be either a check or a run with expect 0): " + cmd.toString() + "\n" +
+                                    "Exception:\n" +  exceptionAsString
+                            );
+                        }
+                    }
+                }
+                if (!atLeastOneTestGenerated) {
+                    logger.info("Couldn't generate any variabilization test");
+                }
+            }
+        }
+
         private EvaluationResults evaluateCandidateNormalEvaluation(Candidate candidate, SimpleReporter rep) {
             List<Command> cmds = MutantLab.getInstance().getCommandsToRunFor(candidate);
             return evaluateCandidate(candidate, cmds, rep, false);
@@ -1053,6 +1094,8 @@ final class SimpleReporter extends A4Reporter {
                 logger.info("Running cmd " + cmds.get(i).toString() + " with complexity " + DependencyGraph.getInstance().getCommandComplexity(cmds.get(i)));
                 current.clearMutatedStatus();
                 final Command cmd = cmds.get(i);
+                if (cmd.isGenerated())
+                    continue;
                 try {
                     synchronized (SimpleReporter.class) {
                         latestModule = world;
@@ -1067,6 +1110,23 @@ final class SimpleReporter extends A4Reporter {
                         if (ai.satisfiable()) {
                             if (cmd.expects == 0 || (cmd.expects == -1 && cmd.check)) {
                                 repaired = false;
+                                if (variabilizationTestGeneration()) {
+                                    try {
+                                        List<Command> varTests = TestsGenerator.getInstance().generateTestsFor(ai, world, cmd);
+                                        for (Command varTest : varTests) {
+                                            DependencyGraph.getInstance().addLooseCommand(varTest);
+                                        }
+                                    } catch (Exception e) {
+                                        StringWriter sw = new StringWriter();
+                                        e.printStackTrace(new PrintWriter(sw));
+                                        String exceptionAsString = sw.toString();
+                                        logger.info("Error while generating variabilization tests\n" +
+                                                "Current candidate: " + current.toString() + "\n" +
+                                                "Current command (should be either a check or a run with expect 0): " + cmd.toString() + "\n" +
+                                                "Exception:\n" +  exceptionAsString
+                                        );
+                                    }
+                                }
                             }
                         } else {
                             if (cmd.expects == 1 || (cmd.expects == -1 && !cmd.check)) {
@@ -1130,6 +1190,16 @@ final class SimpleReporter extends A4Reporter {
         private long repairTimeout() {
             Optional<Object> timeoutConfigValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_TIMEOUT);
             return timeoutConfigValue.map(o -> (Long) o).orElse((Long) ConfigKey.REPAIR_TIMEOUT.defaultValue());
+        }
+
+        private boolean variabilizationTestGeneration() {
+            Optional<Object> variabilizationConfigValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION);
+            boolean useVariabilization = variabilizationConfigValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION.defaultValue());
+            if (useVariabilization) {
+                Optional<Object> testGenerationConfigValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION);
+                return testGenerationConfigValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION.defaultValue());
+            }
+            return false;
         }
 
     }

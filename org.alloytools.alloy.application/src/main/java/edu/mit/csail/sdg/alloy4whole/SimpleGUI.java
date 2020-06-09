@@ -1413,6 +1413,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                     asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION, AStrykerVariabilization.get());
                                     break;
                                 }
+                                case "AStrykerVariabilizationTestGeneration" : {
+                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_TEST_GENERATION, AStrykerVariabilizationTestGeneration.get());
+                                    break;
+                                }
                                 case "AStrykerVariabilizationSameTypes": {
                                     asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE, AStrykerVariabilizationUseSameType.get());
                                     break;
@@ -1443,6 +1447,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 MutationConfiguration mconfig = MutationConfiguration.getInstance();
                 mconfig.loadConfigFromAStrykerConfig();
                 AStrykerVariabilization.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION).orElse(REPAIR_VARIABILIZATION.defaultValue()));
+                AStrykerVariabilizationTestGeneration.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION_TEST_GENERATION).orElse(REPAIR_VARIABILIZATION_TEST_GENERATION.defaultValue()));
                 AStrykerVariabilizationUseSameType.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION_USE_SAME_TYPES).orElse(REPAIR_VARIABILIZATION_USE_SAME_TYPES.defaultValue()));
                 AStrykerPartialRepair.set((Boolean) mconfig.getConfigValue(REPAIR_PARTIAL_REPAIR).orElse(REPAIR_PARTIAL_REPAIR.defaultValue()));
                 Long to = (Long) mconfig.getConfigValue(REPAIR_TIMEOUT).orElse(REPAIR_TIMEOUT.defaultValue());
@@ -1450,12 +1455,14 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerRepairDepth.set((Integer) mconfig.getConfigValue(REPAIR_MAX_DEPTH).orElse(REPAIR_MAX_DEPTH.defaultValue()));
                 AStrykerUseTestsOnly.set((Boolean) mconfig.getConfigValue(REPAIR_TESTS_ONLY).orElse(REPAIR_TESTS_ONLY.defaultValue()));
                 addToMenu(optmenu, AStrykerVariabilization);
+                addToMenu(optmenu, AStrykerVariabilizationTestGeneration);
                 addToMenu(optmenu, AStrykerVariabilizationUseSameType);
                 addToMenu(optmenu, AStrykerPartialRepair);
                 addToMenu(optmenu, AStrykerRepairTimeout);
                 addToMenu(optmenu, AStrykerRepairDepth);
                 addToMenu(optmenu, AStrykerUseTestsOnly);
                 AStrykerVariabilization.addChangeListener(astrykerChangeListener);
+                AStrykerVariabilizationTestGeneration.addChangeListener(astrykerChangeListener);
                 AStrykerVariabilizationUseSameType.addChangeListener(astrykerChangeListener);
                 AStrykerPartialRepair.addChangeListener(astrykerChangeListener);
                 AStrykerRepairTimeout.addChangeListener(astrykerChangeListener);

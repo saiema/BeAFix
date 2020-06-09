@@ -66,6 +66,10 @@ public abstract class Sig extends Expr implements Clause {
         isVariabilizationTestRelatedSig = b;
     }
 
+    private static boolean enableFacts = true;
+    public static void enableFacts() {enableFacts = true;}
+    public static void disableFacts() {enableFacts = false;}
+
     /**
      * Returns the name for this sig; this name need not be unique.
      */
@@ -381,6 +385,8 @@ public abstract class Sig extends Expr implements Clause {
      * this.decl.get()
      */
     public SafeList<Expr> getFacts() {
+        if (!enableFacts)
+            return new SafeList<>();
         return facts.dup();
     }
 

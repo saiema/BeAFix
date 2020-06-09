@@ -12,6 +12,12 @@ public class AStrykerConfigReader {
                 return "astryker.repair.variabilization";
             }
         },
+        VARIABILIZATION_TEST_GENERATION {
+            @Override
+            public String getKey() {
+                return "astryker.repair.variabilization.testgeneration";
+            }
+        },
         VARIABILIZATION_SAME_TYPE {
             @Override
             public String getKey() {
@@ -155,6 +161,7 @@ public class AStrykerConfigReader {
         switch (key) {
             case VARIABILIZATION:
             case VARIABILIZATION_SAME_TYPE:
+            case VARIABILIZATION_TEST_GENERATION:
             case USE_PO_TO_VALIDATE:
             case PARTIAL_REPAIR: return true;
             default : return false;

@@ -81,12 +81,13 @@ public class TestsGenerator {
         Expr cleanedFormula = propertyCleaner.cleanExpression(extractedProperty.getProperty());
         if (cleanedFormula == null)
             throw new IllegalStateException("Cleaned formula is null");
-        Expr propertyValidationOnInstance = ExprUnary.Op.NOT.make(null, (Expr) cleanedFormula.clone());
         VariableExchanger variableExchanger = new VariableExchanger(variableMapping);
-        Expr testFormula = variableExchanger.replaceVariables(propertyValidationOnInstance);
+        Expr testFormula = variableExchanger.replaceVariables((Expr)cleanedFormula.clone());
+        Expr negateFacts = ExprUnary.Op.NOT.make(null, getFacts(context));
+        testFormula = ExprBinary.Op.OR.make(null, null, negateFacts, testFormula);
         Expr initialization = generateInitialization(signatureValues, fieldValues, variablesValues);
-        Func testPredicate = generateTestPredicate(initialization, testFormula, skolemVariables, command);
-        Command testCommand = generateTestCommand(testPredicate);
+        Func testPredicate = generateTestPredicate(initialization, testFormula, skolemVariables, signatureValues, command);
+        Command testCommand = generateTestCommand(testPredicate, context);
         try {
             Cheats.addFunctionToModule(context, testPredicate);
         } catch (CheatingIsBadMkay e) {
@@ -100,19 +101,24 @@ public class TestsGenerator {
         return testCommand;
     }
 
-    private Command generateTestCommand(Func testPredicate) {
+    private Command generateTestCommand(Func testPredicate, CompModule context) {
         ExprVar predName = ExprVar.make(null, testPredicate.label);
-        Command testCommand = new Command(null, predName, testPredicate.label, false, -1, -1, -1, 1, null, null, predName, null);
+        predName.setReferenced(testPredicate);
+        Expr formula = testPredicate.getBody();
+        Command testCommand = new Command(null, predName, testPredicate.label, false, -1, -1, -1, 1, null, null, formula, null);
         testCommand.setAsVariabilizationTest();
+        testCommand.setAsGenerated();
         return testCommand;
     }
 
-    private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Command cmd) {
+    private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
         Expr sub = ExprBinary.Op.AND.make(null, null, initialization, testFormula);
         List<Decl> decls = new LinkedList<>();
         Map<String, List<ExprHasName>> variablesPerType = new TreeMap<>();
         Map<String, Type> typeMap = new HashMap<>();
-        for (ExprVar v : skolemVariables) {
+        List<ExprVar> varsToDeclare = new LinkedList<>(skolemVariables);
+        signatureValues.values().forEach(varsToDeclare::addAll);
+        for (ExprVar v : varsToDeclare) {
             Type t = v.type();
             String tString = t.toString();
             List<ExprHasName> vars;
@@ -125,25 +131,35 @@ public class TestsGenerator {
             vars.add(v);
             typeMap.put(tString, t);
         }
-        Expr guard = null;
+        //Expr guard = null;
         for (Entry<String, List<ExprHasName>> varsOfType : variablesPerType.entrySet()) {
             Type t = typeMap.get(varsOfType.getKey());
             List<ExprHasName> variables = varsOfType.getValue();
             Expr bound = t.toExpr();
             Decl d = new Decl(null, null, null, variables, bound);
             decls.add(d);
-            if (variables.size() > 1) {
-                Expr disj = ExprList.make(null, null, ExprList.Op.DISJOINT, variables);
-                guard = guard == null?disj:disj.and(guard);
-            }
+//            if (variables.size() > 1) {
+//                Expr disj = ExprList.make(null, null, ExprList.Op.DISJOINT, variables);
+//                guard = guard == null?disj:disj.and(guard);
+//            }
         }
-        if (guard != null) {
-            sub = guard.and(sub);
-        }
+//        if (guard != null) {
+//            sub = guard.and(sub);
+//        }
         Expr body = ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = "CE_" + from + "_" + generateRandomName(10);
         return new Func(null, name, decls, null, body);
+    }
+
+    private Expr getFacts(CompModule context) {
+        Expr facts = context.getAllReachableFacts();
+        for (Sig s : context.getAllSigs()) {
+            for (Expr sFact : s.getFacts()) {
+                facts = ExprBinary.Op.AND.make(null, null, facts, sFact);
+            }
+        }
+        return facts;
     }
 
     private Expr generateInitialization(Map<Sig, List<ExprVar>> signaturesValues, Map<Field, List<Expr>> fieldsValues, Map<ExprVar, List<Expr>> variablesValues) {
