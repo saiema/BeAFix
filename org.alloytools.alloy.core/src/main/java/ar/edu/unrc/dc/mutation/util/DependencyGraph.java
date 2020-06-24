@@ -5,6 +5,8 @@ import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.Func;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
+import ar.edu.unrc.dc.mutation.MutationConfiguration;
 
 import java.util.*;
 
@@ -44,7 +46,7 @@ public class DependencyGraph {
         this.commands = new LinkedList<>(commands);
     }
 
-    public void addLooseCommand(Command command) {commands.add(command);}
+    public void addLooseCommand(Command command) { commands.add(command); }
     public void addDependencies(Browsable b, List<Command> commands) {
         dependencyGraph.put(b, commands);
     }
@@ -94,7 +96,7 @@ public class DependencyGraph {
     }
 
     private boolean onlyCallsTargetAndNonBuggyFunctions(Func target, Stack<Func> calledFunctions, List<Browsable> allBuggedFunctionsAndAssertions) {
-        if (calledFunctions.size() == 1 && calledFunctions.contains(target))
+        if (!partialRepairFullCallGraphValidation() && calledFunctions.size() == 1 && calledFunctions.contains(target))
             return true;
         boolean callsTarget = false;
         Set<String> visitedFunctions = new LinkedHashSet<>();
@@ -103,9 +105,10 @@ public class DependencyGraph {
             visitedFunctions.add(calledFunc.label);
             if (Browsable.equals(target, calledFunc)) {
                 callsTarget = true;
-                continue;
+                if (!partialRepairFullCallGraphValidation())
+                    continue;
             }
-            if (allBuggedFunctionsAndAssertions.contains(calledFunc)) {
+            if (allBuggedFunctionsAndAssertions.contains(calledFunc) && !Browsable.equals(target, calledFunc)) {
                 return false;
             }
             FunctionsCollector functionsCollector = new FunctionsCollector();
@@ -167,6 +170,11 @@ public class DependencyGraph {
         if (defaultValue < 0)
             throw new IllegalArgumentException("default value must be positive or zero");
         return commandComplexity.getOrDefault(c, defaultValue);
+    }
+
+    public static boolean partialRepairFullCallGraphValidation() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION.defaultValue());
     }
 
 }

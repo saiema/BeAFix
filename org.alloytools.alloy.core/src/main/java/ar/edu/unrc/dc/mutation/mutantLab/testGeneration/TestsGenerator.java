@@ -14,13 +14,32 @@ import kodkod.engine.Evaluator;
 import kodkod.instance.Tuple;
 import kodkod.instance.TupleSet;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
 
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.*;
 
 public class TestsGenerator {
+
+    private static final Logger logger = Logger.getLogger(TestsGenerator.class.getName());
+    private static boolean GENERATE_DEBUG_TESTS = false;
+
+    static {
+        try {
+            // This block configure the logger with handler and formatter
+            FileHandler fh = new FileHandler("TestsGenerator.log");
+            logger.addHandler(fh);
+            SimpleFormatter formatter = new SimpleFormatter();
+            fh.setFormatter(formatter);
+        } catch (SecurityException | IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private static final String FACTS_PROPERTY = "facts";
     private final Map<String, Integer> testsPerProperty;
@@ -38,9 +57,18 @@ public class TestsGenerator {
         testsPerProperty = new TreeMap<>();
     }
 
+    private static int testsToGeneratePerCommand() {
+        return 4;
+    }
+
+    private static int testsPerGeneration() {
+        return 1;
+    }
+
     public List<Command> generateTestsFor(A4Solution solution, CompModule context, Command command) throws Err {
         if (solution.getOriginalCommand().compareTo(command.toString()) != 0)
             throw new IllegalArgumentException("Command argument doesn't match the one use for the obtained solution");
+        logger.info("generate tests for\n" + command.toString());
         if (command.check || command.expects == 0) {
             List<Command> newTests = new LinkedList<>();
             String property;
@@ -51,7 +79,8 @@ public class TestsGenerator {
             int currentTests = testsPerProperty.getOrDefault(property, 0);
             int testsToGenerate = testsToGeneratePerCommand() - currentTests;
             int testsGenerated = 0;
-            for (int i = 0; i < testsToGenerate; i++) {
+            for (int i = 0; i < testsToGenerate && i < testsPerGeneration(); i++) {
+                logger.info("Generating test for instance\n" + solution.getEvaluator().instance().relationTuples().entrySet().toString());
                 Command newTest = generateNewTest(solution, context, command);
                 testsGenerated++;
                 newTests.add(newTest);
@@ -67,6 +96,7 @@ public class TestsGenerator {
 
     private Command generateNewTest(A4Solution solution, CompModule context, Command command) {
         Map<Sig, List<ExprVar>> signatureValues = getSignaturesAtoms(solution, context);
+        mergeExtendingSignaturesValues(signatureValues);
         Map<Field, List<Expr>> fieldValues = getFieldsValues(solution, context, signatureValues);
         Map<ExprVar, List<Expr>> variablesValues = getVariablesValues(solution, signatureValues, command);
         List<ExprVar> skolemVariables = new LinkedList<>(variablesValues.keySet());
@@ -83,11 +113,21 @@ public class TestsGenerator {
             throw new IllegalStateException("Cleaned formula is null");
         VariableExchanger variableExchanger = new VariableExchanger(variableMapping);
         Expr testFormula = variableExchanger.replaceVariables((Expr)cleanedFormula.clone());
-        Expr negateFacts = ExprUnary.Op.NOT.make(null, getFacts(context));
-        testFormula = ExprBinary.Op.OR.make(null, null, negateFacts, testFormula);
+        if (GENERATE_DEBUG_TESTS) {
+            testFormula = ExprUnary.Op.NOT.make(null, testFormula);
+        } else {
+            Expr negateFacts = ExprUnary.Op.NOT.make(null, getFacts(context));
+            testFormula = ExprBinary.Op.OR.make(null, null, negateFacts, testFormula);
+        }
         Expr initialization = generateInitialization(signatureValues, fieldValues, variablesValues);
         Func testPredicate = generateTestPredicate(initialization, testFormula, skolemVariables, signatureValues, command);
-        Command testCommand = generateTestCommand(testPredicate, context);
+        Command testCommand = generateTestCommand(testPredicate);
+        logger.info("Test generated\n" +
+                    testPredicate.toString() + "\n" +
+                    testPredicate.decls.toString() + "\n" +
+                    testPredicate.getBody().toString()
+
+        );
         try {
             Cheats.addFunctionToModule(context, testPredicate);
         } catch (CheatingIsBadMkay e) {
@@ -101,7 +141,7 @@ public class TestsGenerator {
         return testCommand;
     }
 
-    private Command generateTestCommand(Func testPredicate, CompModule context) {
+    private Command generateTestCommand(Func testPredicate) {
         ExprVar predName = ExprVar.make(null, testPredicate.label);
         predName.setReferenced(testPredicate);
         Expr formula = testPredicate.getBody();
@@ -117,7 +157,12 @@ public class TestsGenerator {
         Map<String, List<ExprHasName>> variablesPerType = new TreeMap<>();
         Map<String, Type> typeMap = new HashMap<>();
         List<ExprVar> varsToDeclare = new LinkedList<>(skolemVariables);
-        signatureValues.values().forEach(varsToDeclare::addAll);
+        for (Entry<Sig, List<ExprVar>> sValues : signatureValues.entrySet()) {
+            if (extendsNonBuiltIn(sValues.getKey()))
+                continue;
+            varsToDeclare.addAll(sValues.getValue());
+        }
+        //signatureValues.values().forEach(varsToDeclare::addAll);
         for (ExprVar v : varsToDeclare) {
             Type t = v.type();
             String tString = t.toString();
@@ -131,21 +176,13 @@ public class TestsGenerator {
             vars.add(v);
             typeMap.put(tString, t);
         }
-        //Expr guard = null;
         for (Entry<String, List<ExprHasName>> varsOfType : variablesPerType.entrySet()) {
             Type t = typeMap.get(varsOfType.getKey());
             List<ExprHasName> variables = varsOfType.getValue();
             Expr bound = t.toExpr();
             Decl d = new Decl(null, null, null, variables, bound);
             decls.add(d);
-//            if (variables.size() > 1) {
-//                Expr disj = ExprList.make(null, null, ExprList.Op.DISJOINT, variables);
-//                guard = guard == null?disj:disj.and(guard);
-//            }
         }
-//        if (guard != null) {
-//            sub = guard.and(sub);
-//        }
         Expr body = ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = "CE_" + from + "_" + generateRandomName(10);
@@ -201,20 +238,27 @@ public class TestsGenerator {
     }
 
     private Expr getOriginalFormula(Command command, CompModule context) {
+        Expr formula = null;
         if (command.nameExpr instanceof ExprVar) {
             String callee = ((ExprVar) command.nameExpr).label;
             for (Func pred : context.getAllFunc()) {
-                if (pred.label.replace("this/", "").compareTo(callee) == 0)
-                    return pred.getBody();
+                if (pred.label.replace("this/", "").compareTo(callee) == 0) {
+                    formula = pred.getBody();
+                    break;
+                }
             }
-            for (Pair<String, Expr> assertion : context.getAllAssertions()) {
-                if (assertion.a.compareTo(callee) == 0)
-                    return assertion.b;
+            if (formula == null) {
+                for (Pair<String, Expr> assertion : context.getAllAssertions()) {
+                    if (assertion.a.compareTo(callee) == 0) {
+                        formula = assertion.b;
+                        break;
+                    }
+                }
             }
         } else {
-            return command.nameExpr;
+            formula = command.nameExpr;
         }
-        return null;
+        return formula == null?null:(Expr) formula.clone();
     }
 
     private Map<Sig, List<ExprVar>> getSignaturesAtoms(A4Solution solution, CompModule context) {
@@ -268,11 +312,6 @@ public class TestsGenerator {
             variablesValues.put(var, vValues);
         }
         return variablesValues;
-    }
-
-
-    private static int testsToGeneratePerCommand() {
-        return 1;
     }
 
     private Map<ExprVar, TupleSet> getCounterExampleVariables(A4Solution solution) {

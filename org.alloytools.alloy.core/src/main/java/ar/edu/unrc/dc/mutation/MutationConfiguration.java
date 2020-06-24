@@ -310,6 +310,34 @@ public class MutationConfiguration {
 
         },
 
+        REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
+
+        },
+
+        REPAIR_PARTIAL_REPAIR_REQUIRE_TESTS_FOR_ALL {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
+
+        },
+
         REPAIR_TIMEOUT {
 
             @Override
@@ -359,6 +387,12 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.PARTIAL_REPAIR)) {
                 setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION)) {
+                setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL)) {
+                setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_REQUIRE_TESTS_FOR_ALL, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL));
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE)) {
                 setConfig(ConfigKey.REPAIR_TESTS_ONLY, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE));

@@ -30,6 +30,14 @@ public class AStrykerConfigReader {
                 return "astryker.repair.partialrepair";
             }
         },
+        PARTIAL_REPAIR_FULLCGRAPH_VALIDATION {
+            @Override
+            public String getKey() { return "astryker.repair.partialrepair.fullcgraphvalidation"; }
+        },
+        PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL {
+            @Override
+            public String getKey() { return "astryker.repair.partialrepair.independenttestsforall"; }
+        },
         USE_PO_TO_VALIDATE {
             @Override
             public String getKey() {
@@ -163,6 +171,8 @@ public class AStrykerConfigReader {
             case VARIABILIZATION_SAME_TYPE:
             case VARIABILIZATION_TEST_GENERATION:
             case USE_PO_TO_VALIDATE:
+            case PARTIAL_REPAIR_FULLCGRAPH_VALIDATION:
+            case PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL:
             case PARTIAL_REPAIR: return true;
             default : return false;
         }

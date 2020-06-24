@@ -125,6 +125,8 @@ public class Variabilization {
         int commandsPassed = 0;
         for (Command cmd : commands) {
             try {
+                if (cmd.isGenerated())
+                    Sig.disableFacts();
                 Browsable.freezeParents();
                 A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(reporter, module.getAllReachableSigs(), cmd, options, variabilizationCandidate);
                 variabilizationCandidate.clearMutatedStatus();
@@ -148,6 +150,8 @@ public class Variabilization {
                 Browsable.unfreezeParents();
             }
             logger.info("Command " + cmd.toString() + (repaired?" SUCCEED":" FAILED"));
+            if (cmd.isGenerated())
+                Sig.enableFacts();
             if (!repaired) break;
             else {
                 commandsPassed++;
@@ -168,7 +172,7 @@ public class Variabilization {
             Expr magicExpr = generateVariabilizationExpression(me.a, magicSig);
             Mutation varMut;
             if (me.a.type().is_bool) {
-                ExprUnary boolCheck = (ExprUnary) ExprUnary.Op.ONE.make(null, magicExpr);
+                ExprUnary boolCheck = (ExprUnary) ExprUnary.Op.SOME.make(null, magicExpr);
                 varMut = new Mutation(Ops.VAR, me.a, boolCheck);
             } else {
                 varMut = new Mutation(Ops.VAR, me.a, magicExpr);
@@ -213,19 +217,19 @@ public class Variabilization {
     }
 
     private Expr generateMagicExpr(Sig magicSig, Field magicField, Expr x) {
-        Sig sig = (Sig) magicSig.clone();
-        Field field = (Field) magicField.fullCopy();
+        Sig sig = magicSig;//(Sig) magicSig.clone();
+        Field field = magicField;//(Field) magicField.fullCopy();
         Expr magicExpr = ExprBinary.Op.JOIN.make(sig.span().merge(field.span()), null, sig, field);
         Optional<List<Expr>> nonBooleanVariabilizationVars = getNonBooleanVariablesFor(x);
         if (nonBooleanVariabilizationVars.isPresent()) {
             List<Expr> reversedVariables = nonBooleanVariabilizationVars.get();
             Collections.reverse(reversedVariables);
-            for (Expr vVar : reversedVariables) {
+            for (Expr vVar : reversedVariables) { //TODO: check clones
                 magicExpr = ExprBinary.Op.JOIN.make(
                                                     vVar.span().merge(magicExpr.span()),
                                         null,
-                                                    (Expr) vVar.clone(),
-                                                    (Expr) magicExpr.clone()
+                                                    vVar,//(Expr) vVar.clone(),
+                                                    magicExpr//(Expr) magicExpr.clone()
                 );
             }
         }
@@ -400,18 +404,22 @@ public class Variabilization {
         List<Expr> vVars = new LinkedList<>();
         if (x.getVariabilizationVariables().isPresent()) {
             for (String vVarId : x.getVariabilizationVariables().get()) {
-                ContextExpressionExtractor.getLocalVariables(x).ifPresent(lVars -> {
-                    boolean varFound = false;
-                    for (Expr localVar : lVars) {
-                        if (localVar.toString().compareTo(vVarId) == 0) {
-                            varFound = true;
-                            vVars.add(localVar);
-                            break;
+                try {
+                    ContextExpressionExtractor.getLocalVariables(x).ifPresent(lVars -> {
+                        boolean varFound = false;
+                        for (Expr localVar : lVars) {
+                            if (localVar.toString().compareTo(vVarId) == 0) {
+                                varFound = true;
+                                vVars.add(localVar);
+                                break;
+                            }
                         }
-                    }
-                    if (!varFound)
-                        throw new IllegalStateException("Expression " + x.toString() + " has " + vVarId + " as variabilization related variable, but there is no local variable with that name");
-                });
+                        if (!varFound)
+                            throw new IllegalStateException("Expression " + x.toString() + " has " + vVarId + " as variabilization related variable, but there is no local variable with that name");
+                    });
+                } catch (CheatingIsBadMkay e) {
+                    throw new Error("A problem related with reflection occurred while trying to retrieve local variables for " + x.toString(), e);
+                }
             }
         }
         return vVars;
@@ -422,15 +430,17 @@ public class Variabilization {
     }
 
     private Expr univ() {
-        Expr univ = (Expr) Sig.PrimSig.UNIV.clone();
-        univ.newID();
-        return univ;
+//        Expr univ = (Expr) Sig.PrimSig.UNIV.clone();
+//        univ.newID();
+//        return univ;
+        return Sig.PrimSig.UNIV;
     }
 
     private Expr sigint() {
-        Expr siginit = (Expr) Sig.PrimSig.SIGINT.clone();
-        siginit.newID();
-        return siginit;
+//        Expr siginit = (Expr) Sig.PrimSig.SIGINT.clone();
+//        siginit.newID();
+//        return siginit;
+        return Sig.PrimSig.SIGINT;
     }
 
     private Expr generateMagicFieldLastBound(Expr x, boolean noSet) {
@@ -447,7 +457,8 @@ public class Variabilization {
             }
             return ExprUnary.Op.SETOF.make(null, univ());
         } else if (x.type().is_bool) {
-            return ExprUnary.Op.LONEOF.make(null, univ());
+            return univ();
+            //return ExprUnary.Op.LONEOF.make(null, univ());
         } else {
             Expr current = univ();
             for (int i = 1; i < x.type().arity(); i++) {

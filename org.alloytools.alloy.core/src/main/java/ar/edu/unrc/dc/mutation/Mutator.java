@@ -47,6 +47,8 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     }
 
     public Optional<List<Mutation>> getMutations() {
+        if (allowBoundMutationByAnyOperator() && whoiam().equals(Ops.QTBER))
+            return Optional.empty();
         useMutGenLimit = true;
         List<Mutation> mutations = new LinkedList<>();
         context.getAllFacts().forEach(namedFact -> {
@@ -221,8 +223,6 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
     @Override
     public Optional<List<Mutation>> visit(ExprLet x) throws Err {
         List<Mutation> mutations = new LinkedList<>();
-//        Optional<List<Mutation>> letVarMutations = x.var.accept(this);
-//        letVarMutations.ifPresent(mutations::addAll);
         if (allowBoundMutationByAnyOperator()) {
             Optional<List<Mutation>> letVarBoundedExprMutations = visitThis(x.expr);
             letVarBoundedExprMutations.ifPresent(mutations::addAll);

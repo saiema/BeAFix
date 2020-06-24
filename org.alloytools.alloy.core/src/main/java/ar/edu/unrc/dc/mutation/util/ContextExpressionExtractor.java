@@ -17,12 +17,6 @@ import static ar.edu.unrc.dc.mutation.Cheats.cheatedClone;
 public final class ContextExpressionExtractor {
 
     private static CompModule context;
-    private static Map<Integer, Optional<Func>> functions;
-    private static Map<Integer, Optional<List<Expr>>> localVariables;
-    private static Map<Integer, Optional<List<Expr>>> compatibleVariablesFor;
-    private static Map<Integer, Optional<List<Expr>>> allVariablesFor;
-    private static Optional<List<Expr>> sigsAndDecls;
-    private static Optional<List<Expr>> combinedSigAndDecls;
 
     public synchronized static void initialize(CompModule context) {
         if (ContextExpressionExtractor.context != null)
@@ -30,12 +24,6 @@ public final class ContextExpressionExtractor {
         if (context == null)
             throw new IllegalArgumentException("context can't be null");
         ContextExpressionExtractor.context = context;
-        functions = new HashMap<>();
-        localVariables = new HashMap<>();
-        compatibleVariablesFor = new HashMap<>();
-        allVariablesFor = new HashMap<>();
-        sigsAndDecls = null;
-        combinedSigAndDecls = null;
     }
 
     public synchronized static void reInitialize(CompModule context) {
@@ -52,32 +40,27 @@ public final class ContextExpressionExtractor {
     }
 
     public synchronized static Optional<List<Expr>> getAllVariablesFor(Expr target) throws CheatingIsBadMkay {
-        List<Expr> clonedVars = new LinkedList<>();
-        Optional<List<Expr>> vars = getCompatibleVariablesFor(target, false, false);
-        if (vars.isPresent()) {
-            for (Expr x : vars.get()) {
-                clonedVars.add(cheatedClone(x));
-            }
-        }
-        return clonedVars.isEmpty()?Optional.empty():Optional.of(clonedVars);
+        return getVariables(target, false, false);
     }
 
     public synchronized static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean strictTypeCheck) throws CheatingIsBadMkay {
+        return getVariables(target, true, strictTypeCheck);
+    }
+
+    private synchronized static Optional<List<Expr>> getVariables(Expr target, boolean typeCheck, boolean strictTypeCheck) throws CheatingIsBadMkay {
         List<Expr> clonedVars = new LinkedList<>();
-        Optional<List<Expr>> vars = getCompatibleVariablesFor(target, true, strictTypeCheck);
+        Optional<List<Expr>> vars = getCompatibleVariablesFor(target, typeCheck, strictTypeCheck);
         if (vars.isPresent()) {
             for (Expr x : vars.get()) {
-                clonedVars.add(cheatedClone(x));
+                Expr varClone = cheatedClone(x);
+                varClone.newID();
+                clonedVars.add(varClone);
             }
         }
         return clonedVars.isEmpty()?Optional.empty():Optional.of(clonedVars);
     }
 
-    private synchronized static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean typeCheck, boolean strictTypeCheck) {
-        if (!typeCheck && allVariablesFor.containsKey(target.getID()))
-            return allVariablesFor.get(target.getID());
-        if (typeCheck && compatibleVariablesFor.containsKey(target.getID()))
-            return compatibleVariablesFor.get(target.getID());
+    private synchronized static Optional<List<Expr>> getCompatibleVariablesFor(Expr target, boolean typeCheck, boolean strictTypeCheck) throws CheatingIsBadMkay {
         Set<Expr> result = new TreeSet<>((Comparator.comparing(Expr::toString)));
         Optional<Func> containerFunc = getContainerFunc(target);
         if (containerFunc.isPresent()) {
@@ -106,11 +89,7 @@ public final class ContextExpressionExtractor {
             }
         }
         List<Expr> resultAsList = new LinkedList<>(result);
-        if (typeCheck)
-            compatibleVariablesFor.put(target.getID(), result.isEmpty()?Optional.empty():Optional.of(resultAsList));
-        else
-            allVariablesFor.put(target.getID(), result.isEmpty()?Optional.empty():Optional.of(resultAsList));
-        return typeCheck?compatibleVariablesFor.get(target.getID()):allVariablesFor.get(target.getID());
+        return resultAsList.isEmpty()?Optional.empty():Optional.of(resultAsList);
     }
 
 
@@ -124,56 +103,45 @@ public final class ContextExpressionExtractor {
     public synchronized static Optional<Func> getContainerFunc(Expr x) {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
-        if (functions.containsKey(x.getID())) {
-            return functions.get(x.getID());
-        }
-        Set<Integer> visitedIds = new TreeSet<>();
         Browsable current = x;
         while (current != null && !(current instanceof Func)) {
-            visitedIds.add(current.getID());
             current = current.getBrowsableParent();
-            if (current != null && functions.containsKey(current.getID()))
-                return functions.get(current.getID());
         }
         Optional<Func> result;
         if (current == null)
             result = Optional.empty();
         else
             result = Optional.of((Func)current);
-        for (Integer id : visitedIds) {
-            functions.put(id, result);
-        }
         return result;
     }
 
-    public synchronized static Optional<List<Expr>> getLocalVariables(Expr x) {
+    public synchronized static Optional<List<Expr>> getLocalVariables(Expr x) throws CheatingIsBadMkay {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
-        if (localVariables.containsKey(x.getID())) {
-            return localVariables.get(x.getID());
-        }
         Set<Expr> localVariablesFound = new TreeSet<>(Comparator.comparing(Expr::toString));
-        Set<Integer> visitedIds = new TreeSet<>();
         Expr mayorExpr = TypeChecking.getMayorExpression(x);
         Browsable current = x;
         Browsable parent = current.getBrowsableParent();
         SearchExpr searcher = new SearchExpr((Expr) current);
-        visitedIds.add(current.getID());
         while (current != mayorExpr) {
             if (parent instanceof ExprQt) {
                 ExprQt parentAsQt = (ExprQt) parent;
                 if (searcher.visitThis(parentAsQt.sub)) { //current is inside the formula of a quantified expression
-                    visitedIds.add(current.getID());
                     for (Decl d : parentAsQt.decls) {
                         //will only add var if there is not already a variable with the same name
-                        localVariablesFound.addAll(d.names);
+                        for (Expr var : d.names) {
+                            Expr varClone = cheatedClone(var);
+                            varClone.newID();
+                            localVariablesFound.add(varClone);
+                        }
                     }
                 }
             } else if (parent instanceof ExprLet) {
                 ExprLet parentAsLet = (ExprLet) parent;
                 if (searcher.visitThis(parentAsLet.sub)) { //current is inside the body of the let expression
-                    visitedIds.add(current.getID());
-                    localVariablesFound.add(parentAsLet.var);
+                    Expr varClone = cheatedClone(parentAsLet.var);
+                    varClone.newID();
+                    localVariablesFound.add(varClone);
                 }
             }
             current = parent;
@@ -181,46 +149,49 @@ public final class ContextExpressionExtractor {
             searcher = new SearchExpr((Expr) current);
         }
         Optional<Func> containerFunc = getContainerFunc(x);
-        containerFunc.ifPresent(f -> f.decls.forEach(d -> localVariablesFound.addAll(d.names)));
+        if (containerFunc.isPresent()) {
+            for (Decl d : containerFunc.get().decls) {
+                for (Expr var : d.names) {
+                    Expr varClone = cheatedClone(var);
+                    varClone.newID();
+                    localVariablesFound.add(varClone);
+                }
+            }
+        }
         Optional<List<Expr>> result;
         if (localVariablesFound.isEmpty()) {
             result = Optional.empty();
         } else {
             result = Optional.of(new LinkedList<>(localVariablesFound));
         }
-        for (Integer id : visitedIds)
-            localVariables.put(id, result);
         return result;
     }
 
-    public synchronized static Optional<List<Expr>> getSigsAndDecls() {
+    public synchronized static Optional<List<Expr>> getSigsAndDecls() throws CheatingIsBadMkay {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
-        if (sigsAndDecls == null) {
-            List<Expr> collectedSigsAndDecls = new LinkedList<>();
-            SafeList<Sig> sigs = context.getAllSigs();
-            for (Sig s : sigs) {
-                if (s.isVariabilizationTestRelatedSig())
-                    continue;
-                collectedSigsAndDecls.add(s);
-                for (Decl d : s.getFieldDecls()) {
-                    collectedSigsAndDecls.addAll(d.names);
+        List<Expr> collectedSigsAndDecls = new LinkedList<>();
+        SafeList<Sig> sigs = context.getAllSigs();
+        for (Sig s : sigs) {
+            if (s.isVariabilizationTestRelatedSig())
+                continue;
+            Sig sClone = (Sig) cheatedClone(s);
+            sClone.newID();
+            collectedSigsAndDecls.add(sClone);
+            for (Decl d : s.getFieldDecls()) {
+                for (Expr f : d.names) {
+                    Expr fClone = cheatedClone(f);
+                    fClone.newID();
+                    collectedSigsAndDecls.add(fClone);
                 }
             }
-            if (collectedSigsAndDecls.isEmpty()) {
-                sigsAndDecls = Optional.empty();
-            } else {
-                sigsAndDecls = Optional.of(collectedSigsAndDecls);
-            }
         }
-        return sigsAndDecls;
+        return collectedSigsAndDecls.isEmpty()?Optional.empty():Optional.of(collectedSigsAndDecls);
     }
 
     public synchronized static Optional<List<Expr>> getCombinedSigAndDecls(int min, int max) throws CheatingIsBadMkay {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
-        if (combinedSigAndDecls != null)
-            return combinedSigAndDecls;
         List<Expr> result = new LinkedList<>();
         SafeList<Sig> sigs = context.getAllSigs();
         List<Expr> sigsList = new LinkedList<>();
@@ -238,12 +209,7 @@ public final class ContextExpressionExtractor {
             }
         }
         combineSigsAndFields(sigsList, fields, result, min, max);
-        if (!result.isEmpty()) {
-            combinedSigAndDecls = Optional.of(result);
-        } else {
-            combinedSigAndDecls = Optional.empty();
-        }
-        return combinedSigAndDecls;
+        return result.isEmpty()?Optional.empty():Optional.of(result);
     }
 
     private synchronized static void combineSigsAndFields(List<Expr> sigs, Map<Expr,Type> fields, List<Expr> output, int min, int max) throws CheatingIsBadMkay {

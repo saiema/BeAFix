@@ -36,6 +36,7 @@ import org.alloytools.alloy.core.AlloyCore;
 
 import java.io.*;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -162,7 +163,10 @@ final class SimpleReporter extends A4Reporter {
                     len3 = len2 = span.getLength();
                     span.log("" + array[1]);
                 }
-
+                if (array[0].equals("RepairError")) {
+                    len3 = len2 = span.getLength();
+                    span.logAstrykerRed("" + array[1]);
+                }
                 if (array[0].equals("RepairExprOrig->Mut")) {
                     len3 = len2 = span.getLength();
                     span.log("" + array[1]+":\n");
@@ -809,6 +813,8 @@ final class SimpleReporter extends A4Reporter {
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_TEST_GENERATION));
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE));
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR));
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION));
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_REQUIRE_TESTS_FOR_ALL, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL));
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH));
             MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TESTS_ONLY, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE));
             int timeoutInMinutes = aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TIMEOUT);
@@ -842,7 +848,7 @@ final class SimpleReporter extends A4Reporter {
             DependencyScanner.scanDependencies(world);
             // Generate and build the mutation manager
             cb(out, "RepairSubTittle", world.markedEprsToMutate.size()+  " mutations mark detected Executing \n");
-            cb(out, "RepairSubTittle", "Generating mutants... ");
+
             ContextExpressionExtractor.reInitialize(world);
             Variabilization.initializeInstance(null, options);
             Ops[] availableOps = Ops.values();
@@ -850,15 +856,28 @@ final class SimpleReporter extends A4Reporter {
                     Arrays.stream(availableOps).filter(Ops::isImplemented).map(Enum::toString).collect(Collectors.joining(",")));
             MutantLab.initialize(world, maxDepthForRepair(), availableOps);
             MutantLab mutantLab = MutantLab.getInstance();
-            MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR).ifPresent(partialRepair -> {
-                if ((Boolean) partialRepair) {
-                    logger.info("Partial Repair is ENABLED " + (MutantLab.getInstance().isPartialRepairSupported()?"AND SUPPORTED":"BUT NOT SUPPORTED"));
-                    if (MutantLab.getInstance().isPartialRepairSupported()) {
-                        MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD, 0);
-                        logger.info("Changing " + ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD.toString() + " to 0");
+            if (partialRepairEnabled()) {
+                logger.info("Partial Repair is ENABLED " + (MutantLab.getInstance().isPartialRepairSupported()?"AND SUPPORTED":"BUT NOT SUPPORTED"));
+                if (MutantLab.getInstance().isPartialRepairSupported()) {
+                    MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD, 0);
+                    logger.info("Changing " + ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD.toString() + " to 0");
+                    if (!MutantLab.partialRepairAllFPANeedTests()) {
+                        StringBuilder sb = new StringBuilder("Using partial repair for some bugged predicates/functions/assertions");
+                        sb.append("\n");
+                        for (Entry<Browsable, List<Command>> indCommandsPerFPA : MutantLab.getInstance().originalCommandsPerFPA.entrySet()) {
+                            sb.append(indCommandsPerFPA.getKey().toString());
+                            if (indCommandsPerFPA.getValue().isEmpty()) {
+                                sb.append(" : has no independent tests for partial repair");
+                            } else {
+                                sb.append(" : ").append(indCommandsPerFPA.getValue().stream().map(Command::toString).collect(Collectors.joining(", ")));
+                            }
+                            sb.append("\n");
+                        }
+                        logger.info(sb.toString());
+                        cb(out, "RepairSubTittle", sb.toString());
                     }
                 }
-            });
+            }
             RepairReport.getInstance().setCommands(DependencyGraph.getInstance().getAllCommands().size());
             RepairReport.getInstance().setVariabilizationRelatedCommands((int) DependencyGraph.getInstance().getAllCommands().stream().filter(Command::isVariabilizationTest).count());
             RepairReport.getInstance().setMarkedExpressions(MutantLab.getInstance().getMarkedExpressions());
@@ -872,11 +891,13 @@ final class SimpleReporter extends A4Reporter {
             }
             RepairReport.getInstance().clockStart();
             Candidate repair = null;
+            int initialCommands = world.getAllCommands().size();
             if (variabilizationTestGeneration()) {
                 generateVariabilizationTests(world, rep);
             }
+            cb(out, "RepairSubTittle", "Repairing... ");
             while (mutantLab.advance()) {
-                cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + world.getAllCommands().size() + " commands...\n");
+                cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + initialCommands + " commands...\n");
                 count++;
                 //report current mutation
                 Optional<Candidate> current = mutantLab.getCurrentCandidate();
@@ -910,44 +931,55 @@ final class SimpleReporter extends A4Reporter {
                 // check all commands
                 MutantLab.getInstance().lockCandidateGeneration();
                 Browsable.freezeParents();
-                EvaluationResults results;
+                EvaluationResults results = null;
                 current.get().clearMutatedStatus();
-                if (partialRepair()) {
-                    results = evaluateCandidatePartialRepairEvaluation(current.get(), rep);
-                } else {
-                    results = evaluateCandidateNormalEvaluation(current.get(), rep);
+                try {
+                    if (partialRepair()) {
+                        results = evaluateCandidatePartialRepairEvaluation(current.get(), rep);
+                    } else {
+                        results = evaluateCandidateNormalEvaluation(current.get(), rep);
+                    }
+                } catch (Throwable e) {
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    String exceptionAsString = sw.toString();
+                    cb(out, "RepairError", "Fatal Error:\n"+exceptionAsString);
+                    logger.info("FATAL ERROR\n" + exceptionAsString);
                 }
                 current.get().clearMutatedStatus();
-                if (partialRepair())
-                    current.get().setCommandsResults(results.getCommandResults());
-                if (results.isDiscarded()) {
-                    cb(out, "RepairResults", Collections.singletonList("E"));
-                    logger.info("ERROR, mutant discarded\ncurrent mutant is:\n" + current.get().toString());
-                    StringWriter sw = new StringWriter();
-                    results.getException().printStackTrace(new PrintWriter(sw));
-                    String exceptionAsString = sw.toString();
-                    logger.info(exceptionAsString);
-                    mutantLab.reportCurrentAsInvalid();
-                } else if (results.isRepaired()) {
-                    repairFound = true;
-                    repair = current.get();
-                    cb(out, "RepairResults", Collections.singletonList("R"));
-                    RepairReport.getInstance().setRepair(current.get());
-                    mutantLab.stopSearch();
-                    rep.cb("bold", "Current mutant repair the model, all commands results as expected \n");
-                    cb(out, "RepairSubTittle", "Repair:\n" + RepairReport.getInstance().getRepairRepresentation());
-                    logger.info("Current mutant repair the model, all commands results as expected");
-                    logger.info("MODEL REPAIRED!");
-                    break;
-                } else if (results.isPartialRepair()) {
-                    cb(out, "RepairResults", Collections.singletonList("PR"));
-                } else {
-                    rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
-                    logger.info("Current mutant does not repair the model, some commands do not results as expected");
-                    cb(out, "RepairResults", Collections.singletonList("F"));
+                if (results != null) {
+                    if (partialRepair())
+                        current.get().setCommandsResults(results.getCommandResults());
+                    if (results.isDiscarded()) {
+                        cb(out, "RepairResults", Collections.singletonList("E"));
+                        logger.info("ERROR, mutant discarded\ncurrent mutant is:\n" + current.get().toString());
+                        StringWriter sw = new StringWriter();
+                        results.getException().printStackTrace(new PrintWriter(sw));
+                        String exceptionAsString = sw.toString();
+                        logger.info(exceptionAsString);
+                        mutantLab.reportCurrentAsInvalid();
+                    } else if (results.isRepaired()) {
+                        repairFound = true;
+                        repair = current.get();
+                        cb(out, "RepairResults", Collections.singletonList("R"));
+                        RepairReport.getInstance().setRepair(current.get());
+                        mutantLab.stopSearch();
+                        //cb(out, "RepairSubTittle", "Repair:\n" + RepairReport.getInstance().getRepairRepresentation());
+                        logger.info("Current mutant repair the model, all commands results as expected");
+                        logger.info("MODEL REPAIRED!");
+                        break;
+                    } else if (results.isPartialRepair()) {
+                        cb(out, "RepairResults", Collections.singletonList("PR"));
+                    } else {
+                        rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
+                        logger.info("Current mutant does not repair the model, some commands do not results as expected");
+                        cb(out, "RepairResults", Collections.singletonList("F"));
+                    }
                 }
                 Browsable.unfreezeParents();
                 MutantLab.getInstance().unlockCandidateGeneration();
+                if (results == null)
+                    break;
             }
             if (!repairFound) {
                 cb(out, "RepairTittle", "Model couldn't be repaired\n");
@@ -1037,7 +1069,8 @@ final class SimpleReporter extends A4Reporter {
             Map<Browsable, List<Command>> commandsForPartialRepair = MutantLab.getInstance().getCommandsToRunUsingPartialRepairFor(candidate);
             for (Browsable relatedPFA : candidate.getRelatedAssertionsAndFunctions()) {
                 if (commandsForPartialRepair.containsKey(relatedPFA)) {
-                    EvaluationResults partialResults = evaluateCandidate(candidate, commandsForPartialRepair.get(relatedPFA), rep, true);
+                    List<Command> independentCommands = commandsForPartialRepair.get(relatedPFA);
+                    EvaluationResults partialResults = evaluateCandidate(candidate, independentCommands, rep, true);
                     if (partialResults.isDiscarded()) {
                         atLeastOnePartialRepair = false;
                         exception = partialResults.getException();
@@ -1056,7 +1089,7 @@ final class SimpleReporter extends A4Reporter {
                             throw new IllegalStateException("Independent tests are not independent, command " + command.toString() + " was already executed");
                         }
                     }
-                    if (partialResults.isRepaired())
+                    if (partialResults.isRepaired() && independentCommands.size() > 0)
                         atLeastOnePartialRepair = true;
                 }
             }
@@ -1185,6 +1218,11 @@ final class SimpleReporter extends A4Reporter {
             Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR);
             boolean repairConfigValue = configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR.defaultValue());
             return repairConfigValue && MutantLab.getInstance().isPartialRepairSupported();
+        }
+
+        private boolean partialRepairEnabled() {
+            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR);
+            return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR.defaultValue());
         }
 
         private long repairTimeout() {

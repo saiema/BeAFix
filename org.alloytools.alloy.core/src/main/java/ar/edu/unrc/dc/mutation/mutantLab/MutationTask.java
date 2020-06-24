@@ -140,7 +140,7 @@ public class MutationTask implements Runnable {
                 logger.info("Sending only next index candidate:\n" + nextMutationSpotCandidate.toString());
                 outputChannel.insert(nextMutationSpotCandidate);
                 return;
-            } else if (!nextMutationSpotCandidate.isLast()){
+            } else if (!nextMutationSpotCandidate.isLast()) {
                 logger.info("Sending mutants of:\n" + nextMutationSpotCandidate.toString());
                 generateMutationsFor(nextMutationSpotCandidate);
             }
@@ -168,6 +168,7 @@ public class MutationTask implements Runnable {
             outputChannel.insert(Candidate.INVALID);
             return;
         }
+        Optional<Mutation> fromLastMutation = from.getLastMutation();
         AtomicReference<Candidate> updatedFrom = new AtomicReference<>(Candidate.original(context));
         updatedFrom.get().setCurrentMarkedExpression(from.getCurrentMarkedExpression());
         AtomicReference<Candidate> lastCandidate = new AtomicReference<>(updatedFrom.get());
@@ -184,6 +185,9 @@ public class MutationTask implements Runnable {
             Optional<List<Mutation>> mutationsOp = o.getOperator(context).getMutations();
             mutationsOp.ifPresent(mutations -> mutations.forEach(m -> {
                 Candidate newCandidate = Candidate.mutantFromCandidate(updatedFrom.get(), m);
+                newCandidate.copyMutationsRepsFrom(from);
+                fromLastMutation.ifPresent(newCandidate::addMutationRep);
+                newCandidate.addMutationRep(m);
                 newCandidate.increaseMutations(newCandidate.getCurrentMarkedExpression());
                 RepairReport.getInstance().incGeneratedCandidates();
                 if (mutantsHashes.add(newCandidate)) {

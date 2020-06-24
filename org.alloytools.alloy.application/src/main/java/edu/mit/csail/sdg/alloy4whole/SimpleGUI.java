@@ -1093,6 +1093,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             int newmem = SubMemory.get(), newstack = SubStack.get();
             if (newmem != subMemoryNow || newstack != subStackNow)
                 WorkerEngine.stop();
+            //TODO: debug mode alloy
             if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
                 WorkerEngine.runLocally(task, cb);
             else
@@ -1425,6 +1426,14 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                     asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, AStrykerPartialRepair.get());
                                     break;
                                 }
+                                case "AStrykerPartialRepairFullCGraphValidation" : {
+                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, AStrykerPartialRepairFullCGraphValidation.get());
+                                    break;
+                                }
+                                case "AStrykerPartialRepairIndependentTestsForAll" : {
+                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL, AStrykerPartialRepairIndependentTestsForAll.get());
+                                    break;
+                                }
                                 case "AStrykerRepairTimeout" : {
                                     asConfig.setIntArgument(AStrykerConfigReader.Config_key.TIMEOUT, AStrykerRepairTimeout.get());
                                     break;
@@ -1458,6 +1467,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerVariabilizationTestGeneration);
                 addToMenu(optmenu, AStrykerVariabilizationUseSameType);
                 addToMenu(optmenu, AStrykerPartialRepair);
+                addToMenu(optmenu, AStrykerPartialRepairFullCGraphValidation);
+                addToMenu(optmenu, AStrykerPartialRepairIndependentTestsForAll);
                 addToMenu(optmenu, AStrykerRepairTimeout);
                 addToMenu(optmenu, AStrykerRepairDepth);
                 addToMenu(optmenu, AStrykerUseTestsOnly);
@@ -1465,6 +1476,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerVariabilizationTestGeneration.addChangeListener(astrykerChangeListener);
                 AStrykerVariabilizationUseSameType.addChangeListener(astrykerChangeListener);
                 AStrykerPartialRepair.addChangeListener(astrykerChangeListener);
+                AStrykerPartialRepairFullCGraphValidation.addChangeListener(astrykerChangeListener);
+                AStrykerPartialRepairIndependentTestsForAll.addChangeListener(astrykerChangeListener);
                 AStrykerRepairTimeout.addChangeListener(astrykerChangeListener);
                 AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
                 AStrykerUseTestsOnly.addChangeListener(astrykerChangeListener);

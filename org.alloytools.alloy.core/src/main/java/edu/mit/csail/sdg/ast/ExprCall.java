@@ -444,7 +444,7 @@ public final class ExprCall extends Expr {
     public ExprCall mutateArgument(Expr target, Expr replacement) {
         List<Expr> argsClone = new LinkedList<>();
         for (Expr a : this.args) {
-            if (Browsable.equals(a, target)) {
+            if (a.getID() == target.getID()) {
                 argsClone.add((Expr) replacement.clone());
             } else {
                 argsClone.add((Expr) a.clone());

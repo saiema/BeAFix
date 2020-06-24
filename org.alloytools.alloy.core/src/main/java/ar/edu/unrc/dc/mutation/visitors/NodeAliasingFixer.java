@@ -10,14 +10,11 @@ import edu.mit.csail.sdg.parser.CompModule;
 public class NodeAliasingFixer extends VisitReturn<Void> {
 
     private Expr replacement = null;
-    private CompModule ast;
 
     public void fixSigNodes(CompModule ast) {
-        this.ast = ast;
-//        for (Sig s : ast.getAllSigs()) {
-//            s.getFields().forEach(f -> f.accept(this));
-//            s.getFacts().forEach(f -> f.accept(this));
-//        }
+        for (Sig s : ast.getAllSigs()) {
+            s.getFacts().forEach(f -> f.accept(this));
+        }
         for (Pair<String, Expr> fact : ast.getAllFacts()) {
             fact.b.accept(this);
         }
@@ -195,16 +192,6 @@ public class NodeAliasingFixer extends VisitReturn<Void> {
                 throw new Error("Error while replacing sub expression of " + x.toString(), e);
             }
         }
-//        if (x.op.equals(ExprUnary.Op.NOOP)) {
-//            try {
-//                Expr noopClone = Cheats.cheatedClone(x);
-//                noopClone.newID();
-//                noopClone.newIDEnv();
-//                replacement = noopClone;
-//            } catch (CheatingIsBadMkay e) {
-//                throw new Error("Error while cloning noop unary expression " + x.toString(), e);
-//            }
-//        }
         return null;
     }
 
@@ -223,8 +210,6 @@ public class NodeAliasingFixer extends VisitReturn<Void> {
 
     @Override
     public Void visit(Sig x) throws Err {
-//        if (!x.isBuiltInSig())
-//            return null;
         Sig cloneSig;
         try {
             cloneSig = (Sig) Cheats.cheatedClone(x);

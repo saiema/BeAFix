@@ -384,11 +384,11 @@ public final class Cheats {
         try {
             boolean oldAccessibleStatus = setAccessibleStatus(sigsField, true);
             Map<String, Sig> sigs = (Map<String, Sig>) sigsField.get(module);
-            if (sigs.containsKey(sig.label)) {
+            if (sigs.containsKey(sig.toString())) {
                 setAccessibleStatus(sigsField, oldAccessibleStatus);
-                throw new IllegalAccessException("Sig to add (" + sig.label + ") already exists in module");
+                throw new IllegalAccessException("Sig to add (" + sig.toString() + ") already exists in module");
             }
-            sigs.put(sig.label, sig);
+            sigs.put(sig.toString(), sig);
             setAccessibleStatus(sigsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("An error occurred while trying to access sigs field");
@@ -463,11 +463,11 @@ public final class Cheats {
         try {
             boolean oldAccessibleStatus = setAccessibleStatus(sigsField, true);
             Map<String, Sig> sigs = (Map<String, Sig>) sigsField.get(module);
-            if (!sigs.containsKey(sig.label)) {
+            if (!sigs.containsKey(sig.toString())) {
                 setAccessibleStatus(sigsField, oldAccessibleStatus);
-                throw new IllegalAccessException("Sig to remove (" + sig.label + ") doesn't exists in module");
+                throw new IllegalAccessException("Sig to remove (" + sig.toString() + ") doesn't exists in module");
             }
-            sigs.remove(sig.label);
+            sigs.remove(sig.toString());
             setAccessibleStatus(sigsField, oldAccessibleStatus);
         } catch (IllegalAccessException e) {
             throw new CheatingIsBadMkay("An error occurred while trying to access sigs field");

@@ -162,13 +162,20 @@ public class MutantLab {
         }
     }
 
+    public Map<Browsable, List<Command>> originalCommandsPerFPA = new HashMap<>();
     private boolean doesFunctionsPredicatesAndAssertionsInvolvedHaveIndependentTests(List<Browsable> involvedFPAs) {
+        boolean atLeastOneFPAWithIndependentTests = false;
+        boolean allFPAWithIndependentTests = true;
         for (Browsable involvedFPA : involvedFPAs) {
-            if (DependencyGraph.getInstance().getDirectIndependentCommandsFor(involvedFPA, involvedFPAs).isEmpty()) {
-                return false;
+            List<Command> independentCommands = DependencyGraph.getInstance().getDirectIndependentCommandsFor(involvedFPA, involvedFPAs);
+            if (independentCommands.isEmpty()) {
+                allFPAWithIndependentTests = false;
+            } else {
+                atLeastOneFPAWithIndependentTests = true;
             }
+            originalCommandsPerFPA.put(involvedFPA, independentCommands);
         }
-        return true;
+        return partialRepairAllFPANeedTests()?allFPAWithIndependentTests:atLeastOneFPAWithIndependentTests;
     }
 
     public int getMaxDepth() {
@@ -235,8 +242,9 @@ public class MutantLab {
             List<Integer> indexesToBlock = new LinkedList<>();
             Map<Command, Boolean> testsResults = current.getCommandsResults();
             for (Browsable affectedFPA : affectedFunctionsPredicatesAndAssertions) {
-                boolean affectedFPAFixed = true;
-                for (Command affectedFPARelatedCommnand : DependencyGraph.getInstance().getDirectIndependentCommandsFor(affectedFPA, affectedFunctionsPredicatesAndAssertions)) {
+                List<Command> independentCommandsForFPA = DependencyGraph.getInstance().getDirectIndependentCommandsFor(affectedFPA, affectedFunctionsPredicatesAndAssertions);
+                boolean affectedFPAFixed = independentCommandsForFPA.size() > 0;
+                for (Command affectedFPARelatedCommnand : independentCommandsForFPA) {
                     if (!testsResults.containsKey(affectedFPARelatedCommnand) || !testsResults.get(affectedFPARelatedCommnand)) {
                         affectedFPAFixed = false;
                         break;
@@ -250,6 +258,7 @@ public class MutantLab {
             }
             if (!indexesToBlock.isEmpty()) {
                 Candidate partiallyFixedCandidate = current.copy();
+                partiallyFixedCandidate.copyMutationsRepsFrom(current);
                 for (int indexToBlock : indexesToBlock) {
                     partiallyFixedCandidate.blockIndex(indexToBlock);
                 }
@@ -334,21 +343,25 @@ public class MutantLab {
     public static final Browsable PARTIAL_REPAIR_PRIORITY = Browsable.make(null, (Browsable) null);
     public static final Browsable PARTIAL_REPAIR_NON_PRIORITY = Browsable.make(null, (Browsable) null);
     public Map<Browsable, List<Command>> getCommandsToRunUsingPartialRepairFor(Candidate candidate) {
-        List<Browsable> partiallyFixedPFAs = partiallyFixedPFAs(candidate);
+        logger.info("getCommandsToRunUsingPartialRepairFor\n" + candidate.toString() + "\n");
+        logger.info("commands" + "\n" + DependencyGraph.getInstance().getAllCommands().stream().map(Command::toString).collect(Collectors.joining(",")));
+        //List<Browsable> partiallyFixedPFAs = partiallyFixedPFAs(candidate);
         Map<Browsable, List<Command>> commands = new HashMap<>();
         List<Command> lastPriorityCommandsToRun = new LinkedList<>();
+        List<Command> lastNonPriorityCommandsToRun = new LinkedList<>();
+        List<Command> allIndependentTests = new LinkedList<>();
         for (Browsable relatedPFA : candidate.getRelatedAssertionsAndFunctions()) {
-            List<Command> independentTests;
-            if (partiallyFixedPFAs.contains(relatedPFA)) {
-                independentTests = new LinkedList<>();
-            } else {
-                independentTests = DependencyGraph.getInstance().getDirectIndependentCommandsFor(relatedPFA);
-            }
-            DependencyGraph.getInstance().getPriorityCommands(relatedPFA).stream().parallel().filter(c -> !independentTests.contains(c) && !lastPriorityCommandsToRun.contains(c)).forEach(lastPriorityCommandsToRun::add);
+            List<Command> independentTests = DependencyGraph.getInstance().getDirectIndependentCommandsFor(relatedPFA);
+            independentTests.stream().filter(c -> !allIndependentTests.contains(c)).forEach(allIndependentTests::add);
             commands.put(relatedPFA, independentTests);
+            logger.info("Independent commands for " + relatedPFA.toString() + "\n" + independentTests.stream().map(Command::toString).collect(Collectors.joining(",")));
         }
+        DependencyGraph.getInstance().getPriorityCommands(candidate.getRelatedAssertionsAndFunctions()).stream().filter(c -> !allIndependentTests.contains(c) && !lastPriorityCommandsToRun.contains(c)).forEach(lastPriorityCommandsToRun::add);
         commands.put(PARTIAL_REPAIR_PRIORITY, lastPriorityCommandsToRun);
-        commands.put(PARTIAL_REPAIR_NON_PRIORITY, DependencyGraph.getInstance().getNonPriorityCommands(candidate.getRelatedAssertionsAndFunctions()));
+        logger.info("Priority commands\n" + lastPriorityCommandsToRun.stream().map(Command::toString).collect(Collectors.joining(",")));
+        DependencyGraph.getInstance().getNonPriorityCommands(candidate.getRelatedAssertionsAndFunctions()).stream().filter(c -> !allIndependentTests.contains(c) && !lastNonPriorityCommandsToRun.contains(c)).forEach(lastNonPriorityCommandsToRun::add);
+        commands.put(PARTIAL_REPAIR_NON_PRIORITY, lastNonPriorityCommandsToRun);
+        logger.info("Non priority commands\n" + lastNonPriorityCommandsToRun.stream().map(Command::toString).collect(Collectors.joining(",")));
         return commands;
     }
 
@@ -420,6 +433,11 @@ public class MutantLab {
     public static boolean useTestsOnly() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_TESTS_ONLY);
         return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_TESTS_ONLY.defaultValue());
+    }
+
+    public static boolean partialRepairAllFPANeedTests() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR_REQUIRE_TESTS_FOR_ALL);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR_REQUIRE_TESTS_FOR_ALL.defaultValue());
     }
 
 }

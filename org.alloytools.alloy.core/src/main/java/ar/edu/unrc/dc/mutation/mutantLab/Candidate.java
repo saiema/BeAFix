@@ -32,6 +32,7 @@ public class Candidate {
     private Map<Command, Boolean> commandsResults;
     private boolean hasPartialResults;
     private boolean isPartialRepair;
+    private List<String> mutationsRepresentations;
 
     static {
         Candidate invalid = new Candidate(null);
@@ -58,6 +59,7 @@ public class Candidate {
         currentMarkedExpression = 0;
         mutationsPerIndex = new int[markedExpressions];
         blockedIndexes = new boolean[markedExpressions];
+        mutationsRepresentations = new LinkedList<>();
         Arrays.fill(mutationsPerIndex, 0);
         Arrays.fill(blockedIndexes, Boolean.FALSE);
     }
@@ -79,7 +81,7 @@ public class Candidate {
         if (context == null)
             throw new IllegalArgumentException("from candidate doesn't have a context associated");
         Candidate newCandidate;
-        if (from.mutation != null && Browsable.equals(from.mutation.mutant(), mutation.original())) {
+        if (from.mutation != null && sameNodes(from.mutation.mutant(), mutation.original())) {
             Mutation merged = new Mutation(Ops.MULTI, from.mutation.original(), mutation.mutant());
             newCandidate = new Candidate(from.parent, merged, from.getContext());
         } else {
@@ -91,6 +93,23 @@ public class Candidate {
             System.arraycopy(from.blockedIndexes, 0, newCandidate.blockedIndexes, 0, from.markedExpressions);
         }
         return newCandidate;
+    }
+
+    public void addMutationRep(Mutation mut) {
+        this.mutationsRepresentations.add(getMutationRep(mut));
+    }
+
+    private String getMutationRep(Mutation mut) {
+        if (mut.operator().equals(Ops.VAR) || mut.operator().equals(Ops.MULTI))
+            throw new IllegalArgumentException("Only add non VAR/MULTI mutations");
+        return  mut.original().pos.y +
+                "$$$" +
+                mut.operator().toString() +
+                "$$$" +
+                mut.original().toString() +
+                "$$$" +
+                mut.mutant().toString()
+                ;
     }
 
     private boolean verifyParentStructure() {
@@ -134,7 +153,7 @@ public class Candidate {
     public Optional<Expr> getMutatedExpr(Expr x) {
         if (mutation != null) {
             if (!isAlreadyMutated) {
-                if (Browsable.equals(mutation.original(), x))
+                if (sameNodes(mutation.original(), x))
                     return Optional.of(mutation.mutant());
                 else {
                     Expr replacement = isFromFact?findSubExpressionMatchFrom(mutation.original(), x, mutation.mutant()):null;
@@ -147,6 +166,10 @@ public class Candidate {
             return parent.getMutatedExpr(x); //the parent structure guaranties that if mutation != null then parent != null
         }
         return Optional.empty();
+    }
+
+    private static boolean sameNodes(Browsable a, Browsable b) {
+        return a.getID() == b.getID();
     }
 
     public boolean[] getAllMutatedStatus() {
@@ -190,7 +213,7 @@ public class Candidate {
     }
 
     private Expr findSubExpressionMatchFrom(Expr from, Expr target, Expr replacement) {
-         if (Browsable.equals(from, target))
+         if (sameNodes(from, target))
              return replacement;
          if (from instanceof ExprUnary && ((ExprUnary)from).op.equals(ExprUnary.Op.NOOP)) {
              if (replacement instanceof ExprUnary && ((ExprUnary)replacement).op.equals(ExprUnary.Op.NOOP))
@@ -222,7 +245,7 @@ public class Candidate {
 
     public void markAsAlreadyMutated(Expr x) {
         if (mutation != null) {
-            if (Browsable.equals(mutation.original(), x) && !isAlreadyMutated)
+            if (sameNodes(mutation.original(), x) && !isAlreadyMutated)
                 isAlreadyMutated = true;
             else if (findSubExpressionMatchFrom(mutation.original(), x, mutation.mutant()) != null && !isAlreadyMutated)
                 isAlreadyMutated = true;
@@ -337,9 +360,17 @@ public class Candidate {
         if (current.mutation == null)
             sb.append("ORIGINAL").append("\n");
         else {
-            sb.append(toString(current.parent));
-            sb.append("Line: ").append(current.mutation.original().pos.y).append(" : ");
-            sb.append(current.mutation.toString()).append("\n");
+            for (String mutRep : mutationsRepresentations) {
+                String[] mutRepParts = mutRep.split("\\$\\$\\$");
+                sb.append("Line : ").append(mutRepParts[0]).append(" : ");
+                sb.append("(").append(mutRepParts[1]).append(")");
+                sb.append(" |< ").append(mutRepParts[2]);
+                sb.append(" |> ").append(mutRepParts[3]);
+                sb.append("\n");
+            }
+//            sb.append(toString(current.parent));
+//            sb.append("Line: ").append(current.mutation.original().pos.y).append(" : ");
+//            sb.append(current.mutation.toString()).append("\n");
         }
         return sb.toString();
     }
@@ -443,6 +474,19 @@ public class Candidate {
         System.arraycopy(from.mutationsPerIndex, 0, mutationsPerIndex ,0, markedExpressions);
     }
 
+    public void copyMutationsRepsFrom(Candidate from) {
+        List<String> fromMutReps = new LinkedList<>();
+        Optional<Mutation> lastMutation = from.getLastMutation();
+        String lastMutRep = lastMutation.map(this::getMutationRep).orElse(null);
+        for (String mutRep : from.mutationsRepresentations) {
+            if (lastMutRep != null && mutRep.compareTo(lastMutRep) == 0)
+                continue;
+            fromMutReps.add(mutRep);
+        }
+        fromMutReps.addAll(mutationsRepresentations);
+        this.mutationsRepresentations = fromMutReps;
+    }
+
     /**
      * Returns a list of triplet (place & OP, orig expr, mutation expr) of the current mutation
      * @return a representation of a this candidate mutations showing line, operator used, original and mutated expression
@@ -454,8 +498,9 @@ public class Candidate {
             l.add(t);
         }
         else {
-            for (Mutation m : getMutations()) {
-                Triplet<String, String, String> t = new Triplet<>("Line "+m.original().pos.y+" <"+ m.operator()+"> ", m.original().toString(),m.mutant().toString());
+            for (String mutRep : mutationsRepresentations) {
+                String[] mutRepParts = mutRep.split("\\$\\$\\$");
+                Triplet<String, String, String> t = new Triplet<>("Line "+mutRepParts[0]+" <"+ mutRepParts[1]+"> ", mutRepParts[2],mutRepParts[3]);
                 l.add(t);
             }
         }

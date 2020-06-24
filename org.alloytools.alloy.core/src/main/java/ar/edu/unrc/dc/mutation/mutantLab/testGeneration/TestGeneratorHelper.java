@@ -6,10 +6,7 @@ import edu.mit.csail.sdg.translator.A4Solution;
 import kodkod.ast.Relation;
 import kodkod.instance.Tuple;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 class TestGeneratorHelper {
@@ -111,8 +108,9 @@ class TestGeneratorHelper {
     }
 
      static Optional<Sig> nameToSig(Relation relation, CompModule context) {
-         for (Sig sig : context.getAllSigs()) {
-             if (relation.name().compareTo(sig.label) == 0)
+        String targetName = relation.name().replace(" remainder", "");
+        for (Sig sig : context.getAllSigs()) {
+             if (targetName.compareTo(sig.label) == 0)
                  return Optional.of(sig);
          }
          return Optional.empty();
@@ -198,6 +196,94 @@ class TestGeneratorHelper {
         for (int i = 0; i < length; i++)
             sb.append(SYMBOLS.charAt(rng.nextInt(SYMBOLS.length())));
         return sb.toString();
+    }
+
+    static boolean extendsNonBuiltIn(Sig s) {
+        if (s == null)
+            return false;
+        if (s.isBuiltInSig())
+            return false;
+        if (s instanceof Sig.PrimSig) {
+            Sig.PrimSig sAsPrimSig = (Sig.PrimSig) s;
+            return sAsPrimSig.parent != null && !sAsPrimSig.parent.isBuiltInSig() && sAsPrimSig.parent.isAbstract == null;
+        }
+        if (s instanceof Sig.SubsetSig) {
+            Sig.SubsetSig sAsSubsetSig = (Sig.SubsetSig) s;
+            for (Sig parent : sAsSubsetSig.parents) {
+                if (!parent.isBuiltInSig() && parent.isAbstract == null)
+                    return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    static boolean extendsSignatures(Sig thiz, Sig that) {
+        if (thiz.isBuiltInSig())
+            return false;
+        if (thiz instanceof Sig.PrimSig) {
+            Sig.PrimSig thizAsPrimSig = (Sig.PrimSig) thiz;
+            Sig parent = thizAsPrimSig.parent;
+            if (parent.equals(that))
+                return true;
+            return extendsSignatures(parent, that);
+        }
+        if (thiz instanceof Sig.SubsetSig) {
+            Sig.SubsetSig thizAsSubsetSig = (Sig.SubsetSig) thiz;
+            for (Sig parent : thizAsSubsetSig.parents) {
+                if (parent.equals(that))
+                    return true;
+                return extendsSignatures(parent, that);
+            }
+        }
+        return false;
+    }
+
+    static void mergeExtendingSignaturesValues(Map<Sig, List<ExprVar>> signaturesValues) {
+        boolean modified = true;
+        while (modified) {
+            modified = false;
+            for (Sig s : signaturesValues.keySet()) {
+                List<ExprVar> sVars = signaturesValues.get(s);
+                Set<String> sVarsNames = sVars.stream().map(v -> v.label).collect(Collectors.toCollection(TreeSet::new));
+                for (Sig extendingSig : extendingSignatures(s, signaturesValues.keySet())) {
+                    List<ExprVar> extendingSigVars = signaturesValues.get(extendingSig);
+                    for (ExprVar eVar : extendingSigVars) {
+                        if (sVarsNames.contains(eVar.label)) {
+                            remove(eVar.label, sVars);
+                        }
+                        sVars.add(eVar);
+                        sVarsNames.add(eVar.label);
+                    }
+                }
+                signaturesValues.put(s, sVars);
+            }
+        }
+    }
+
+    private static void remove(String label, List<ExprVar> vars) {
+        ExprVar varToRemove = null;
+        for (ExprVar v : vars) {
+            if (v.label.compareTo(label) == 0) {
+                varToRemove = v;
+                break;
+            }
+        }
+        if (varToRemove != null)
+            vars.remove(varToRemove);
+    }
+
+    static List<Sig> extendingSignatures(Sig sig, Collection<Sig> allSigs) {
+        List<Sig> extendingSigs = new LinkedList<>();
+        if (!sig.isBuiltInSig()) {
+            for (Sig otherSig : allSigs) {
+                if (sig.equals(otherSig))
+                    continue;
+                if (extendsSignatures(otherSig, sig))
+                    extendingSigs.add(otherSig);
+            }
+        }
+        return extendingSigs;
     }
 
 }

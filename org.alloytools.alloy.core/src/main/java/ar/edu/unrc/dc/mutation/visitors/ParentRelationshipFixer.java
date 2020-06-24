@@ -142,6 +142,7 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
             if (!isCurrentParent(x)) {
                 ExprConstant constCopy = (ExprConstant) Cheats.cheatedClone(x);
                 constCopy.newID();
+                constCopy.newIDEnv();
                 varConstantReplacement = constCopy;
                 constCopy.setBrowsableParent(currentParent);
             }
@@ -273,6 +274,7 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
             if (!isCurrentParent(x)) {
                 ExprVar varCopy = (ExprVar) Cheats.cheatedClone(x);
                 varCopy.newID();
+                varCopy.newIDEnv();
                 varConstantReplacement = varCopy;
                 varCopy.setBrowsableParent(currentParent);
             }
