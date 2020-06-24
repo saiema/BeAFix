@@ -17,6 +17,8 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static ar.edu.unrc.dc.mutation.util.AStrykerConfigReader.Config_key.*;
+
 public class AStrykerCLI {
 
 
@@ -75,35 +77,46 @@ public class AStrykerCLI {
         }
     }
 
-    private static final String VARIABILIZATION = "variabilization";
-    private static final String VARIABILIZATION_SAME_TYPE = "sametypes";
-    private static final String PARTIALREPAIR = "partialrepair";
-    private static final String USEPOTOVALIDATE = "validatewithpo";
-    private static final String TIMEOUT = "timeout";
-    private static final String MAXDEPTH = "maxdepth";
+    private static final String VARIABILIZATION_KEY = "variabilization";
+    private static final String VARIABILIZATION_TEST_GENERATION_KEY = "testgeneration";
+    private static final String VARIABILIZATION_SAME_TYPE_KEY = "sametypes";
+    private static final String PARTIALREPAIR_KEY = "partialrepair";
+    private static final String USEPOTOVALIDATE_KEY = "validatewithpo";
+    private static final String TIMEOUT_KEY = "timeout";
+    private static final String MAXDEPTH_KEY = "maxdepth";
     private static void setConfig(String key, String value) {
         switch (key.toLowerCase()) {
-            case VARIABILIZATION :
-            case VARIABILIZATION_SAME_TYPE:
-            case USEPOTOVALIDATE:
-            case PARTIALREPAIR : {
+            case VARIABILIZATION_KEY:
+            case VARIABILIZATION_TEST_GENERATION_KEY:
+            case VARIABILIZATION_SAME_TYPE_KEY:
+            case USEPOTOVALIDATE_KEY:
+            case PARTIALREPAIR_KEY: {
                 Optional<Boolean> varValue = parseBooleanValue(value);
                 if (varValue.isPresent()) {
                     switch (key) {
-                        case VARIABILIZATION: {
-                            AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION, varValue.get());
+                        case VARIABILIZATION_KEY: {
+                            AStrykerConfigReader.getInstance().setBooleanArgument(VARIABILIZATION, varValue.get());
                             break;
                         }
-                        case PARTIALREPAIR: {
-                            AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, varValue.get());
+                        case VARIABILIZATION_TEST_GENERATION_KEY: {
+                            AStrykerConfigReader.getInstance().setBooleanArgument(VARIABILIZATION_TEST_GENERATION, varValue.get());
                             break;
                         }
-                        case USEPOTOVALIDATE: {
-                            AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE, varValue.get());
+                        case PARTIALREPAIR_KEY: {
+                            Boolean partialRepair = varValue.get();
+                            AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR, partialRepair);
+                            if (partialRepair) {
+                                AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL, Boolean.FALSE);
+                                AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, Boolean.TRUE);
+                            }
                             break;
                         }
-                        case VARIABILIZATION_SAME_TYPE: {
-                            AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE, varValue.get());
+                        case USEPOTOVALIDATE_KEY: {
+                            AStrykerConfigReader.getInstance().setBooleanArgument(USE_PO_TO_VALIDATE, varValue.get());
+                            break;
+                        }
+                        case VARIABILIZATION_SAME_TYPE_KEY: {
+                            AStrykerConfigReader.getInstance().setBooleanArgument(VARIABILIZATION_SAME_TYPE, varValue.get());
                             varValue.ifPresent(A4Preferences.AStrykerVariabilizationUseSameType::set);
                             break;
                         }
@@ -112,16 +125,16 @@ public class AStrykerCLI {
                     throw new IllegalArgumentException("Invalid value for " + key + " expecting (true/false) but got " + value + " instead");
                 break;
             }
-            case TIMEOUT :
-            case MAXDEPTH : {
+            case TIMEOUT_KEY:
+            case MAXDEPTH_KEY: {
                 Optional<Integer> intVal = parseIntegerValue(value);
                 intVal.ifPresent(intValue -> {
                     if (intValue < 0)
                         throw new IllegalArgumentException("Negative value for " + key + " (" + intValue + ")");
-                    if (key.equals(TIMEOUT))
-                        AStrykerConfigReader.getInstance().setIntArgument(AStrykerConfigReader.Config_key.TIMEOUT, intVal.get());
+                    if (key.equals(TIMEOUT_KEY))
+                        AStrykerConfigReader.getInstance().setIntArgument(TIMEOUT, intVal.get());
                     else
-                        AStrykerConfigReader.getInstance().setIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH, intVal.get());
+                        AStrykerConfigReader.getInstance().setIntArgument(MAX_DEPTH, intVal.get());
                 });
                 if (!intVal.isPresent())
                     throw new IllegalArgumentException("Invalid value for " + key + " expecting integer but got " + value + " instead");
