@@ -67,6 +67,8 @@ public class MutantLab {
     public Boolean timeoutReached = false;
     public Boolean stopRepairProcess = false;
 
+    private final boolean variabilizationSupported;
+
     //fields for partial repair for multiple bugged and independent functions (preds/fun/assertions)
     private final List<Browsable> affectedFunctionsPredicatesAndAssertions;
     private final boolean partialRepairSupported;
@@ -89,6 +91,7 @@ public class MutantLab {
         searchStarted = false;
         Optional<List<Expr>> initialMarkedExpressions = Variabilization.getInstance().getMarkedExpressions(context);
         markedExpressions = initialMarkedExpressions.map(List::size).orElse(0);
+        variabilizationSupported = markedExpressions > 1;
         AtomicBoolean factsAffected = new AtomicBoolean(false);
         affectedFunctionsPredicatesAndAssertions = new LinkedList<>();
         boolean independent = false;
@@ -101,8 +104,16 @@ public class MutantLab {
         partialRepairSupported = !factsAffected.get() && affectedFunctionsPredicatesAndAssertions.size() > 1 && independent;
     }
 
+    public boolean isOperatorEnabled(Ops op) {
+        return ops.contains(op);
+    }
+
     public boolean isPartialRepairSupported() {
         return partialRepairSupported;
+    }
+
+    public boolean isVariabilizationSupported() {
+        return variabilizationSupported;
     }
 
     private boolean isAnyFactBugged(CompModule context, List<Expr> initialMarkedExpressions) {

@@ -339,13 +339,19 @@ public final class TypeChecking {
                 Optional<Expr> opParent = getContext(x);
                 return opParent.map(o -> canReplace(o, resType, strictCheck)).orElse(true);
             }
-            case CAST2INT :
-                return replacementType.hasArity(1);
+            case CAST2INT : {
+                if (!replacementType.hasArity(1))
+                    return false;
+                Optional<Expr> opParent = getContext(x);
+                return opParent.map(o -> canReplace(o, replacementType, strictCheck)).orElse(true);
+            }
             case CAST2SIGINT : {
-                if (replacementType.is_small_int())
-                    return true;
-                if (replacementType.is_int())
-                    return true;
+                if (!replacementType.is_small_int())
+                    return false;
+                if (!replacementType.is_int())
+                    return false;
+                Optional<Expr> opParent = getContext(x);
+                return opParent.map(o -> canReplace(o, replacementType, strictCheck)).orElse(true);
             }
             default:
                 return false;
@@ -406,7 +412,7 @@ public final class TypeChecking {
                 ExprQt qt = (ExprQt) exprQtOrLet.get();
                 formula = qt.sub;
                 for (Decl d : qt.decls) {
-                    if (d.expr.getID() == target.getID()) {
+                    if (sameNodesForBound(target, d.expr)) {//(d.expr.getID() == target.getID()) {
                         varsToCheck.addAll(d.names);
                         break;
                     }
@@ -445,12 +451,27 @@ public final class TypeChecking {
             if (qtOrLet.get() instanceof ExprQt) {
                 ExprQt qt = (ExprQt) qtOrLet.get();
                 for (Decl d : qt.decls) {
-                    if (d.expr.getID() == target.getID())
+                    if (sameNodesForBound(target, d.expr))//(d.expr.getID() == target.getID())
                         return true;
                 }
             } else {
                 ExprLet let = (ExprLet) qtOrLet.get();
-                return let.expr.getID() == target.getID();
+                return sameNodesForBound(target, let.expr);//let.expr.getID() == target.getID();
+            }
+        }
+        return false;
+    }
+
+    private static boolean sameNodesForBound(Expr target, Expr bound) {
+        if (target.getID() == bound.getID())
+            return true;
+        if (bound instanceof ExprUnary) {
+            ExprUnary boundAsUnary = (ExprUnary) bound;
+            switch (boundAsUnary.op) {
+                case NOOP:
+                case SOMEOF:
+                case ONEOF:
+                case LONEOF: return sameNodesForBound(target, boundAsUnary.sub);
             }
         }
         return false;

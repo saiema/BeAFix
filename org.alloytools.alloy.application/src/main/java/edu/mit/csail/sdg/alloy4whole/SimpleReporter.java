@@ -878,6 +878,11 @@ final class SimpleReporter extends A4Reporter {
                     }
                 }
             }
+            if (MutationTask.useVariabilization() && MutantLab.getInstance().isVariabilizationSupported()) {
+                logger.info("Variabilization is ENABLED BUT NOT SUPPORTED (disabling variabilization and test generation)");
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, Boolean.FALSE);
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, Boolean.FALSE);
+            }
             RepairReport.getInstance().setCommands(DependencyGraph.getInstance().getAllCommands().size());
             RepairReport.getInstance().setVariabilizationRelatedCommands((int) DependencyGraph.getInstance().getAllCommands().stream().filter(Command::isVariabilizationTest).count());
             RepairReport.getInstance().setMarkedExpressions(MutantLab.getInstance().getMarkedExpressions());

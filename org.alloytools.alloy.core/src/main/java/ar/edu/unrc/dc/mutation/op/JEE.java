@@ -3,6 +3,7 @@ package ar.edu.unrc.dc.mutation.op;
 import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
 import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
@@ -79,15 +80,19 @@ public class JEE extends JEX {
         return Optional.empty();
     }
 
-//    @Override
-//    public Optional<List<Mutation>> visit(Sig.Field x) throws Err {
-//        return generateMutants(x, x);
-//    }
-//
-//    @Override
-//    public Optional<List<Mutation>> visit(Sig x) throws Err {
-//        return generateMutants(x, x);
-//    }
+    @Override
+    public Optional<List<Mutation>> visit(Sig.Field x) throws Err {
+        if (MutantLab.getInstance().isOperatorEnabled(Ops.QTBER))
+            return Optional.empty();
+        return generateMutants(x, x);
+    }
+
+    @Override
+    public Optional<List<Mutation>> visit(Sig x) throws Err {
+        if (MutantLab.getInstance().isOperatorEnabled(Ops.QTBER))
+            return Optional.empty();
+        return generateMutants(x, x);
+    }
 
     @Override
     protected boolean isMutable(Expr x) {
@@ -129,7 +134,7 @@ public class JEE extends JEX {
                     }
                 }
             }
-        } else if (from instanceof ExprUnary || from instanceof ExprVar || from instanceof ExprCall) {
+        } else if (from instanceof ExprUnary || from instanceof ExprVar || from instanceof ExprCall || from instanceof Sig || from instanceof Sig.Field) {
             if (from.getID() != replace.getID())
                 throw new IllegalArgumentException("The replace expression for Expr(Unary,HasName,Var,Call) must be the same as the from expression");
             Optional<List<Expr>> replacements;

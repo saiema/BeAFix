@@ -233,7 +233,7 @@ public class MutationTask implements Runnable {
         return Variabilization.getInstance().variabilizationCheck(candidate, MutantLab.getInstance().getCommandsToRunFor(candidate, true), logger);
     }
 
-    private boolean useVariabilization() {
+    public static boolean useVariabilization() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION);
         return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION.defaultValue());
     }
