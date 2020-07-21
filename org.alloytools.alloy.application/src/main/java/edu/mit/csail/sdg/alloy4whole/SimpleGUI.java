@@ -1017,14 +1017,18 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 runmenu.add(y, 0);
                 runmenu.add(new JSeparator(), 1);
             }
+            //@Test generation
+            JMenuItem testGenerationMenu = new JMenuItem("Generate tests from counterexamples", null);
+            testGenerationMenu.addActionListener(doAStryker(AStrykerTESTGENERATION));
+            runmenu.add(new JSeparator(), runmenu.getItemCount());
+            runmenu.add(testGenerationMenu, runmenu.getItemCount());
             //@Mutants
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 JMenuItem y = new JMenuItem("Repair by mutating marked exprs (#m#)", null);
-                y.addActionListener(doRepair(-1));
+                //y.addActionListener(doRepair(-1));
+                y.addActionListener(doAStryker(AStrykerREPAIR));
                 runmenu.add(new JSeparator(), runmenu.getItemCount());
                 runmenu.add(y, runmenu.getItemCount());
-
-
             }
         } finally {
             wrap = false;
@@ -1110,28 +1114,28 @@ public final class SimpleGUI implements ComponentListener, Listener {
         return null;
     }
 
-
-    /**
-     * This method executes a reparation on a marked source.
-     */
-    private Runner doRepair(int index) {
+    private final int AStrykerREPAIR = 1;
+    private final int AStrykerTESTGENERATION = 2;
+    private Runner doAStryker(int index) {
         if (wrap)
             return wrapMe(index);
+        boolean onlyTestGeneration = index == AStrykerTESTGENERATION;
         if (WorkerEngine.isBusy())
             return null;
         // To update the accelerator to point to the command actually chosen
-      //  doRefreshRun();
+        //  doRefreshRun();
         OurUtil.enableAll(runmenu);
         if (commands == null)
             return null;
         if (commands.size() == 0 ) {
-            log.logRed("There are no commands for repair validation.\n\n");
+            log.logRed(onlyTestGeneration?"There are no commands for test generation.\n\n":"There are no commands for repair validation.\n\n");
             return null;
         }
         SimpleCallback1 cb = new SimpleCallback1(this, null, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
         //@Atryker
         cb.reparing=true;
         SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
+        repair1.onlyTestGeneration = onlyTestGeneration;
         A4Options opt = new A4Options();
         opt.tempDirectory = alloyHome() + fs + "tmp";
         opt.solverDirectory = alloyHome() + fs + "binary";
@@ -1174,6 +1178,70 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
         return null;
     }
+
+//    /**
+//     * This method executes a reparation on a marked source.
+//     */
+//    private Runner doRepair(int index) {
+//        if (wrap)
+//            return wrapMe(index);
+//        if (WorkerEngine.isBusy())
+//            return null;
+//        // To update the accelerator to point to the command actually chosen
+//      //  doRefreshRun();
+//        OurUtil.enableAll(runmenu);
+//        if (commands == null)
+//            return null;
+//        if (commands.size() == 0 ) {
+//            log.logRed("There are no commands for repair validation.\n\n");
+//            return null;
+//        }
+//        SimpleCallback1 cb = new SimpleCallback1(this, null, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
+//        //@Atryker
+//        cb.reparing=true;
+//        SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
+//        A4Options opt = new A4Options();
+//        opt.tempDirectory = alloyHome() + fs + "tmp";
+//        opt.solverDirectory = alloyHome() + fs + "binary";
+//        opt.recordKodkod = RecordKodkod.get();
+//        opt.noOverflow = NoOverflow.get();
+//        opt.unrolls = Version.experimental ? Unrolls.get() : (-1);
+//        opt.skolemDepth = SkolemDepth.get();
+//        opt.coreMinimization = CoreMinimization.get();
+//        opt.inferPartialInstance = InferPartialInstance.get();
+//        opt.coreGranularity = CoreGranularity.get();
+//        opt.originalFilename = Util.canon(text.get().getFilename());
+//        opt.solver = Solver.get();
+//        //repairtask.bundleIndex = i;
+//        //repairtask.bundleWarningNonFatal = WarningNonfatal.get();
+//        repair1.map = text.takeSnapshot();
+//        repair1.options = opt.dup();
+//        repair1.resolutionMode = (Version.experimental && ImplicitThis.get()) ? 2 : 1;
+//        repair1.tempdir = maketemp();
+//        try {
+//            runmenu.setEnabled(false);
+//            runbutton.setVisible(false);
+//            showbutton.setEnabled(false);
+//            stopbutton.setVisible(true);
+//            int newmem = SubMemory.get(), newstack = SubStack.get();
+//            if (newmem != subMemoryNow || newstack != subStackNow)
+//                WorkerEngine.stop();
+//            //TODO: repair run
+//            if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
+//                WorkerEngine.runLocally(repair1, cb);
+//            else
+//                WorkerEngine.run(repair1, newmem, newstack, alloyHome() + fs + "binary", "", cb);
+//            subMemoryNow = newmem;
+//            subStackNow = newstack;
+//        } catch (Throwable ex) {
+//            WorkerEngine.stop();
+//            log.logBold("Fatal Error: Solver failed due to unknown reason.\n" + "One possible cause is that, in the Options menu, your specified\n" + "memory size is larger than the amount allowed by your OS.\n" + "Also, please make sure \"java\" is in your program path.\n");
+//            log.logDivider();
+//            log.flush();
+//            doStop(2);
+//        }
+//        return null;
+//    }
 
 
     /**
@@ -1402,59 +1470,69 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, ImplicitThis, NoOverflow, InferPartialInstance);
             }
             //@Mutants options menu
-            if (CompUtil.hasMutableExpressions(text.get().getText())){
-                optmenu.addSeparator();
-                ChangeListener astrykerChangeListener = e -> {
-                    try {
-                        if (e.getSource() instanceof Pref) {
-                            Pref p = (Pref) e.getSource();
-                            AStrykerConfigReader asConfig = AStrykerConfigReader.getInstance();
-                            switch (p.id) {
-                                case "AStrykerVariabilization" : {
-                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION, AStrykerVariabilization.get());
-                                    break;
-                                }
-                                case "AStrykerVariabilizationTestGeneration" : {
-                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_TEST_GENERATION, AStrykerVariabilizationTestGeneration.get());
-                                    break;
-                                }
-                                case "AStrykerVariabilizationSameTypes": {
-                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE, AStrykerVariabilizationUseSameType.get());
-                                    break;
-                                }
-                                case "AStrykerPartialRepair" : {
-                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, AStrykerPartialRepair.get());
-                                    break;
-                                }
-                                case "AStrykerPartialRepairFullCGraphValidation" : {
-                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, AStrykerPartialRepairFullCGraphValidation.get());
-                                    break;
-                                }
-                                case "AStrykerPartialRepairIndependentTestsForAll" : {
-                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL, AStrykerPartialRepairIndependentTestsForAll.get());
-                                    break;
-                                }
-                                case "AStrykerRepairTimeout" : {
-                                    asConfig.setIntArgument(AStrykerConfigReader.Config_key.TIMEOUT, AStrykerRepairTimeout.get());
-                                    break;
-                                }
-                                case "AStrykerRepairDepth" : {
-                                    asConfig.setIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH, AStrykerRepairDepth.get());
-                                    break;
-                                }
-                                case "AStrykerUseTestsOnly" : {
-                                    asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE, AStrykerUseTestsOnly.get());
-                                    break;
-                                }
+            ChangeListener astrykerChangeListener = e -> {
+                try {
+                    if (e.getSource() instanceof Pref) {
+                        Pref p = (Pref) e.getSource();
+                        AStrykerConfigReader asConfig = AStrykerConfigReader.getInstance();
+                        switch (p.id) {
+                            case "AStrykerVariabilization" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION, AStrykerVariabilization.get());
+                                break;
+                            }
+                            case "AStrykerVariabilizationTestGeneration" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_TEST_GENERATION, AStrykerVariabilizationTestGeneration.get());
+                                break;
+                            }
+                            case "AStrykerVariabilizationSameTypes": {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE, AStrykerVariabilizationUseSameType.get());
+                                break;
+                            }
+                            case "AStrykerPartialRepair" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, AStrykerPartialRepair.get());
+                                break;
+                            }
+                            case "AStrykerPartialRepairFullCGraphValidation" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, AStrykerPartialRepairFullCGraphValidation.get());
+                                break;
+                            }
+                            case "AStrykerPartialRepairIndependentTestsForAll" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL, AStrykerPartialRepairIndependentTestsForAll.get());
+                                break;
+                            }
+                            case "AStrykerRepairTimeout" : {
+                                asConfig.setIntArgument(AStrykerConfigReader.Config_key.TIMEOUT, AStrykerRepairTimeout.get());
+                                break;
+                            }
+                            case "AStrykerRepairDepth" : {
+                                asConfig.setIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH, AStrykerRepairDepth.get());
+                                break;
+                            }
+                            case "AStrykerUseTestsOnly" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE, AStrykerUseTestsOnly.get());
+                                break;
+                            }
+                            case "AStrykerTestGenerationMaxTestsPerCommand" : {
+                                asConfig.setIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND, AStrykerTestGenerationMaxTestsPerCommand.get());
+                                break;
+                            }
+                            case "AStrykerTestGenerationTestsPerStep" : {
+                                asConfig.setIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP, AStrykerTestGenerationTestsPerStep.get());
+                                break;
                             }
                         }
-                        AStrykerConfigReader.getInstance().saveConfig();
-                    } catch (IOException ioException) {
-                        ioException.printStackTrace();
                     }
-                };
-                MutationConfiguration mconfig = MutationConfiguration.getInstance();
-                mconfig.loadConfigFromAStrykerConfig();
+                    AStrykerConfigReader.getInstance().saveConfig();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            };
+            optmenu.addSeparator();
+            MutationConfiguration mconfig = MutationConfiguration.getInstance();
+            mconfig.loadConfigFromAStrykerConfig();
+            AStrykerTestGenerationMaxTestsPerCommand.set((Integer) mconfig.getConfigValue(TEST_GENERATION_MAX_TESTS_PER_COMMAND).orElse(TEST_GENERATION_MAX_TESTS_PER_COMMAND.defaultValue()));
+            AStrykerTestGenerationTestsPerStep.set((Integer) mconfig.getConfigValue(TEST_GENERATION_TESTS_PER_STEP).orElse(TEST_GENERATION_TESTS_PER_STEP.defaultValue()));
+            if (CompUtil.hasMutableExpressions(text.get().getText())){
                 AStrykerVariabilization.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION).orElse(REPAIR_VARIABILIZATION.defaultValue()));
                 AStrykerVariabilizationTestGeneration.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION_TEST_GENERATION).orElse(REPAIR_VARIABILIZATION_TEST_GENERATION.defaultValue()));
                 AStrykerVariabilizationUseSameType.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION_USE_SAME_TYPES).orElse(REPAIR_VARIABILIZATION_USE_SAME_TYPES.defaultValue()));
@@ -1465,6 +1543,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerUseTestsOnly.set((Boolean) mconfig.getConfigValue(REPAIR_TESTS_ONLY).orElse(REPAIR_TESTS_ONLY.defaultValue()));
                 addToMenu(optmenu, AStrykerVariabilization);
                 addToMenu(optmenu, AStrykerVariabilizationTestGeneration);
+                addToMenu(optmenu, AStrykerTestGenerationMaxTestsPerCommand);
+                addToMenu(optmenu, AStrykerTestGenerationTestsPerStep);
                 addToMenu(optmenu, AStrykerVariabilizationUseSameType);
                 addToMenu(optmenu, AStrykerPartialRepair);
                 addToMenu(optmenu, AStrykerPartialRepairFullCGraphValidation);
@@ -1481,9 +1561,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerRepairTimeout.addChangeListener(astrykerChangeListener);
                 AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
                 AStrykerUseTestsOnly.addChangeListener(astrykerChangeListener);
+            } else {
+                addToMenu(optmenu, AStrykerTestGenerationTestsPerStep);
             }
-
-
+            AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
         } finally {
             wrap = false;
         }

@@ -78,6 +78,32 @@ public class ExtractedProperty {
             return new ExtractedProperty(let, letVars);
     }
 
+    public static ExtractedProperty createQTProperty(ExprQt original, ExtractedProperty formula) {
+        List<ExprVar> declaredVariables = new LinkedList<>();
+        for (Decl d : original.decls) {
+            for (Expr var : d.names) {
+                if (var instanceof ExprVar) {
+                    declaredVariables.add((ExprVar) var);
+                } else {
+                    throw new IllegalStateException("I don't know what to do, I was expecting ExprVar in QT variable declarations");
+                }
+            }
+        }
+        List<ExprVar> formulaUndeclaredVariables = new LinkedList<>();
+        for (ExprVar fVar : formula.variables) {
+            boolean undeclared = true;
+            for (ExprVar qtDVar : declaredVariables) {
+                if (fVar.equals(qtDVar)) {
+                    undeclared = false;
+                    break;
+                }
+            }
+            if (undeclared)
+                formulaUndeclaredVariables.add(fVar);
+        }
+        return new ExtractedProperty(original, formulaUndeclaredVariables);
+    }
+
     public static ExtractedProperty createUnaryProperty(ExtractedProperty sub, ExprUnary.Op op) {
         Expr unary = op.make(null, sub.property);
         if (unary.errors != null && !unary.errors.isEmpty())

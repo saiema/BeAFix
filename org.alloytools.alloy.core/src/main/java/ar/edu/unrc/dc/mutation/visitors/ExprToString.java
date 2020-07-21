@@ -9,10 +9,10 @@ import java.util.Optional;
 
 public class ExprToString extends VisitReturn<Void> {
 
-    private StringBuilder sb;
+    private final StringBuilder sb;
     private int indent;
-    private Candidate candidate;
-    private boolean nicePrint;
+    private final Candidate candidate;
+    private final boolean nicePrint;
 
     public ExprToString(Candidate candidate) {
         this(candidate, false);
@@ -29,6 +29,33 @@ public class ExprToString extends VisitReturn<Void> {
         return sb.toString();
     }
 
+    public void visitPredicate(Func f) throws Err {
+        if (f == null)
+            throw new IllegalArgumentException("Func f is null");
+        if (!f.isPred)
+            throw new IllegalArgumentException("Func " + f.label + " is not a predicate");
+        sb.append("pred ").append(f.label).append("[");
+        Iterator<Decl> declIterator = f.decls.iterator();
+        while (declIterator.hasNext()) {
+            Decl currentDecl = declIterator.next();
+            Iterator<? extends ExprHasName> varNamesIterator =  currentDecl.names.iterator();
+            while (varNamesIterator.hasNext()) {
+                sb.append(varNamesIterator.next().label);
+                if (varNamesIterator.hasNext())
+                    sb.append(", ");
+            }
+            sb.append(" : ").append(currentDecl.expr.toString());
+            if (declIterator.hasNext())
+                sb.append(", ");
+        }
+        sb.append("]").append("{\n");
+        indent++;
+        addIndent();
+        checkBlockAndVisit(f.getBody());
+        indent--;
+        sb.append("\n}\n");
+    }
+
     @Override
     public Void visitThis(Expr x) throws Err {
         if (candidate != null) {
@@ -43,85 +70,104 @@ public class ExprToString extends VisitReturn<Void> {
 
     @Override
     public Void visit(ExprBinary x) throws Err {
-        addIndent();
-        visitThis(x.left);
+        visitWithParenthesis(x.left);
         sb.append(" ");
         sb.append(x.op.toString());
         sb.append(" ");
-        visitThis(x.right);
+        visitWithParenthesis(x.right);
         return null;
     }
 
     @Override
     public Void visit(ExprList x) throws Err {
+        if (x.op.equals(ExprList.Op.AND) && x.args.size() > 2)
+            printAndList(x);
+        else if (x.op.equals(ExprList.Op.AND) || x.op.equals(ExprList.Op.OR)) {
+            Iterator<Expr> it = x.args.iterator();
+            while(it.hasNext()) {
+                visitWithParenthesis(it.next());
+                if (it.hasNext())
+                    sb.append(" ").append(x.op.equals(ExprList.Op.AND)?"&&":"||").append(" ");
+            }
+        } else {
+            Iterator<Expr> it = x.args.iterator();
+            sb.append(x.op);
+            sb.append(" [");
+            while (it.hasNext()) {
+                visitWithParenthesis(it.next());
+                if (it.hasNext())
+                    sb.append(", ");
+            }
+            sb.append("] ");
+        }
+        return null;
+    }
+
+    private void printAndList(ExprList x) throws Err {
+        if (!x.op.equals(ExprList.Op.AND))
+            throw new Error("Calling printAnd without an AND expression");
+        if (x.args.size() <= 2)
+            throw new Error("Calling printAnd with less than 3 expressions");
+        sb.append("{\n");
         addIndent();
         Iterator<Expr> it = x.args.iterator();
-        sb.append(x.op);
-        sb.append(" [");
         while(it.hasNext()) {
-            visitThis(it.next());
-            if (it.hasNext())
-                sb.append(",");
+            Expr item = it.next();
+            checkBlockAndVisit(item);
+            if (!it.hasNext()) {
+                sb.append("\n");
+                addIndentFinalBrace();
+            } else {
+                sb.append(",\n");
+                addIndent();
+            }
         }
-        sb.append("] ");
-        return null;
+        sb.append("}");
     }
 
     @Override
     public Void visit(ExprCall x) throws Err {
-        addIndent();
         sb.append(x.fun.label);
-        sb.append("(");
+        sb.append("[");
         Iterator<Expr> it = x.args.iterator();
         while(it.hasNext()) {
-            visitThis(it.next());
+            checkBlockAndVisit(it.next());
             if (it.hasNext())
-                sb.append(",");
+                sb.append(", ");
         }
-        sb.append("(");
+        sb.append("]");
         return null;
     }
 
     @Override
     public Void visit(ExprConstant x) throws Err {
-        addIndent();
         sb.append(x.toString());
         return null;
     }
 
     @Override
     public Void visit(ExprITE x) throws Err {
-        addIndent();
-        sb.append("if (");
-        visitThis(x.cond);
-        sb.append(") {\n");
-        indent++;
-        visitThis(x.left);
-        indent--;
-        addIndent();
-        sb.append("} else {\n");
-        indent++;
-        visitThis(x.right);
-        indent--;
-        sb.append("}\n");
+        visitWithParenthesis(x.cond);
+        sb.append(" => ");
+        visitWithParenthesis(x.left);
+        sb.append(" else ");
+        visitWithParenthesis(x.right);
         return null;
     }
 
     @Override
     public Void visit(ExprLet x) throws Err {
-        addIndent();
         sb.append("let ");
         visitThis(x.var);
         sb.append(" = ");
         visitThis(x.expr);
         sb.append(" | ");
-        visitThis(x.sub);
+        checkBlockAndVisit(x.sub);
         return null;
     }
 
     @Override
     public Void visit(ExprQt x) throws Err {
-        addIndent();
         sb.append(x.op.toString()).append(" ");
         Iterator<Decl> it = x.decls.iterator();
         while(it.hasNext()) {
@@ -130,32 +176,26 @@ public class ExprToString extends VisitReturn<Void> {
             while (varsIt.hasNext()) {
                 visitThis(varsIt.next());
                 if (varsIt.hasNext())
-                    sb.append(",");
+                    sb.append(", ");
             }
             sb.append(" : ");
             visitThis(d.expr);
             if (it.hasNext())
-                sb.append(",");
+                sb.append(", ");
         }
         sb.append(" | ");
-        int oldIndent = indent;
-        indent = 0;
-        visitThis(x.sub);
-        indent = oldIndent;
+        checkBlockAndVisit(x.sub);
         return null;
     }
 
     @Override
     public Void visit(ExprUnary x) throws Err {
-        if (nicePrint && x.op.equals(ExprUnary.Op.NOOP)) {
+        if (nicePrint && unaryOpToString(x.op) == null) {
             visitThis(x.sub);
         } else {
-            addIndent();
-            sb.append(x.op.toString()).append(" ");
-            int oldIndent = indent;
-            indent = 0;
-            visitThis(x.sub);
-            indent = oldIndent;
+            sb.append(unaryOpToString(x.op));
+            sb.append(" ");
+            visitWithParenthesis(x.sub);
         }
         return null;
     }
@@ -181,6 +221,59 @@ public class ExprToString extends VisitReturn<Void> {
     private void addIndent() {
         for (int i = 0; i < indent; i++)
             sb.append("\t");
+    }
+
+    private void addIndentFinalBrace() {
+        for (int i = 0; i < indent - 1; i++)
+            sb.append("\t");
+    }
+
+    private void checkBlockAndVisit(Expr x) {
+        boolean addIndent = x instanceof ExprList && ((ExprList)x).op.equals(ExprList.Op.AND) && ((ExprList)x).args.size() > 2;
+        if (addIndent)
+            indent++;
+        visitThis(x);
+        if (addIndent)
+            indent--;
+    }
+
+    private void visitWithParenthesis(Expr x) {
+        if (x instanceof ExprCall || x instanceof ExprConstant || x instanceof ExprVar || x instanceof Sig || x instanceof Sig.Field) {
+            checkBlockAndVisit(x);
+        } else if (x instanceof ExprUnary && unaryOpToString(((ExprUnary) x).op) == null) {
+            checkBlockAndVisit(x);
+        } else {
+            sb.append("(");
+            checkBlockAndVisit(x);
+            sb.append(")");
+        }
+    }
+
+    private String unaryOpToString(ExprUnary.Op op) {
+        switch (op) {
+            case SOMEOF:
+            case SOME:
+                return "some";
+            case LONEOF:
+            case LONE:
+                return "lone";
+            case ONEOF:
+            case ONE:
+                return "one";
+            case SETOF: return "set";
+            case EXACTLYOF: return "exactly";
+            case NOT: return "!";
+            case NO: return "no";
+            case TRANSPOSE: return "~";
+            case RCLOSURE: return "*";
+            case CLOSURE: return "^";
+            case CARDINALITY: return "#";
+            case CAST2INT:
+            case NOOP:
+            case CAST2SIGINT:
+                return null;
+        }
+        return null;
     }
 
 }

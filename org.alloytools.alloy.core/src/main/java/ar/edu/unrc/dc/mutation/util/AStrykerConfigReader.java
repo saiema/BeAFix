@@ -18,6 +18,18 @@ public class AStrykerConfigReader {
                 return "astryker.repair.variabilization.testgeneration";
             }
         },
+        TEST_GENERATION_MAX_TESTS_PER_COMMAND {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.maxtestspercommand";
+            }
+        },
+        TEST_GENERATION_TESTS_PER_STEP {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.testsperstep";
+            }
+        },
         VARIABILIZATION_SAME_TYPE {
             @Override
             public String getKey() {
@@ -181,6 +193,8 @@ public class AStrykerConfigReader {
     private boolean isIntKey(Config_key key) {
         switch (key) {
             case TIMEOUT    :
+            case TEST_GENERATION_MAX_TESTS_PER_COMMAND:
+            case TEST_GENERATION_TESTS_PER_STEP:
             case MAX_DEPTH  :  return true;
             default : return false;
         }

@@ -109,7 +109,7 @@ public class DependencyScanner {
         });
     }
 
-    private static Optional<Func> getFuncByName(String name, SafeList<Func> functions) {
+    public static Optional<Func> getFuncByName(String name, SafeList<Func> functions) {
         name = cleanLabel(name);
         for (Func f : functions) {
             if (cleanLabel(f.label).compareTo(name) == 0)
@@ -118,7 +118,7 @@ public class DependencyScanner {
         return Optional.empty();
     }
 
-    private static Optional<Expr> getAssertByName(String name, ConstList<Pair<String, Expr>> assertions) {
+    public static Optional<Expr> getAssertByName(String name, ConstList<Pair<String, Expr>> assertions) {
         name = cleanLabel(name);
         for (Pair<String, Expr> namedAssertion : assertions) {
             if (cleanLabel(namedAssertion.a).compareTo(name) == 0)

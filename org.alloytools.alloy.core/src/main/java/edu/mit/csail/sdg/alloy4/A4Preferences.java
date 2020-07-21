@@ -678,6 +678,8 @@ public class A4Preferences {
     public static final IntChoicePref AStrykerRepairTimeout = new IntChoicePref("AStrykerRepairTimeout",Arrays.asList(0, 5, 10, 30, 60, 120, 180, 240, 360, 480, 720, 1440, 2880), 0);
     public static final IntChoicePref AStrykerRepairDepth = new IntChoicePref("AStrykerRepairDepth", Arrays.asList(1, 2, 3, 4, 5), 2);
     public static final BooleanPref AStrykerUseTestsOnly = new BooleanPref("AStrykerUseTestsOnly", "AStryker | Use Perfect oracle tests to validate repair");
+    public static final IntChoicePref AStrykerTestGenerationMaxTestsPerCommand = IntChoicePref.range("AStrykerTestGenerationMaxTestsPerCommand", "AStryker (Test Generation) | Max Tests Per Command", 2, 2, 30, 4);
+    public static final IntChoicePref AStrykerTestGenerationTestsPerStep = IntChoicePref.range("AStrykerTestGenerationTestsPerStep", "AStryker (Test Generation) | Tests Per Generation", 1, 1, 30, 1);
     //==================================================================
 
     public enum Verbosity {

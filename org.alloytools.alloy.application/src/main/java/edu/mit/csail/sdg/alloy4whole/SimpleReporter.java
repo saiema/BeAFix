@@ -21,6 +21,7 @@ import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.mutantLab.*;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestsGenerator;
 import ar.edu.unrc.dc.mutation.util.*;
+import ar.edu.unrc.dc.mutation.visitors.ExprToString;
 import ar.edu.unrc.dc.mutation.visitors.NodeAliasingFixer;
 import ar.edu.unrc.dc.mutation.visitors.ParentRelationshipFixer;
 import edu.mit.csail.sdg.alloy4.*;
@@ -155,6 +156,13 @@ final class SimpleReporter extends A4Reporter {
             Object[] array = (Object[]) msg;
             //@Atryker - mualloy - Avoid all callback message from the alloy process and only inform Repair messages
             if (reparing) {
+                if (array[0].equals("TestGeneration")) {
+                    len3 = len2 = span.getLength();
+                    span.logAStrykerGreen("Command:\n");
+                    span.logBold(array[1] + "\n");
+                    span.logAStrykerGreen("Predicate:\n");
+                    span.logBold(array[2]+"\n");
+                }
                 if (array[0].equals("RepairTittle")) {
                     len3 = len2 = span.getLength();
                     span.logBold("" + array[1]);
@@ -571,7 +579,7 @@ final class SimpleReporter extends A4Reporter {
     private static String                  latestMetamodelXML = null;
 
     /** Constructor is private. */
-    private SimpleReporter(WorkerCallback cb, boolean recordKodkod) {
+    SimpleReporter(WorkerCallback cb, boolean recordKodkod) {
         this.cb = cb;
         this.recordKodkod = recordKodkod;
     }
@@ -794,6 +802,7 @@ final class SimpleReporter extends A4Reporter {
         public String             tempdir;
         public int                resolutionMode;
         public Map<String,String> map;
+        public boolean onlyTestGeneration = false;
 
         public SimpleTaskRepair1() {}
 
@@ -801,43 +810,107 @@ final class SimpleReporter extends A4Reporter {
             out.callback(objs);
         }
 
-        private void setupMutationConfiguration(WorkerCallback out) throws IOException {
+        private void setupMutationConfiguration(WorkerCallback out, boolean repair) throws IOException {
             AStrykerConfigReader aStrykerConfig = AStrykerConfigReader.getInstance();
             aStrykerConfig.loadConfig();
-            MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
-            MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.FALSE);                     //+
-            MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR, Boolean.TRUE);     //+
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION)); //update the variabilization Repair option
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_TEST_GENERATION));
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE));
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR));
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION));
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_REQUIRE_TESTS_FOR_ALL, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL));
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH));
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TESTS_ONLY, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE));
-            int timeoutInMinutes = aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TIMEOUT);
-            long timeout = (timeoutInMinutes * 60) * 1000;
-            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
-            logger.info(MutationConfiguration.getInstance().toString());
-            cb(out, "RepairTittle", MutationConfiguration.getInstance().toString());
+            MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
+            if (repair) {
+                MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
+                MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.FALSE);                     //+
+                MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR, Boolean.TRUE);     //+
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_CANDIDATE_GETTER_TIMEOUT, 0L);       //++++++++++++++++++++++++++++++++++
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DEBUG_SKIP_VERIFICATION, Boolean.FALSE);             //ONLY FOR DEBUGGING MUTATION GENERATION
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION)); //update the variabilization Repair option
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_TEST_GENERATION));
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.VARIABILIZATION_SAME_TYPE));
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR));
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION));
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_REQUIRE_TESTS_FOR_ALL, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL));
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH));
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TESTS_ONLY, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE));
+                int timeoutInMinutes = aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TIMEOUT);
+                long timeout = (timeoutInMinutes * 60) * 1000;
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
+                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND));
+            } else {
+                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
+            }
+            if (repair) {
+                logger.info(MutationConfiguration.getInstance().toString());
+                cb(out, "RepairTittle", MutationConfiguration.getInstance().toString());
+            } else {
+                String testGenerationLogMessage = "Tests to generate per command: " + TestsGenerator.testsPerGeneration() + "\n";
+                logger.info(testGenerationLogMessage);
+                cb(out, "RepairTittle", testGenerationLogMessage);
+            }
         }
 
         @Override
         public void run(WorkerCallback out) throws Exception {
             try {
-                runRepair(out);
+                if (onlyTestGeneration)
+                    runTestGeneration(out);
+                else
+                    runRepair(out);
             } catch (Exception e) {
                 logger.info("Exception in run:\n" + Arrays.toString(e.getStackTrace()).replace( ',', '\n' ));
                 throw e;
             }
         }
 
+        public void runTestGeneration(WorkerEngine.WorkerCallback out) throws Exception {
+            cb(out, "RepairTittle", "Test generation started...\n\n");
+            logger.info("Starting test generation for model: " + options.originalFilename);
+            setupMutationConfiguration(out, false);
+            final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
+            final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
+            ASTMutator.startInstance(world);
+            //==========================================
+            fixParentRelationship(world);
+            NodeAliasingFixer nodeAliasingFixer = new NodeAliasingFixer();
+            nodeAliasingFixer.fixSigNodes(world);
+            DependencyScanner.scanDependencies(world);
+            ContextExpressionExtractor.reInitialize(world);
+            Variabilization.initializeInstance(null, options);
+            MutantLab.initialize(world, maxDepthForRepair());
+            generateVariabilizationTests(world, rep);
+            for (Command c : world.getAllCommands()) {
+                if (c.isGenerated()) {
+                    String command = c.toString();
+                    Optional<Func> testFunc = DependencyScanner.getFuncByName(((ExprHasName)c.nameExpr).label, world.getAllFunc());
+                    if (!testFunc.isPresent())
+                        throw new Error("Something went wrong, test command " + command + " has no associated predicate");
+                    ExprToString toString = new ExprToString(null, true);
+                    toString.visitPredicate(testFunc.get());
+                    String predicate = toString.getStringRepresentation();
+                    cb(out, "TestGeneration", command, predicate);
+                    logger.info("Test Generation, new test generated\n" +
+                                    "Command: " + command + "\n" +
+                                    "Test predicate:\n" +
+                                    predicate + "\n"
+                            );
+                }
+            }
+            if (TestsGenerator.getInstance().getTestAmountPerProperty() == null | TestsGenerator.getInstance().getTestAmountPerProperty().isEmpty()) {
+                cb(out, "RepairSubTittle", "No tests generated");
+                logger.info("No tests generated");
+            } else {
+                StringBuilder sb = new StringBuilder("Generated tests per command\n");
+                for (Entry<String, Integer> propertyTestAmount : TestsGenerator.getInstance().getTestAmountPerProperty().entrySet()) {
+                    sb.append(propertyTestAmount.getKey()).append(" : ").append(propertyTestAmount.getValue()).append("\n");
+                }
+                cb(out, "RepairSubTittle", sb.toString());
+                logger.info(sb.toString());
+            }
+            ASTMutator.destroyInstance();
+            MutantLab.destroyInstance();
+            Variabilization.destroyInstance();
+        }
+
         public void runRepair(WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Reparing process...\n\n");
             logger.info("Starting repair on model: " + options.originalFilename);
-            setupMutationConfiguration(out);
+            setupMutationConfiguration(out, true);
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
             ASTMutator.startInstance(world);
@@ -1036,20 +1109,29 @@ final class SimpleReporter extends A4Reporter {
                         try {
                             A4Solution result = evaluateCandidateWithCommand(original, cmd, rep);
                             if (result != null && result.satisfiable()) {
-                                List<Command> variabilizationTests = TestsGenerator.getInstance().generateTestsFor(result, world, cmd);
-                                if (!atLeastOneTestGenerated && !variabilizationTests.isEmpty())
-                                    atLeastOneTestGenerated = true;
-                                for (Command varTest : variabilizationTests) {
-                                    DependencyGraph.getInstance().addLooseCommand(varTest);
+                                try {
+                                    List<Command> variabilizationTests = TestsGenerator.getInstance().generateTestsFor(result, world, cmd);
+                                    if (!atLeastOneTestGenerated && !variabilizationTests.isEmpty())
+                                        atLeastOneTestGenerated = true;
+                                    for (Command varTest : variabilizationTests) {
+                                        DependencyGraph.getInstance().addLooseCommand(varTest);
+                                    }
+                                } catch (Exception e) {
+                                    StringWriter sw = new StringWriter();
+                                    e.printStackTrace(new PrintWriter(sw));
+                                    String exceptionAsString = sw.toString();
+                                    logger.info("Error while generating variabilization tests\n" +
+                                            "Current candidate (should be original): " + original.toString() + "\n" +
+                                            "Current command (should be either a check or a run with expect 0): " + cmd.toString() + "\n" +
+                                            "Exception:\n" +  exceptionAsString
+                                    );
                                 }
                             }
                         } catch (Exception e) {
                             StringWriter sw = new StringWriter();
                             e.printStackTrace(new PrintWriter(sw));
                             String exceptionAsString = sw.toString();
-                            logger.info("Error while generating variabilization tests\n" +
-                                    "Current candidate (should be original): " + original.toString() + "\n" +
-                                    "Current command (should be either a check or a run with expect 0): " + cmd.toString() + "\n" +
+                            logger.info("Error while running tests\n" +
                                     "Exception:\n" +  exceptionAsString
                             );
                         }

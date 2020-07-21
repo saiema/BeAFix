@@ -268,6 +268,34 @@ public class MutationConfiguration {
 
         },
 
+        TEST_GENERATION_TESTS_PER_STEP {
+
+            @Override
+            public Class<?> getValueType() {
+                return Integer.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return 1;
+            }
+
+        },
+
+        TEST_GENERATION_MAX_TESTS_PER_COMMAND {
+
+            @Override
+            public Class<?> getValueType() {
+                return Integer.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return 4;
+            }
+
+        },
+
         REPAIR_TESTS_ONLY {
 
             @Override
@@ -404,6 +432,12 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.MAX_DEPTH)) {
                 setConfig(ConfigKey.REPAIR_MAX_DEPTH, aconfig.getIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND)) {
+                setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aconfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP)) {
+                setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aconfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
             }
         } catch (IOException e) {
             e.printStackTrace();

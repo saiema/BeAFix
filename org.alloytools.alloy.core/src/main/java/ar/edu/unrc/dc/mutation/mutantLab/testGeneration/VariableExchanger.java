@@ -63,7 +63,8 @@ public class VariableExchanger extends VisitReturn<Void> {
 
     @Override
     public Void visit(ExprQt x) throws Err {
-        throw new IllegalStateException("Should not encounter a quantified expression at this stage");
+        visitThis(x.sub);
+        return null;
     }
 
     @Override

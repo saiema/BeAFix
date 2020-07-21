@@ -2,6 +2,7 @@ package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 
 import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Cheats;
+import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pair;
@@ -22,6 +23,8 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
 
+import static ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND;
+import static ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey.TEST_GENERATION_TESTS_PER_STEP;
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.*;
 
 public class TestsGenerator {
@@ -57,12 +60,12 @@ public class TestsGenerator {
         testsPerProperty = new TreeMap<>();
     }
 
-    private static int testsToGeneratePerCommand() {
-        return 4;
+    public static int testsToGeneratePerCommand() {
+        return (Integer) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_MAX_TESTS_PER_COMMAND).orElse(TEST_GENERATION_MAX_TESTS_PER_COMMAND.defaultValue());
     }
 
-    private static int testsPerGeneration() {
-        return 1;
+    public static int testsPerGeneration() {
+        return (Integer) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_TESTS_PER_STEP).orElse(TEST_GENERATION_TESTS_PER_STEP.defaultValue());
     }
 
     public List<Command> generateTestsFor(A4Solution solution, CompModule context, Command command) throws Err {
@@ -94,17 +97,26 @@ public class TestsGenerator {
         return new LinkedList<>();
     }
 
+    public Map<String, Integer> getTestAmountPerProperty() {
+        return testsPerProperty;
+    }
+
     private Command generateNewTest(A4Solution solution, CompModule context, Command command) {
         Map<Sig, List<ExprVar>> signatureValues = getSignaturesAtoms(solution, context);
         mergeExtendingSignaturesValues(signatureValues);
         Map<Field, List<Expr>> fieldValues = getFieldsValues(solution, context, signatureValues);
         Map<ExprVar, List<Expr>> variablesValues = getVariablesValues(solution, signatureValues, command);
         List<ExprVar> skolemVariables = new LinkedList<>(variablesValues.keySet());
-        Expr originalFormula = getOriginalFormula(command, context);
-        if (originalFormula == null)
-            throw new IllegalStateException("Couldn't get formula for " + command.toString());
+        Browsable predicateOrAssertionCalled = getPredicateOrAssertionCalled(command, context);
+        if (predicateOrAssertionCalled == null)
+            throw new IllegalStateException("Couldn't get predicate or assertion for " + command.toString());
         PropertyExtractor propertyExtractor = new PropertyExtractor();
-        ExtractedProperty extractedProperty = propertyExtractor.visitThis(originalFormula);
+        ExtractedProperty extractedProperty;
+        if (predicateOrAssertionCalled instanceof Func) {
+            extractedProperty = propertyExtractor.extractFromPredicate((Func) predicateOrAssertionCalled);
+        } else {
+            extractedProperty = propertyExtractor.extractFromAssertion((Expr) predicateOrAssertionCalled);
+        }
         List<ExprVar> originalVariables = extractedProperty.getVariables();
         VariableMapping variableMapping = new VariableMapping(originalVariables, skolemVariables, command);
         PropertyCleaner propertyCleaner = new PropertyCleaner();
@@ -124,9 +136,7 @@ public class TestsGenerator {
         Command testCommand = generateTestCommand(testPredicate);
         logger.info("Test generated\n" +
                     testPredicate.toString() + "\n" +
-                    testPredicate.decls.toString() + "\n" +
                     testPredicate.getBody().toString()
-
         );
         try {
             Cheats.addFunctionToModule(context, testPredicate);
@@ -162,7 +172,6 @@ public class TestsGenerator {
                 continue;
             varsToDeclare.addAll(sValues.getValue());
         }
-        //signatureValues.values().forEach(varsToDeclare::addAll);
         for (ExprVar v : varsToDeclare) {
             Type t = v.type();
             String tString = t.toString();
@@ -186,7 +195,7 @@ public class TestsGenerator {
         Expr body = ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = "CE_" + from + "_" + generateRandomName(10);
-        return new Func(null, name, decls, null, body);
+        return new Func(null, name, null, null, body);
     }
 
     private Expr getFacts(CompModule context) {
@@ -237,28 +246,28 @@ public class TestsGenerator {
         return initExpressions;
     }
 
-    private Expr getOriginalFormula(Command command, CompModule context) {
-        Expr formula = null;
+    private Browsable getPredicateOrAssertionCalled(Command command, CompModule context) {
+        Browsable predicateOrAssertionCalled = null;
         if (command.nameExpr instanceof ExprVar) {
             String callee = ((ExprVar) command.nameExpr).label;
             for (Func pred : context.getAllFunc()) {
                 if (pred.label.replace("this/", "").compareTo(callee) == 0) {
-                    formula = pred.getBody();
+                    predicateOrAssertionCalled = pred;
                     break;
                 }
             }
-            if (formula == null) {
+            if (predicateOrAssertionCalled == null) {
                 for (Pair<String, Expr> assertion : context.getAllAssertions()) {
                     if (assertion.a.compareTo(callee) == 0) {
-                        formula = assertion.b;
+                        predicateOrAssertionCalled = assertion.b;
                         break;
                     }
                 }
             }
         } else {
-            formula = command.nameExpr;
+            predicateOrAssertionCalled = command.nameExpr;
         }
-        return formula == null?null:(Expr) formula.clone();
+        return predicateOrAssertionCalled == null?null:(Expr) predicateOrAssertionCalled.clone();
     }
 
     private Map<Sig, List<ExprVar>> getSignaturesAtoms(A4Solution solution, CompModule context) {

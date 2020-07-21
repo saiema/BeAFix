@@ -21,6 +21,7 @@ import static ar.edu.unrc.dc.mutation.util.AStrykerConfigReader.Config_key.*;
 
 public class AStrykerCLI {
 
+    private static boolean repair = true;
 
     public static void main(String[] args) throws IOException {
         AlloyCore.debug = false;
@@ -38,7 +39,7 @@ public class AStrykerCLI {
         }
         AStryker astryker = new AStryker(moduleInfo.a, sourcefile, source);
         astryker.init();
-        astryker.doRepair();
+        astryker.doAStryker(repair);
     }
 
 
@@ -84,12 +85,16 @@ public class AStrykerCLI {
     private static final String USEPOTOVALIDATE_KEY = "validatewithpo";
     private static final String TIMEOUT_KEY = "timeout";
     private static final String MAXDEPTH_KEY = "maxdepth";
+    private static final String ONLYTESTGENERATION_KEY = "testgenerationonly";
+    private static final String TEST_GENERATION_MAX_TEST_PER_COMMAND_KEY = "maxtestspercommand";
+    private static final String TEST_GENERATION_TESTS_PER_STEP_KEY = "testspergeneration";
     private static void setConfig(String key, String value) {
         switch (key.toLowerCase()) {
             case VARIABILIZATION_KEY:
             case VARIABILIZATION_TEST_GENERATION_KEY:
             case VARIABILIZATION_SAME_TYPE_KEY:
             case USEPOTOVALIDATE_KEY:
+            case ONLYTESTGENERATION_KEY:
             case PARTIALREPAIR_KEY: {
                 Optional<Boolean> varValue = parseBooleanValue(value);
                 if (varValue.isPresent()) {
@@ -100,6 +105,10 @@ public class AStrykerCLI {
                         }
                         case VARIABILIZATION_TEST_GENERATION_KEY: {
                             AStrykerConfigReader.getInstance().setBooleanArgument(VARIABILIZATION_TEST_GENERATION, varValue.get());
+                            break;
+                        }
+                        case ONLYTESTGENERATION_KEY: {
+                            repair = !varValue.get();
                             break;
                         }
                         case PARTIALREPAIR_KEY: {
@@ -125,23 +134,39 @@ public class AStrykerCLI {
                     throw new IllegalArgumentException("Invalid value for " + key + " expecting (true/false) but got " + value + " instead");
                 break;
             }
-            case TIMEOUT_KEY:
+            case TIMEOUT_KEY: {
+                Integer toValue = getIntegerValue(TIMEOUT_KEY, value);
+                AStrykerConfigReader.getInstance().setIntArgument(TIMEOUT, toValue);
+                break;
+            }
+            case TEST_GENERATION_MAX_TEST_PER_COMMAND_KEY: {
+                Integer maxTestsPerCommand = getIntegerValue(TEST_GENERATION_MAX_TEST_PER_COMMAND_KEY, value);
+                AStrykerConfigReader.getInstance().setIntArgument(TEST_GENERATION_MAX_TESTS_PER_COMMAND, maxTestsPerCommand);
+                break;
+            }
+            case TEST_GENERATION_TESTS_PER_STEP_KEY: {
+                Integer testsPerGeneration = getIntegerValue(TEST_GENERATION_TESTS_PER_STEP_KEY, value);
+                AStrykerConfigReader.getInstance().setIntArgument(TEST_GENERATION_TESTS_PER_STEP, testsPerGeneration);
+                break;
+            }
             case MAXDEPTH_KEY: {
-                Optional<Integer> intVal = parseIntegerValue(value);
-                intVal.ifPresent(intValue -> {
-                    if (intValue < 0)
-                        throw new IllegalArgumentException("Negative value for " + key + " (" + intValue + ")");
-                    if (key.equals(TIMEOUT_KEY))
-                        AStrykerConfigReader.getInstance().setIntArgument(TIMEOUT, intVal.get());
-                    else
-                        AStrykerConfigReader.getInstance().setIntArgument(MAX_DEPTH, intVal.get());
-                });
-                if (!intVal.isPresent())
-                    throw new IllegalArgumentException("Invalid value for " + key + " expecting integer but got " + value + " instead");
+                Integer maxDepth = getIntegerValue(MAXDEPTH_KEY, value);
+                AStrykerConfigReader.getInstance().setIntArgument(MAX_DEPTH, maxDepth);
                 break;
             }
             default : throw new IllegalArgumentException("Invalid configuration key " + key);
         }
+    }
+
+    private static Integer getIntegerValue(String key, String originalValue) {
+        Optional<Integer> intVal = parseIntegerValue(originalValue);
+        intVal.ifPresent(intValue -> {
+            if (intValue < 0)
+                throw new IllegalArgumentException("Negative value for " + key + " (" + intValue + ")");
+        });
+        if (!intVal.isPresent())
+            throw new IllegalArgumentException("Invalid value for " + key + " expecting integer but got " + originalValue + " instead");
+        return intVal.get();
     }
 
     private static Optional<Boolean> parseBooleanValue(String v) {

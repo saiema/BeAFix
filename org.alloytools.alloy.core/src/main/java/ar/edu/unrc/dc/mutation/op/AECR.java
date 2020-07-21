@@ -142,7 +142,7 @@ public class AECR extends Mutator {
 
     private boolean isNeg(Expr x) {
         if (x instanceof ExprConstant) {
-            return ((ExprConstant) x).toString().startsWith("-");
+            return x.toString().startsWith("-");
         }
         return false;
     }
