@@ -873,7 +873,7 @@ final class SimpleReporter extends A4Reporter {
             ContextExpressionExtractor.reInitialize(world);
             Variabilization.initializeInstance(null, options);
             MutantLab.initialize(world, maxDepthForRepair());
-            generateVariabilizationTests(world, rep);
+            generateVariabilizationTests(world, rep, true);
             for (Command c : world.getAllCommands()) {
                 if (c.isGenerated()) {
                     String command = c.toString();
@@ -971,7 +971,7 @@ final class SimpleReporter extends A4Reporter {
             Candidate repair = null;
             int initialCommands = world.getAllCommands().size();
             if (variabilizationTestGeneration()) {
-                generateVariabilizationTests(world, rep);
+                generateVariabilizationTests(world, rep, false);
             }
             cb(out, "RepairSubTittle", "Repairing... ");
             while (mutantLab.advance()) {
@@ -1098,9 +1098,9 @@ final class SimpleReporter extends A4Reporter {
             // canceled...
         }
 
-        private void generateVariabilizationTests(CompModule world, SimpleReporter rep) {
+        private void generateVariabilizationTests(CompModule world, SimpleReporter rep, boolean onlyTestGeneration) {
             //check if there are at least one variabilization test
-            if (world.getAllCommands().stream().noneMatch(Command::isVariabilizationTest)) {
+            if (world.getAllCommands().stream().noneMatch(Command::isVariabilizationTest) || onlyTestGeneration) {
                 //we should run the original candidate to try to generate at least one variabilization test
                 boolean atLeastOneTestGenerated = false;
                 Candidate original = Candidate.original(world);
