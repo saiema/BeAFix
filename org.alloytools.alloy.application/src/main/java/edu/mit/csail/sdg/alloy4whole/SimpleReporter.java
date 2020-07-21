@@ -813,7 +813,6 @@ final class SimpleReporter extends A4Reporter {
         private void setupMutationConfiguration(WorkerCallback out, boolean repair) throws IOException {
             AStrykerConfigReader aStrykerConfig = AStrykerConfigReader.getInstance();
             aStrykerConfig.loadConfig();
-            MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
             if (repair) {
                 MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
                 MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.FALSE);                     //+
@@ -831,10 +830,9 @@ final class SimpleReporter extends A4Reporter {
                 int timeoutInMinutes = aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TIMEOUT);
                 long timeout = (timeoutInMinutes * 60) * 1000;
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
-                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND));
-            } else {
-                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
             }
+            MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
+            MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND));
             if (repair) {
                 logger.info(MutationConfiguration.getInstance().toString());
                 cb(out, "RepairTittle", MutationConfiguration.getInstance().toString());

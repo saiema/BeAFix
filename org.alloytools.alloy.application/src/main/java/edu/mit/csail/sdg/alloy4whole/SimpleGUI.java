@@ -1561,6 +1561,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerRepairTimeout.addChangeListener(astrykerChangeListener);
                 AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
                 AStrykerUseTestsOnly.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationMaxTestsPerCommand.addChangeListener(astrykerChangeListener);
             } else {
                 addToMenu(optmenu, AStrykerTestGenerationTestsPerStep);
             }

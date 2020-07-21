@@ -4,6 +4,7 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
 import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
+import ar.edu.unrc.dc.mutation.mutantLab.MutationTask;
 import ar.edu.unrc.dc.mutation.visitors.ExprToString;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
@@ -254,6 +255,7 @@ public class RepairReport {
     public String toString() {
         calculateAvgMutations();
         calculateVariabilizationEstimatedPruning();
+        boolean variabilizationEnabledAndSupported = MutationTask.useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
         StringBuilder sb = new StringBuilder("***AStryker report***\n");
         if (repair != null) {
             sb.append("REPAIR FOUND\n");
@@ -272,8 +274,11 @@ public class RepairReport {
             int complexity = DependencyGraph.getInstance().getCommandComplexity(c);
             boolean isVariabilizationTest = c.isVariabilizationTest();
             boolean isPerfectOracleTest = c.isPerfectOracleTest();
+            boolean isGenerated = c.isGenerated();
             sb.append(c.toString()).append("\t").append(" complexity (").append(complexity).append(")");
-            if (isVariabilizationTest)
+            if (isGenerated)
+                sb.append(" (generated)");
+            if (isVariabilizationTest && variabilizationEnabledAndSupported)
                 sb.append(" used as variabilization test");
             if (isPerfectOracleTest)
                 sb.append(" used as perfect oracle test");
