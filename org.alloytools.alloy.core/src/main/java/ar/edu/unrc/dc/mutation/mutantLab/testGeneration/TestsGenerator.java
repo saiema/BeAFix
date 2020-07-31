@@ -350,6 +350,8 @@ public class TestsGenerator {
         Evaluator evaluator = solution.getEvaluator();
         if (evaluator != null) {
             for (Map.Entry<Relation, TupleSet> relation : evaluator.instance().relationTuples().entrySet()) {
+                if (relation.getKey().name().trim().isEmpty())
+                    continue;
                 if (filterRelation(relation.getKey(), solution))
                     continue;
                 if (isSignature(relation.getKey()) && !sigs)

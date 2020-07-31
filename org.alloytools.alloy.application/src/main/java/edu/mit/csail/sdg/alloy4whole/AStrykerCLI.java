@@ -9,6 +9,7 @@ import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.parser.CompUtil;
 import org.alloytools.alloy.core.AlloyCore;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -23,12 +24,23 @@ public class AStrykerCLI {
 
     private static boolean repair = true;
 
+    private static final String REPAIR = "REPAIR";
+    private static final String TESTGEN = "TESTS";
     public static void main(String[] args) throws IOException {
         AlloyCore.debug = false;
         if (args.length == 0) throw new IllegalArgumentException("At least one argument (the module to repair) is required");
         String sourcefile = args[0];
         if (args.length > 1) {
-            parseCommandLine(Arrays.copyOfRange(args, 1, args.length));
+            String mode = args[1];
+            if (mode.compareToIgnoreCase(REPAIR) == 0) {
+                repair = true;
+            } else if (mode.compareToIgnoreCase(TESTGEN) == 0) {
+                repair = false;
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_OUTPUT_TO_FILES, true);
+            } else {
+                throw new IllegalArgumentException("The second argument must either be REPAIR or TESTS (got " + mode + " instead)");
+            }
+            parseCommandLine(Arrays.copyOfRange(args, 2, args.length));
             AStrykerConfigReader.getInstance().saveConfig();
         }
         String source = toText(sourcefile);
@@ -71,7 +83,10 @@ public class AStrykerCLI {
             } else {
                 if (!configKeyRead)
                     throw new IllegalArgumentException("Expecting config key but got a value instead " + arg.trim());
-                setConfig(configKey, arg.trim());
+                if (repair)
+                    setConfig_repair(configKey, arg.trim());
+                else
+                    setConfig_tests(configKey, arg.trim());
                 configKeyRead = false;
                 configKey = null;
             }
@@ -85,16 +100,14 @@ public class AStrykerCLI {
     private static final String USEPOTOVALIDATE_KEY = "validatewithpo";
     private static final String TIMEOUT_KEY = "timeout";
     private static final String MAXDEPTH_KEY = "maxdepth";
-    private static final String ONLYTESTGENERATION_KEY = "testgenerationonly";
     private static final String TEST_GENERATION_MAX_TEST_PER_COMMAND_KEY = "maxtestspercommand";
     private static final String TEST_GENERATION_TESTS_PER_STEP_KEY = "testspergeneration";
-    private static void setConfig(String key, String value) {
+    private static void setConfig_repair(String key, String value) {
         switch (key.toLowerCase()) {
             case VARIABILIZATION_KEY:
             case VARIABILIZATION_TEST_GENERATION_KEY:
             case VARIABILIZATION_SAME_TYPE_KEY:
             case USEPOTOVALIDATE_KEY:
-            case ONLYTESTGENERATION_KEY:
             case PARTIALREPAIR_KEY: {
                 Optional<Boolean> varValue = parseBooleanValue(value);
                 if (varValue.isPresent()) {
@@ -105,10 +118,6 @@ public class AStrykerCLI {
                         }
                         case VARIABILIZATION_TEST_GENERATION_KEY: {
                             AStrykerConfigReader.getInstance().setBooleanArgument(VARIABILIZATION_TEST_GENERATION, varValue.get());
-                            break;
-                        }
-                        case ONLYTESTGENERATION_KEY: {
-                            repair = !varValue.get();
                             break;
                         }
                         case PARTIALREPAIR_KEY: {
@@ -135,26 +144,53 @@ public class AStrykerCLI {
                 break;
             }
             case TIMEOUT_KEY: {
-                Integer toValue = getIntegerValue(TIMEOUT_KEY, value);
+                int toValue = getIntegerValue(TIMEOUT_KEY, value);
                 AStrykerConfigReader.getInstance().setIntArgument(TIMEOUT, toValue);
                 break;
             }
             case TEST_GENERATION_MAX_TEST_PER_COMMAND_KEY: {
-                Integer maxTestsPerCommand = getIntegerValue(TEST_GENERATION_MAX_TEST_PER_COMMAND_KEY, value);
+                int maxTestsPerCommand = getIntegerValue(TEST_GENERATION_MAX_TEST_PER_COMMAND_KEY, value);
                 AStrykerConfigReader.getInstance().setIntArgument(TEST_GENERATION_MAX_TESTS_PER_COMMAND, maxTestsPerCommand);
                 break;
             }
             case TEST_GENERATION_TESTS_PER_STEP_KEY: {
-                Integer testsPerGeneration = getIntegerValue(TEST_GENERATION_TESTS_PER_STEP_KEY, value);
+                int testsPerGeneration = getIntegerValue(TEST_GENERATION_TESTS_PER_STEP_KEY, value);
                 AStrykerConfigReader.getInstance().setIntArgument(TEST_GENERATION_TESTS_PER_STEP, testsPerGeneration);
                 break;
             }
             case MAXDEPTH_KEY: {
-                Integer maxDepth = getIntegerValue(MAXDEPTH_KEY, value);
+                int maxDepth = getIntegerValue(MAXDEPTH_KEY, value);
                 AStrykerConfigReader.getInstance().setIntArgument(MAX_DEPTH, maxDepth);
                 break;
             }
-            default : throw new IllegalArgumentException("Invalid configuration key " + key);
+            default : throw new IllegalArgumentException("Invalid configuration key for automatic repair " + key);
+        }
+    }
+
+    private static final String TESTS_TO_GENERATE_KEY = "generate";
+    private static final String OUTPUT_FOLDER_KEY = "out";
+    private static void setConfig_tests(String key, String value) {
+        switch (key.toLowerCase()) {
+            case TESTS_TO_GENERATE_KEY: {
+                int tests = getIntegerValue(TESTS_TO_GENERATE_KEY, value);
+                if (tests < 1)
+                    throw new IllegalArgumentException("generate value must be 1 or more (got " + tests + " )");
+                AStrykerConfigReader.getInstance().setIntArgument(TEST_GENERATION_MAX_TESTS_PER_COMMAND, tests);
+                AStrykerConfigReader.getInstance().setIntArgument(TEST_GENERATION_TESTS_PER_STEP, tests);
+                break;
+            }
+            case OUTPUT_FOLDER_KEY: {
+                File outFolder = new File(value);
+                if (!outFolder.exists())
+                    throw new IllegalArgumentException("tests output folder doesn't exists ( " + value + ")");
+                if (!outFolder.isDirectory())
+                    throw new IllegalArgumentException("tests output folder is not a folder ( " + value + ")");
+                if (!outFolder.canExecute() || !outFolder.canWrite())
+                    throw new IllegalArgumentException("Insufficient access to output folder ( " + value + ")");
+                AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_OUTPUT_FOLDER, value);
+                break;
+            }
+            default : throw new IllegalArgumentException("Invalid configuration key for test generation " + key);
         }
     }
 

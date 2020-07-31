@@ -67,7 +67,22 @@ public class AStrykerConfigReader {
             public String getKey() {
                 return "astryker.repair.maxdepth";
             }
+        },
+
+        TEST_GENERATION_OUTPUT_FOLDER {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.outputfolder";
+            }
+        },
+
+        TEST_GENERATION_OUTPUT_TO_FILES {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.outputtofiles";
+            }
         }
+
         ;
         public abstract String getKey();
 
@@ -160,6 +175,14 @@ public class AStrykerConfigReader {
         return Integer.parseInt(propValue);
     }
 
+    public String getStringArgument(Config_key key) {
+        if (!isStringKey(key))
+            throw new IllegalStateException("Config key is not String " + key.toString());
+        if (!isDefined(key))
+            return "";
+        return prop.getProperty(key.getKey(), "");
+    }
+
     public void setIntArgument(Config_key key, int value) {
         if (!isIntKey(key))
             throw new IllegalStateException("Config key is not int " + key.toString());
@@ -170,6 +193,12 @@ public class AStrykerConfigReader {
         if (!isBooleanKey(key))
             throw new IllegalStateException("Config key is not boolean " + key.toString());
         prop.setProperty(key.getKey(), Boolean.toString(value));
+    }
+
+    public void setStringArgument(Config_key key, String value) {
+        if (!isStringKey(key))
+            throw new IllegalStateException("Config key is not String " + key.toString());
+        prop.setProperty(key.getKey(), value);
     }
 
     private boolean isDefined(Config_key key) {
@@ -185,6 +214,7 @@ public class AStrykerConfigReader {
             case USE_PO_TO_VALIDATE:
             case PARTIAL_REPAIR_FULLCGRAPH_VALIDATION:
             case PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL:
+            case TEST_GENERATION_OUTPUT_TO_FILES:
             case PARTIAL_REPAIR: return true;
             default : return false;
         }
@@ -196,6 +226,13 @@ public class AStrykerConfigReader {
             case TEST_GENERATION_MAX_TESTS_PER_COMMAND:
             case TEST_GENERATION_TESTS_PER_STEP:
             case MAX_DEPTH  :  return true;
+            default : return false;
+        }
+    }
+
+    private boolean isStringKey(Config_key key) {
+        switch (key) {
+            case TEST_GENERATION_OUTPUT_FOLDER: return true;
             default : return false;
         }
     }

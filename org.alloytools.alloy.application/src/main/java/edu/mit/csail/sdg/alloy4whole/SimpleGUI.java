@@ -1117,6 +1117,12 @@ public final class SimpleGUI implements ComponentListener, Listener {
     private final int AStrykerREPAIR = 1;
     private final int AStrykerTESTGENERATION = 2;
     private Runner doAStryker(int index) {
+        AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES, false);
+        try {
+            AStrykerConfigReader.getInstance().saveConfig();
+        } catch (IOException e) {
+            throw new Error("An error occurred while saving AStryker config", e);
+        }
         if (wrap)
             return wrapMe(index);
         boolean onlyTestGeneration = index == AStrykerTESTGENERATION;

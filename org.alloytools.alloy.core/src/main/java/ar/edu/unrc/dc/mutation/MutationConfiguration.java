@@ -378,6 +378,34 @@ public class MutationConfiguration {
                 return 0L;
             }
 
+        },
+
+        TEST_GENERATION_OUTPUT_FOLDER {
+
+            @Override
+            public Class<?> getValueType() {
+                return String.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return "";
+            }
+
+        },
+
+        TEST_GENERATION_OUTPUT_TO_FILES {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
         }
 
         ;
@@ -438,6 +466,12 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP)) {
                 setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aconfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_FOLDER)) {
+                setConfig(ConfigKey.TEST_GENERATION_OUTPUT_FOLDER, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_FOLDER));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES)) {
+                setConfig(ConfigKey.TEST_GENERATION_OUTPUT_TO_FILES, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES));
             }
         } catch (IOException e) {
             e.printStackTrace();
