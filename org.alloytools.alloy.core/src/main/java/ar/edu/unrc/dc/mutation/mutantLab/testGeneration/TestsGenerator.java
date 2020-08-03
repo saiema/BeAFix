@@ -131,8 +131,16 @@ public class TestsGenerator {
             Expr negateFacts = ExprUnary.Op.NOT.make(null, getFacts(context));
             testFormula = ExprBinary.Op.OR.make(null, null, negateFacts, testFormula);
         }
-        Expr initialization = generateInitialization(signatureValues, fieldValues, variablesValues);
-        Func testPredicate = generateTestPredicate(initialization, testFormula, skolemVariables, signatureValues, command);
+        Map<ExprVar, List<Expr>> usedVariablesValues = new HashMap<>();
+        List<ExprVar> usedVariables = new LinkedList<>();
+        for (Entry<ExprVar, List<Expr>> vValues : variablesValues.entrySet()) {
+            if (variableMapping.isSkolemUsed(vValues.getKey())) {
+                usedVariablesValues.put(vValues.getKey(), vValues.getValue());
+                usedVariables.add(vValues.getKey());
+            }
+        }
+        Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues);
+        Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, signatureValues, command);
         Command testCommand = generateTestCommand(testPredicate);
         logger.info("Test generated\n" +
                     testPredicate.toString() + "\n" +

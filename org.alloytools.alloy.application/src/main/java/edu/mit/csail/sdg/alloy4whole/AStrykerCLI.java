@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -44,12 +45,18 @@ public class AStrykerCLI {
             AStrykerConfigReader.getInstance().saveConfig();
         }
         String source = toText(sourcefile);
-        Pair<ConstList<Command>,ConstList<Expr>> moduleInfo = CompUtil.parseOneModuleToRepair_fromFile(sourcefile);
-        if (moduleInfo.a == null || moduleInfo.a.isEmpty() || moduleInfo.b == null || moduleInfo.b.isEmpty()) {
-            System.out.println("There are no marked expressions to repair or no commands for repair validation.");
-            return;
+        List<Command> commands;
+        if (repair) {
+            Pair<ConstList<Command>, ConstList<Expr>> moduleInfo = CompUtil.parseOneModuleToRepair_fromFile(sourcefile);
+            if (moduleInfo.a == null || moduleInfo.a.isEmpty() || moduleInfo.b == null || moduleInfo.b.isEmpty()) {
+                System.out.println("There are no marked expressions to repair or no commands for repair validation.");
+                return;
+            }
+            commands = moduleInfo.a;
+        } else {
+            commands = CompUtil.parseOneModule_fromFile(sourcefile);
         }
-        AStryker astryker = new AStryker(moduleInfo.a, sourcefile, source);
+        AStryker astryker = new AStryker(commands, sourcefile, source);
         astryker.init();
         astryker.doAStryker(repair);
     }

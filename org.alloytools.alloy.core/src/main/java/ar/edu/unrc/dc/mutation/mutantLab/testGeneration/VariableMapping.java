@@ -30,6 +30,10 @@ public class VariableMapping {
 
     public boolean availableSkolem(ExprVar var) {return originalVarsToSkolemVars.containsKey(var);}
 
+    public boolean isSkolemUsed(ExprVar svar) {
+        return originalVarsToSkolemVars.containsValue(svar);
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
