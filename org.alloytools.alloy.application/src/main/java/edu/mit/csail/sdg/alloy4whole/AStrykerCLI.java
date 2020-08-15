@@ -8,6 +8,7 @@ import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.parser.CompUtil;
 import org.alloytools.alloy.core.AlloyCore;
+import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTaskRepair1.ASTRYKER_MODE;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,10 +24,11 @@ import static ar.edu.unrc.dc.mutation.util.AStrykerConfigReader.Config_key.*;
 
 public class AStrykerCLI {
 
-    private static boolean repair = true;
+    private static ASTRYKER_MODE astryker_mode = ASTRYKER_MODE.REPAIR;
 
     private static final String REPAIR = "REPAIR";
     private static final String TESTGEN = "TESTS";
+    private static final String CHECK = "CHECK";
     public static void main(String[] args) throws IOException {
         AlloyCore.debug = false;
         if (args.length == 0) throw new IllegalArgumentException("At least one argument (the module to repair) is required");
@@ -34,19 +36,24 @@ public class AStrykerCLI {
         if (args.length > 1) {
             String mode = args[1];
             if (mode.compareToIgnoreCase(REPAIR) == 0) {
-                repair = true;
+                astryker_mode = ASTRYKER_MODE.REPAIR;
             } else if (mode.compareToIgnoreCase(TESTGEN) == 0) {
-                repair = false;
+                astryker_mode = ASTRYKER_MODE.TESTGENERATION;
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_OUTPUT_TO_FILES, true);
+            } else if (mode.compareToIgnoreCase(CHECK) == 0) {
+                astryker_mode = ASTRYKER_MODE.CHECK;
             } else {
-                throw new IllegalArgumentException("The second argument must either be REPAIR or TESTS (got " + mode + " instead)");
+                throw new IllegalArgumentException("The second argument must either be REPAIR, TESTS, or CHECK (got " + mode + " instead)");
             }
-            parseCommandLine(Arrays.copyOfRange(args, 2, args.length));
-            AStrykerConfigReader.getInstance().saveConfig();
+            if (!astryker_mode.equals(ASTRYKER_MODE.CHECK)) {
+                parseCommandLine(Arrays.copyOfRange(args, 2, args.length));
+                AStrykerConfigReader.getInstance().saveConfig();
+            }
         }
         String source = toText(sourcefile);
         List<Command> commands;
-        if (repair) {
+
+        if (astryker_mode.equals(ASTRYKER_MODE.REPAIR)) {
             Pair<ConstList<Command>, ConstList<Expr>> moduleInfo = CompUtil.parseOneModuleToRepair_fromFile(sourcefile);
             if (moduleInfo.a == null || moduleInfo.a.isEmpty() || moduleInfo.b == null || moduleInfo.b.isEmpty()) {
                 System.out.println("There are no marked expressions to repair or no commands for repair validation.");
@@ -58,7 +65,7 @@ public class AStrykerCLI {
         }
         AStryker astryker = new AStryker(commands, sourcefile, source);
         astryker.init();
-        astryker.doAStryker(repair);
+        astryker.doAStryker(astryker_mode);
     }
 
 
@@ -90,7 +97,7 @@ public class AStrykerCLI {
             } else {
                 if (!configKeyRead)
                     throw new IllegalArgumentException("Expecting config key but got a value instead " + arg.trim());
-                if (repair)
+                if (astryker_mode.equals(ASTRYKER_MODE.REPAIR))
                     setConfig_repair(configKey, arg.trim());
                 else
                     setConfig_tests(configKey, arg.trim());

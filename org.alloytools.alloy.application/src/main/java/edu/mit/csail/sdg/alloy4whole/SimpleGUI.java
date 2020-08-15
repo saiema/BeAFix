@@ -23,6 +23,7 @@ import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleCallback1;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask1;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask2;
+import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTaskRepair1.ASTRYKER_MODE;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompUtil;
@@ -1141,7 +1142,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         //@Atryker
         cb.reparing=true;
         SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
-        repair1.onlyTestGeneration = onlyTestGeneration;
+        repair1.mode = onlyTestGeneration? ASTRYKER_MODE.TESTGENERATION: ASTRYKER_MODE.REPAIR;
         A4Options opt = new A4Options();
         opt.tempDirectory = alloyHome() + fs + "tmp";
         opt.solverDirectory = alloyHome() + fs + "binary";

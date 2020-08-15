@@ -73,7 +73,8 @@ public class AStryker {
     /**
      * This method executes a reparation on a marked source.
      */
-    public void doAStryker(boolean repair) {
+
+    public void doAStryker(SimpleReporter.SimpleTaskRepair1.ASTRYKER_MODE mode) {
         if (!initSuccessful) {
             logger.severe("Either the initialization was not made or it was not successful");
             return;
@@ -91,7 +92,7 @@ public class AStryker {
         SimpleCallback cb = new SimpleCallback(logger);
         cb.setRepairing(true);
         SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
-        repair1.onlyTestGeneration = !repair;
+        repair1.mode = mode;
         A4Options opt = new A4Options();
         opt.tempDirectory = alloyHome() + fs + "tmp";
         opt.solverDirectory = alloyHome() + fs + "binary";

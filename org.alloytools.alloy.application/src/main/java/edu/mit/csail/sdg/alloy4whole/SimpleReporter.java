@@ -112,6 +112,10 @@ final class SimpleReporter extends A4Reporter {
                     }
                     if (ex instanceof StackOverflowError) {
                         span.logBold("\nFatal Error: the solver ran out of stack space!\n" + "Try simplifying your model or reducing the scope,\n" + "or increase stack under the Options menu.\n");
+                        StringWriter sw = new StringWriter();
+                        ex.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsString = sw.toString();
+                        span.logBold(exceptionAsString);
                         return;
                     }
                 }
@@ -799,12 +803,14 @@ final class SimpleReporter extends A4Reporter {
             }
         }
 
+        public enum ASTRYKER_MODE {REPAIR, TESTGENERATION, CHECK}
+
         private static final long serialVersionUID = 0;
         public A4Options          options;
         public String             tempdir;
         public int                resolutionMode;
         public Map<String,String> map;
-        public boolean onlyTestGeneration = false;
+        public ASTRYKER_MODE mode = ASTRYKER_MODE.REPAIR;
 
         public SimpleTaskRepair1() {}
 
@@ -849,17 +855,83 @@ final class SimpleReporter extends A4Reporter {
         @Override
         public void run(WorkerCallback out) throws Exception {
             try {
-                if (onlyTestGeneration)
-                    runTestGeneration(out);
-                else
-                    runRepair(out);
+                switch (mode) {
+                    case REPAIR: {
+                        runRepair(out);
+                        break;
+                    }
+                    case TESTGENERATION: {
+                        runTestGeneration(out);
+                        break;
+                    }
+                    case CHECK: {
+                        runCheck(out);
+                        break;
+                    }
+                }
             } catch (Exception e) {
                 logger.info("Exception in run:\n" + Arrays.toString(e.getStackTrace()).replace( ',', '\n' ));
+                throw e;
+            } catch (Throwable e) {
+                logger.info("FATAL Exception in run:\n" + Arrays.toString(e.getStackTrace()).replace( ',', '\n' ));
                 throw e;
             }
         }
 
-        public void runTestGeneration(WorkerEngine.WorkerCallback out) throws Exception {
+        private void runCheck(WorkerCallback out) throws Exception {
+            cb(out, "RepairTittle", "Model verification started...\n\n");
+            logger.info("Starting verification for model: " + options.originalFilename);
+            final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
+            final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
+            ASTMutator.startInstance(world);
+            //==========================================
+            fixParentRelationship(world);
+            NodeAliasingFixer nodeAliasingFixer = new NodeAliasingFixer();
+            nodeAliasingFixer.fixSigNodes(world);
+            DependencyScanner.scanDependencies(world);
+            ContextExpressionExtractor.reInitialize(world);
+            Variabilization.initializeInstance(null, options);
+            MutantLab.initialize(world, maxDepthForRepair());
+            //verify
+            Candidate original = Candidate.original(world);
+            EvaluationResults result = evaluateCandidateNormalEvaluation(original, rep);
+            if (result.isRepaired()) {
+                writeCheckReportToFile(options.originalFilename, "VALID");
+            } else if (result.isDiscarded()) {
+                StringWriter sw = new StringWriter();
+                result.getException().printStackTrace(new PrintWriter(sw));
+                String exceptionAsString = sw.toString();
+                writeCheckReportToFile(options.originalFilename, "EXCEPTION\n"+exceptionAsString);
+            } else {
+                writeCheckReportToFile(options.originalFilename, "INVALID");
+            }
+            //--------------------------
+            ASTMutator.destroyInstance();
+            MutantLab.destroyInstance();
+            Variabilization.destroyInstance();
+        }
+
+        private void writeCheckReportToFile(String originalFileName, String result) {
+            try {
+                File repairFile = new File(originalFileName.replace(".als", ".verification"));
+                if (repairFile.exists()) {
+                    if (!repairFile.delete()) {
+                        logger.info("Failed to write verification file : " + repairFile.toString());
+                        return;
+                    }
+                }
+                FileWriter myWriter = new FileWriter(repairFile);;
+                myWriter.write(result);
+                myWriter.close();
+            } catch (Exception e) {
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String exceptionAsString = sw.toString();
+                logger.info("Error occurred while writing verification file\n" + exceptionAsString);
+            }
+        }
+
+        private void runTestGeneration(WorkerEngine.WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Test generation started...\n\n");
             logger.info("Starting test generation for model: " + options.originalFilename);
             setupMutationConfiguration(out, false);
@@ -1017,6 +1089,7 @@ final class SimpleReporter extends A4Reporter {
             return new File[] {testsFile, reportFile};
         }
 
+
         public void runRepair(WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Reparing process...\n\n");
             logger.info("Starting repair on model: " + options.originalFilename);
@@ -1037,6 +1110,7 @@ final class SimpleReporter extends A4Reporter {
             Ops[] availableOps = Ops.values();
             logger.info("***Mutation operators***\n" +
                     Arrays.stream(availableOps).filter(Ops::isImplemented).map(Enum::toString).collect(Collectors.joining(",")));
+            RepairTimeOut.initialize(repairTimeout());
             MutantLab.initialize(world, maxDepthForRepair(), availableOps);
             MutantLab mutantLab = MutantLab.getInstance();
             if (partialRepairEnabled()) {
@@ -1061,7 +1135,7 @@ final class SimpleReporter extends A4Reporter {
                     }
                 }
             }
-            if (MutationTask.useVariabilization() && !MutantLab.getInstance().isVariabilizationSupported()) {
+            if (CandidateGenerator.useVariabilization() && !MutantLab.getInstance().isVariabilizationSupported()) {
                 logger.info("Variabilization is ENABLED BUT NOT SUPPORTED (disabling variabilization and test generation)");
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, Boolean.FALSE);
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, Boolean.FALSE);
@@ -1070,94 +1144,84 @@ final class SimpleReporter extends A4Reporter {
             RepairReport.getInstance().setVariabilizationRelatedCommands((int) DependencyGraph.getInstance().getAllCommands().stream().filter(Command::isVariabilizationTest).count());
             RepairReport.getInstance().setMarkedExpressions(MutantLab.getInstance().getMarkedExpressions());
             //======================== mutants test cycle ===========
-            int count =1;
+            int count =0;
             boolean repairFound = false;
-            boolean timeoutReached = false;
-            Timer timeoutTimer = new Timer("AStrykerRepairTimeoutTimer");
-            if (repairTimeout() > 0) {
-                timeoutTimer.schedule(new RepairTimeOut(), repairTimeout());
-            }
-            RepairReport.getInstance().clockStart();
             Candidate repair = null;
             int initialCommands = world.getAllCommands().size();
             if (variabilizationTestGeneration()) {
                 generateVariabilizationTests(world, rep, false);
             }
             cb(out, "RepairSubTittle", "Repairing... ");
-            while (mutantLab.advance()) {
+            RepairReport.getInstance().clockStart();
+            RepairTimeOut.getInstance().start();
+            boolean timeoutReached = false;
+            Candidate current;
+            while ((current = mutantLab.advance()) != null) {
                 cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + initialCommands + " commands...\n");
                 count++;
                 //report current mutation
-                Optional<Candidate> current = mutantLab.getCurrentCandidate();
-                if (MutantLab.getInstance().stopRepairProcess) {
-                    logger.info("Received STOP signal.. stopping search");
-                    break;
-                }
-                if (MutantLab.getInstance().timeoutReached) {
-                    timeoutReached = true;
-                    logger.info("Timeout signal received... stopping search");
-                    break;
-                }
-                if (!current.isPresent()) {
-                    logger.info("Received an empty candidate");
-                    break;
-                }
-                if (current.get() == Candidate.SEARCH_SPACE_EXHAUSTED) {
+                if (current == Candidate.SEARCH_SPACE_EXHAUSTED) {
                     logger.info("Got SEARCH_SPACE_EXHAUSTED candidate but no other termination condition has been met");
                     break;
                 }
-                if (current.get() == Candidate.CANT_REPAIR) {
+                if (current == Candidate.CANT_REPAIR) {
                     logger.info("Variabilization deemed this specification as non repairable... stopping search");
                     break;
                 }
+                if (current == Candidate.TIMEOUT) {
+                    logger.info("Time out reached");
+                    timeoutReached = true;
+                    break;
+                }
                 RepairReport.getInstance().incExaminedCandidates();
-                for (Triplet<String, String, String> em : current.get().getCurrentMutationsInfo()) {
+                for (Triplet<String, String, String> em : current.getCurrentMutationsInfo()) {
                     cb(out, "RepairExprOrig->Mut", em.a, em.b, em.c + "  \n");
                 }
                 logger.info("Validating mutant " + count);
-                logger.info(current.get().toString());
+                logger.info(current.toString());
                 // check all commands
-                MutantLab.getInstance().lockCandidateGeneration();
                 Browsable.freezeParents();
                 EvaluationResults results = null;
-                current.get().clearMutatedStatus();
+                current.clearMutatedStatus();
                 try {
                     if (partialRepair()) {
-                        results = evaluateCandidatePartialRepairEvaluation(current.get(), rep);
+                        results = evaluateCandidatePartialRepairEvaluation(current, rep);
                     } else {
-                        results = evaluateCandidateNormalEvaluation(current.get(), rep);
+                        results = evaluateCandidateNormalEvaluation(current, rep);
                     }
                 } catch (Throwable e) {
                     StringWriter sw = new StringWriter();
                     e.printStackTrace(new PrintWriter(sw));
                     String exceptionAsString = sw.toString();
-                    cb(out, "RepairError", "Fatal Error:\n"+exceptionAsString);
-                    logger.info("FATAL ERROR\n" + exceptionAsString);
+                    String errorType = (e instanceof Exception)?"Evaluation Error":"Fatal Error";
+                    cb(out, "RepairError", errorType + "\n"+exceptionAsString);
+                    logger.info(errorType + "\n" + exceptionAsString);
                 }
-                current.get().clearMutatedStatus();
+                current.clearMutatedStatus();
                 if (results != null) {
                     if (partialRepair())
-                        current.get().setCommandsResults(results.getCommandResults());
+                        current.setCommandsResults(results.getCommandResults());
                     if (results.isDiscarded()) {
                         cb(out, "RepairResults", Collections.singletonList("E"));
-                        logger.info("ERROR, mutant discarded\ncurrent mutant is:\n" + current.get().toString());
+                        logger.info("ERROR, mutant discarded\ncurrent mutant is:\n" + current.toString());
                         StringWriter sw = new StringWriter();
                         results.getException().printStackTrace(new PrintWriter(sw));
                         String exceptionAsString = sw.toString();
                         logger.info(exceptionAsString);
-                        mutantLab.reportCurrentAsInvalid();
+                        RepairReport.getInstance().incInvalidCandidates();
+                        current.markAsInvalid();
+                        logger.info("Current combination " + current.toString() + " reported as invalid by repair task");
                     } else if (results.isRepaired()) {
                         repairFound = true;
-                        repair = current.get();
+                        repair = current;
                         cb(out, "RepairResults", Collections.singletonList("R"));
-                        RepairReport.getInstance().setRepair(current.get());
-                        mutantLab.stopSearch();
-                        //cb(out, "RepairSubTittle", "Repair:\n" + RepairReport.getInstance().getRepairRepresentation());
+                        RepairReport.getInstance().setRepair(current);
                         logger.info("Current mutant repair the model, all commands results as expected");
                         logger.info("MODEL REPAIRED!");
                         break;
                     } else if (results.isPartialRepair()) {
                         cb(out, "RepairResults", Collections.singletonList("PR"));
+                        logger.info("Current mutant is a partial repair");
                     } else {
                         rep.cb("bold", "Current mutant does not repair the model, some commands do not results as expected \n");
                         logger.info("Current mutant does not repair the model, some commands do not results as expected");
@@ -1165,9 +1229,9 @@ final class SimpleReporter extends A4Reporter {
                     }
                 }
                 Browsable.unfreezeParents();
-                MutantLab.getInstance().unlockCandidateGeneration();
                 if (results == null)
                     break;
+                MutantLab.getInstance().sendCandidateToInput(current);
             }
             if (!repairFound) {
                 cb(out, "RepairTittle", "Model couldn't be repaired\n");
@@ -1193,12 +1257,17 @@ final class SimpleReporter extends A4Reporter {
                     }
                 }
             }
-            timeoutTimer.cancel();
             RepairReport.getInstance().clockEnd();
             cb(out, "RepairSubTittle", "***REPORT***\n" + RepairReport.getInstance().toString() + "\n*********\n");
             cb(out, "RepairSubTittle", "Repair time: " + RepairReport.getInstance().getTime() + "ms\n");
+            if (repairFound) {
+                File repairFile = writeRepairToFile(repair, options.originalFilename);
+                if (repairFile != null) {
+                    logger.info("Repair written to " + repairFile.toString());
+                    cb(out, "RepairSubTittle", "Repair written to file : " + repairFile.toString());
+                }
+            }
             logger.info(RepairReport.getInstance().toString());
-            mutantLab.stopSearch();
             ASTMutator.destroyInstance();
             DependencyGraph.destroyInstance();
             Variabilization.destroyInstance();
@@ -1206,6 +1275,29 @@ final class SimpleReporter extends A4Reporter {
             RepairReport.destroyInstance();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
+        }
+
+        private File writeRepairToFile(Candidate repair, String originalFileName) {
+            try {
+                File repairFile = new File(originalFileName.replace(".als", "_repair.als"));
+                if (repairFile.exists()) {
+                    if (!repairFile.delete()) {
+                        logger.info("Failed to write repair file : " + repairFile.toString());
+                        return null;
+                    }
+                }
+                CandidateWriter candidateWriter = new CandidateWriter(repair);
+                FileWriter myWriter = new FileWriter(repairFile);;
+                myWriter.write(candidateWriter.candidateStringRepresentation());
+                myWriter.close();
+                return repairFile;
+            } catch (Exception e) {
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String exceptionAsString = sw.toString();
+                logger.info("Error occurred while writing repair file\n" + exceptionAsString);
+                return null;
+            }
         }
 
         private enum TestGenerationResult {UNDEFINED, NO_TESTS_TO_RUN, NO_CHECK_TESTS_TO_RUN, NO_FAILING_TEST, GENERATED};
@@ -1293,7 +1385,6 @@ final class SimpleReporter extends A4Reporter {
                         if (!results.containsKey(command))
                             results.put(command, result);
                         else {
-                            MutantLab.getInstance().stopSearch();
                             throw new IllegalStateException("Independent tests are not independent, command " + command.toString() + " was already executed");
                         }
                     }
