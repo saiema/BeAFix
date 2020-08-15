@@ -219,9 +219,9 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
     public Void visit(ExprLet x) throws Err {
         sb.append("let ");
         visitThis(x.var);
-        sb.append(" = ");
+        sb.append(" = {");
         visitThis(x.expr);
-        sb.append(" | ");
+        sb.append("} | ");
         checkBlockAndVisit(x.sub);
         return null;
     }
