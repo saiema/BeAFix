@@ -102,6 +102,7 @@ public class TestsGenerator {
     }
 
     private Command generateNewTest(A4Solution solution, CompModule context, Command command) {
+        clearVarsCache();
         Map<Sig, List<ExprVar>> signatureValues = getSignaturesAtoms(solution, context);
         mergeExtendingSignaturesValues(signatureValues);
         Map<Field, List<Expr>> fieldValues = getFieldsValues(solution, context, signatureValues);
@@ -203,7 +204,9 @@ public class TestsGenerator {
         Expr body = ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = "CE_" + from + "_" + generateRandomName(10);
-        return new Func(null, name, null, null, body);
+        Func testPredicate = new Func(null, name, null, null, body);
+        testPredicate.setGenerated();
+        return testPredicate;
     }
 
     private Expr getFacts(CompModule context) {
@@ -278,6 +281,8 @@ public class TestsGenerator {
         return predicateOrAssertionCalled == null?null:(Expr) predicateOrAssertionCalled.clone();
     }
 
+    private final Map<String, ExprVar> varsCache = new TreeMap<>();
+    private void clearVarsCache() {varsCache.clear();}
     private Map<Sig, List<ExprVar>> getSignaturesAtoms(A4Solution solution, CompModule context) {
         Map<Relation, TupleSet> counterExampleSignatures = getCounterExampleSignatures(solution);
         Map<Sig, List<ExprVar>> signatureAtoms = new HashMap<>();
@@ -288,7 +293,13 @@ public class TestsGenerator {
             List<ExprVar> sigValues = new LinkedList<>();
             for (Tuple value : ceSignature.getValue()) {
                 String varName = internalAtomNotationToAlloyName(value.atom(0).toString());
-                ExprVar valueAsVar = ExprVar.make(null, varName, oSig.get().type());
+                ExprVar valueAsVar;
+                if (varsCache.containsKey(varName)) {
+                    valueAsVar = varsCache.get(varName);
+                } else {
+                    valueAsVar = ExprVar.make(null, varName, oSig.get().type());
+                    varsCache.put(varName, valueAsVar);
+                }
                 sigValues.add(valueAsVar);
             }
             signatureAtoms.put(oSig.get(), sigValues);

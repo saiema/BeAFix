@@ -4,10 +4,7 @@ import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
-import ar.edu.unrc.dc.mutation.util.BlockingCollection;
-import ar.edu.unrc.dc.mutation.util.DependencyGraph;
-import ar.edu.unrc.dc.mutation.util.RepairReport;
-import ar.edu.unrc.dc.mutation.util.TypeChecking;
+import ar.edu.unrc.dc.mutation.util.*;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Command;
@@ -40,19 +37,19 @@ public class MutantLab {
     }
 
     private static MutantLab instance;
-    public synchronized static void initialize(CompModule context, int maxDepth, Ops...ops) {
+    public static void initialize(CompModule context, int maxDepth, Ops...ops) {
         if (instance != null)
             throw new IllegalStateException("MutantLab already initialized");
         instance = new MutantLab(context, maxDepth, ops);
     }
 
-    public synchronized static MutantLab getInstance() {
+    public static MutantLab getInstance() {
         if (instance == null)
             throw new IllegalStateException("MutantLab is not initialized");
         return instance;
     }
 
-    public synchronized static void destroyInstance() {
+    public static void destroyInstance() {
         if (instance == null)
             throw new IllegalStateException("MutantLab is not initialized");
         instance = null;
@@ -64,15 +61,13 @@ public class MutantLab {
     private final int maxDepth;
     private final int markedExpressions;
 
-    public Boolean timeoutReached = false;
-    public Boolean stopRepairProcess = false;
-
     private final boolean variabilizationSupported;
 
     //fields for partial repair for multiple bugged and independent functions (preds/fun/assertions)
     private final List<Browsable> affectedFunctionsPredicatesAndAssertions;
     private final boolean partialRepairSupported;
     private Map<Browsable, Pair<Integer,Integer>> indexesPerFPAs;
+
 
     private MutantLab(CompModule context, int maxDepth, Ops...ops) {
         if (context == null) throw new IllegalArgumentException("context can't be null");
@@ -197,58 +192,60 @@ public class MutantLab {
         return markedExpressions;
     }
 
-    private BlockingCollection<Candidate> input;
-    private BlockingCollection<Candidate> output;
-    MutationTask mutationTask;
-    public boolean advance() {
+    private CandidateChannel input;
+    private CandidateChannel output;
+    private CandidateGenerator candidateGenerator;
+    public Candidate advance() {
         if (!searchStarted) {
             logger.info("Starting search with timeout (" + candidateQueueTimeout() + ") and threshold (" + generatorTriggerThreshold() + ")");
-            output = new BlockingCollection<>(candidateQueueTimeout());
-            input = new BlockingCollection<>();
-            input.insert(Candidate.original(context));
-            mutationTask = new MutationTask(ops, input, output, generatorTriggerThreshold());
-            Thread mtThread = new Thread(mutationTask);
-            mtThread.start();
+            output = new CandidateChannel();
+            input = new CandidateChannel();
+            input.add(Candidate.original(context));
+            candidateGenerator = new CandidateGenerator(ops, input, output);
             searchStarted = true;
-            return true;
+            return advance();
         }
-        try {
-            Optional<Candidate> current = output.getAndAdvance();
-            if (timeoutReached) {
-                logger.info("TIMEOUT reached...");
-                return true;
-            }
-            if (stopRepairProcess) {
-                logger.info("STOP search...");
-                return true;
-            }
-            if (!current.isPresent()) {
-                logger.info("Got empty current candidate");
-                return false;
-            }
-            if (current.get() == Candidate.SEARCH_SPACE_EXHAUSTED) {
-                logger.info("Search space exhausted");
-                return true;
-            }
-            if (current.get() == Candidate.INVALID) {
-                logger.info("Received INVALID candidate, something went wrong on the generation process, stopping search");
-                return false;
-            }
-            if (!current.get().isValid()) {
-                logger.info("Received invalid candidate, skipping candidate");
-                return advance();
-            }
-            logger.info("Inserting current to mutation task input channel");
-            sendCandidateToInput(current.get());
-            return true;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            logger.severe("Got interrupted exception when trying to advance");
-            return false;
+        if (RepairTimeOut.getInstance().timeoutReached()) {
+            return Candidate.TIMEOUT;
         }
+        if (output.isEmpty()) {
+            candidateGenerator.generateNewCandidates();
+        }
+        Optional<Candidate> current = output.next();
+        if (!current.isPresent()) {
+            logger.info("Got empty current candidate");
+            return null;
+        }
+        if (current.get() == Candidate.SEARCH_SPACE_EXHAUSTED) {
+            logger.info("Search space exhausted");
+            return current.get();
+        }
+        if (current.get() == Candidate.CANT_REPAIR) {
+            logger.info("Received can't repair candidate, passing it through to SimpleReporter");
+            return current.get();
+        }
+        if (current.get() == Candidate.GENERATION_FAILED) {
+            logger.info("Candidate generation failed, something went wrong on the generation process, stopping search");
+            return null;
+        }
+        if (!current.get().isValid()) {
+            logger.info("Received invalid candidate, skipping candidate");
+            return advance();
+        }
+        logger.info("Inserting current to candidate input channel");
+        //sendCandidateToInput(current.get());
+        return current.get();
     }
 
-    private void sendCandidateToInput(Candidate current) {
+    public void sendCandidateToInput(Candidate current) {
+        if (!current.isValid()) {
+            logger.info("candidate was invalid, ignoring...");
+            return;
+        }
+        if (current.isLast()) {
+            logger.info("candidate was last, ignoring...");
+            return;
+        }
         if (current.hasPartialResults()) { //partial repair
             List<Integer> indexesToBlock = new LinkedList<>();
             Map<Command, Boolean> testsResults = current.getCommandsResults();
@@ -275,11 +272,11 @@ public class MutantLab {
                 }
                 if (goToFirstUnblockedIndex(partiallyFixedCandidate)) {
                     partiallyFixedCandidate.markAsPartialRepair();
-                    input.priorityInsert(partiallyFixedCandidate);
+                    input.addToPriorityChannel(partiallyFixedCandidate);
                 }
             }
         }
-        input.insert(current); //the default behaviour must be kept
+        input.add(current); //the default behaviour must be kept
     }
 
     private boolean goToFirstUnblockedIndex(Candidate candidate) {
@@ -294,37 +291,6 @@ public class MutantLab {
             }
         }
         return unblockedIndexes > 0;
-    }
-
-    public void timeout() {
-        logger.info("Timeout reached (some candidates may still be analyzed)");
-        timeoutReached = true;
-        mutationTask.softStop();
-    }
-
-    public void stopSearch() {
-        logger.info("Stopping search");
-        if (searchStarted) {
-            mutationTask.stop();
-            searchStarted = false;
-        }
-    }
-
-    public void lockCandidateGeneration() {
-        mutationTask.getLock().lock();
-    }
-
-    public void unlockCandidateGeneration() {
-        mutationTask.getLock().unlock();
-    }
-
-    public Optional<Candidate> getCurrentCandidate() {
-        try {
-            return output.current();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return Optional.empty();
-        }
     }
 
     public List<Command> getCommandsToRunFor(Candidate candidate) {
@@ -416,14 +382,6 @@ public class MutantLab {
 
     public synchronized boolean undoChangesToAst() {
         return ASTMutator.getInstance().undoMutations();
-    }
-
-    public void reportCurrentAsInvalid() {
-        if (getCurrentCandidate().isPresent()) {
-            RepairReport.getInstance().incInvalidCandidates();
-            getCurrentCandidate().get().markAsInvalid();
-            logger.info("Current combination " + getCurrentCandidate().toString() + " reported as invalid by repair task");
-        }
     }
 
     private static int generatorTriggerThreshold() {

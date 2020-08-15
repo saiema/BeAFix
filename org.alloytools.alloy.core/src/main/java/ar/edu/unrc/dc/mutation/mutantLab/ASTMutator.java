@@ -107,6 +107,13 @@ public class ASTMutator {
                         return replacement;
                     }
                 }
+                //then whe should check if original is in a predicate or function
+                for (Func func : ast.getAllFunc()) {
+                    if (func.getBody().getID() == original.getID()) {
+                        Cheats.changeFuncBody(func, newExpression);
+                        return replacement;
+                    }
+                }
                 return Optional.empty();
             }
             if (initialExpressionParent instanceof ExprBinary) {

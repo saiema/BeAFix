@@ -3,8 +3,8 @@ package ar.edu.unrc.dc.mutation.util;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
+import ar.edu.unrc.dc.mutation.mutantLab.CandidateGenerator;
 import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
-import ar.edu.unrc.dc.mutation.mutantLab.MutationTask;
 import ar.edu.unrc.dc.mutation.visitors.ExprToString;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
@@ -255,7 +255,7 @@ public class RepairReport {
     public String toString() {
         calculateAvgMutations();
         calculateVariabilizationEstimatedPruning();
-        boolean variabilizationEnabledAndSupported = MutationTask.useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
+        boolean variabilizationEnabledAndSupported = CandidateGenerator.useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
         StringBuilder sb = new StringBuilder("***AStryker report***\n");
         if (repair != null) {
             sb.append("REPAIR FOUND\n");

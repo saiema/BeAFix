@@ -17,6 +17,8 @@ public class Candidate {
     public static final Candidate INVALID;
     public static final Candidate CANT_REPAIR;
     public static final Candidate SEARCH_SPACE_EXHAUSTED;
+    public static final Candidate GENERATION_FAILED;
+    public static final Candidate TIMEOUT;
 
     private Candidate parent;
     private Mutation mutation;
@@ -40,6 +42,8 @@ public class Candidate {
         INVALID = invalid;
         CANT_REPAIR = new Candidate(null);
         SEARCH_SPACE_EXHAUSTED = new Candidate(null);
+        GENERATION_FAILED = new Candidate(null);
+        TIMEOUT = new Candidate(null);
     }
 
     private Candidate(CompModule context) {

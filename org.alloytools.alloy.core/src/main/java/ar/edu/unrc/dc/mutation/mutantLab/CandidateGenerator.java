@@ -4,29 +4,25 @@ import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
-import ar.edu.unrc.dc.mutation.util.BlockingCollection;
+import ar.edu.unrc.dc.mutation.util.CandidateChannel;
 import ar.edu.unrc.dc.mutation.util.IrrelevantMutationChecker;
 import ar.edu.unrc.dc.mutation.util.MutantsHashes;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.parser.CompModule;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-public class MutationTask implements Runnable {
+public class CandidateGenerator  {
 
-    private static final Logger logger = Logger.getLogger(MutationTask.class.getName());
+    private static final Logger logger = Logger.getLogger(CandidateGenerator.class.getName());
 
     static {
         try {
@@ -40,18 +36,12 @@ public class MutationTask implements Runnable {
         }
     }
 
-    private final BlockingCollection<Candidate> outputChannel;
-    private final BlockingCollection<Candidate> inputChannel;
+    private final CandidateChannel outputChannel;
+    private final CandidateChannel inputChannel;
     private final SortedSet<Ops> ops;
-    private final int outputMinThreshold;
-    private final Object thresholdLock = new Object();
     private final MutantsHashes mutantsHashes;
-    private final Lock lock = new ReentrantLock();
-    public Lock getLock() {
-        return lock;
-    }
 
-    public MutationTask(SortedSet<Ops> ops, BlockingCollection<Candidate> inputChannel, BlockingCollection<Candidate> outputChannel, int outputMinThreshold) {
+    public CandidateGenerator(SortedSet<Ops> ops, CandidateChannel inputChannel, CandidateChannel outputChannel) {
         if (inputChannel == null)
             throw new IllegalArgumentException("inputChannel can't be null");
         if (outputChannel == null)
@@ -61,103 +51,66 @@ public class MutationTask implements Runnable {
         this.inputChannel = inputChannel;
         this.outputChannel = outputChannel;
         this.ops = ops;
-        this.outputMinThreshold = outputMinThreshold;
         mutantsHashes = new MutantsHashes();
-        outputChannel.addDecreaseAssociatedObject(thresholdLock);
-    }
-
-    private boolean waitingToBeStopped = false;
-    private boolean run = true;
-    @Override
-    public void run() {
-        while (run) {
-            try {
-                waitForOutputThreshold();
-                if (run) {
-                    Optional<Candidate> current = inputChannel.getAndAdvance();
-                    lock.lock();
-                    if (run) {
-                        current.ifPresent(this::checkAndGenerateNewCandidates);
-                        if (run && mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
-                            MutantLab.getInstance().stopRepairProcess = true;
-                            outputChannel.insert(Candidate.SEARCH_SPACE_EXHAUSTED);
-                        }
-                    }
-                    lock.unlock();
-                }
-            } catch (Throwable e) {
-                StringWriter sw = new StringWriter();
-                e.printStackTrace(new PrintWriter(sw));
-                logger.info("Exception in run method\n"+sw.toString());
-                MutantLab.getInstance().stopRepairProcess = true;
-                lock.unlock();
-                return;
-            }
-        }
-    }
-
-    public synchronized void softStop() {
-        waitingToBeStopped = true;
-    }
-
-    public synchronized void stop() {
-        run = false;
-        synchronized (thresholdLock) {
-            thresholdLock.notify();
-        }
-        inputChannel.unlockAllWaitingThreads();
-    }
-
-    private void waitForOutputThreshold() throws InterruptedException {
-        while (outputChannel.size() > outputMinThreshold) {
-            synchronized (thresholdLock) {
-                thresholdLock.wait(500L);
-            }
-        }
     }
 
     private int mutationsAdded = 0;
-    private void checkAndGenerateNewCandidates(Candidate from) {
-        if (waitingToBeStopped)
-            return;
+
+
+    public void generateNewCandidates() {
         mutationsAdded = 0;
-        logger.info("***Variabilization check started***");
-        if (!from.isValid()) {
-            logger.info("candidate was invalid, returning");
-            return;
-        }
-        if (from.isLast()) {
-            logger.info("candidate was last, ignoring...");
-            return;
-        }
-        //=============VARIABILIZATION=============
-        logger.info("Current candidate:\n" + from.toString());
-        if (variabilizationCheck(from)) {
-            logger.info("variabilization check SUCCEEDED");
-            Candidate nextMutationSpotCandidate = from.copy();
-            nextMutationSpotCandidate.currentMarkedExpressionInc();
-            if (from.isFirst()) {
-                logger.info("Sending only next index candidate:\n" + nextMutationSpotCandidate.toString());
-                outputChannel.insert(nextMutationSpotCandidate);
-                return;
-            } else if (!nextMutationSpotCandidate.isLast()) {
-                logger.info("Sending mutants of:\n" + nextMutationSpotCandidate.toString());
-                generateMutationsFor(nextMutationSpotCandidate);
-            }
-        } else {
-            logger.info("variabilization check FAILED");
-            if (from.isFirst()) {
-                logger.info("current candidate had index 0, sending CANT REPAIR signal");
-                outputChannel.priorityInsert(Candidate.CANT_REPAIR);
+        generateNewCandidates_impl();
+    }
+
+    private void generateNewCandidates_impl() {
+        boolean generate = true;
+        while (generate) {
+            Optional<Candidate> fromOp = inputChannel.next();
+            if (!fromOp.isPresent()) {
+                outputChannel.addToPriorityChannel(Candidate.SEARCH_SPACE_EXHAUSTED);
                 return;
             }
+            Candidate from = fromOp.get();
+            if (!from.isValid()) {
+                logger.info("candidate was invalid, ignoring...");
+                continue;
+            }
+            if (from.isLast()) {
+                logger.info("candidate was last, ignoring...");
+                continue;
+            }
+            //=============VARIABILIZATION=============
+            logger.info("Current candidate:\n" + from.toString());
+            if (variabilizationCheck(from)) {
+                logger.info("variabilization check SUCCEEDED");
+                Candidate nextMutationSpotCandidate = from.copy();
+                nextMutationSpotCandidate.currentMarkedExpressionInc();
+                if (from.isFirst()) {
+                    logger.info("Sending only next index candidate:\n" + nextMutationSpotCandidate.toString());
+                    outputChannel.add(nextMutationSpotCandidate);
+                    return;
+                } else if (!nextMutationSpotCandidate.isLast()) {
+                    logger.info("Sending mutants of:\n" + nextMutationSpotCandidate.toString());
+                    generateMutationsFor(nextMutationSpotCandidate);
+                }
+            } else {
+                logger.info("variabilization check FAILED");
+                if (from.isFirst()) {
+                    logger.info("current candidate had index 0, sending CANT REPAIR signal");
+                    outputChannel.addToPriorityChannel(Candidate.CANT_REPAIR);
+                    return;
+                }
+            }
+            if (!from.isFirst()) {
+                logger.info("Sending mutants of:\n" + from.toString());
+                generateMutationsFor(from);
+            }
+            if (mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
+                outputChannel.addToPriorityChannel(Candidate.SEARCH_SPACE_EXHAUSTED);
+            }
+            generate = (mutationsAdded == 0 && outputChannel.isEmpty() && !inputChannel.isEmpty());
+            //=========================================
         }
-        if (!from.isFirst()) {
-            logger.info("Sending mutants of:\n" + from.toString());
-            generateMutationsFor(from);
-        }
-        logger.info("***Variabilization check finished***");
-        //=========================================
     }
 
     private void generateMutationsFor(Candidate from) {
@@ -165,7 +118,7 @@ public class MutationTask implements Runnable {
             return;
         CompModule context = from.getContext();
         if (!MutantLab.getInstance().applyCandidateToAst(from)) {
-            outputChannel.insert(Candidate.INVALID);
+            outputChannel.addToPriorityChannel(Candidate.GENERATION_FAILED);
             return;
         }
         Optional<Mutation> fromLastMutation = from.getLastMutation();
@@ -217,11 +170,11 @@ public class MutationTask implements Runnable {
             }));
         }
         if (!MutantLab.getInstance().undoChangesToAst())
-            outputChannel.insert(Candidate.INVALID);
+            outputChannel.addToPriorityChannel(Candidate.GENERATION_FAILED);
         else if (!newCandidates.isEmpty()) {
             RepairReport.getInstance().incGenerations(from.getCurrentMarkedExpression());
             mutationsAdded += newCandidates.size();
-            outputChannel.insertBulk(newCandidates);
+            outputChannel.addAll(newCandidates);
         }
     }
 

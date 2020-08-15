@@ -69,6 +69,14 @@ public final class Func extends Browsable implements Clause {
     /** The declared return type; never null. */
     public final Expr            returnDecl;
 
+    private boolean isGenerated = false;
+    public void setGenerated() {
+        isGenerated = true;
+    }
+    public boolean isGenerated() {
+        return isGenerated;
+    }
+
     /** Return the number of parameters. */
     public int count() {
         int n = 0;

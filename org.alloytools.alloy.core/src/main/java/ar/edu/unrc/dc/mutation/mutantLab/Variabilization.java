@@ -457,7 +457,8 @@ public class Variabilization {
             }
             return ExprUnary.Op.SETOF.make(null, univ());
         } else if (x.type().is_bool) {
-            return univ();
+            //return univ();
+            return ExprUnary.Op.SETOF.make(null, univ());
             //return ExprUnary.Op.LONEOF.make(null, univ());
         } else {
             Expr current = univ();
