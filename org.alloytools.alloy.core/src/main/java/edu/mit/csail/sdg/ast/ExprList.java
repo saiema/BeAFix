@@ -334,7 +334,11 @@ public final class ExprList extends Expr {
         for (Expr a : this.args) {
             argsClone.add((Expr) a.clone());
         }
-        return make(pos, closingBracket, op, argsClone);
+        ExprList mutant = make(pos, closingBracket, op, argsClone);
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
+        return mutant;
     }
 
     public ExprList replaceArg(Expr target, Expr replacement) {

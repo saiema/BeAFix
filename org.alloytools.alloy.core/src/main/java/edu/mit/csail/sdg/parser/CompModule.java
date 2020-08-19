@@ -2502,7 +2502,7 @@ public final class CompModule extends Browsable implements Module {
 
     //================== Mutants methods ===================
     /** Add a marked Expression to mutate. */
-    void addMarkedExprToMutate(Expr v)  {
+    public void addMarkedExprToMutate(Expr v)  {
         markedEprsToMutate.add(v);
         v.mutGenLimit(1);
     }

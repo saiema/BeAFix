@@ -19,6 +19,8 @@ public class Candidate {
     public static final Candidate SEARCH_SPACE_EXHAUSTED;
     public static final Candidate GENERATION_FAILED;
     public static final Candidate TIMEOUT;
+    private boolean isSignal = false;
+    public boolean isSignal() {return isSignal;}
 
     private Candidate parent;
     private Mutation mutation;
@@ -57,6 +59,7 @@ public class Candidate {
         this.mutation = mutation;
         this.parent = parent;
         this.context = context;
+        this.isSignal = context == null;
         if (mutation != null)
             collectRelatedAssertionsAndFunctions();
         markedExpressions = MutantLab.getInstance().getMarkedExpressions();
@@ -300,7 +303,7 @@ public class Candidate {
             if (contFunc.isPresent() && !relatedAssertionsAndFunctions.contains(contFunc.get())) {
                 relatedAssertionsAndFunctions.add(contFunc.get());
             } else {
-                Expr mayorExpr = TypeChecking.getMayorExpression(mutation.original());
+                Expr mayorExpr = TypeChecking.getMayorExpression(mutation.original(), getContext());
                 Optional<Pair<String, Expr>> namedAssertion = findAssertionMatchFor(mayorExpr);
                 if (namedAssertion.isPresent() && !relatedAssertionsAndFunctions.contains(namedAssertion.get().b))
                     relatedAssertionsAndFunctions.add(namedAssertion.get().b);
@@ -312,7 +315,7 @@ public class Candidate {
                     } else {
                         //Facts are weird, let's try searching for the mutated fact
                         mayorExpr = mutation.original();
-                        namedFact = findFactMatchFor(TypeChecking.getMayorExpression(mutation.mutant()));
+                        namedFact = findFactMatchFor(TypeChecking.getMayorExpression(mutation.mutant(), getContext()));
                         if (namedFact.isPresent()) {
                             //although we found the mutated fact, we should use the original
                             if (!relatedAssertionsAndFunctions.contains(mayorExpr)) {

@@ -85,11 +85,9 @@ public class CandidateGenerator  {
                 logger.info("variabilization check SUCCEEDED");
                 Candidate nextMutationSpotCandidate = from.copy();
                 nextMutationSpotCandidate.currentMarkedExpressionInc();
-                if (from.isFirst()) {
-                    logger.info("Sending only next index candidate:\n" + nextMutationSpotCandidate.toString());
-                    outputChannel.add(nextMutationSpotCandidate);
-                    return;
-                } else if (!nextMutationSpotCandidate.isLast()) {
+                logger.info("Sending next index candidate:\n" + nextMutationSpotCandidate.toString());
+                outputChannel.add(nextMutationSpotCandidate);
+                if (!nextMutationSpotCandidate.isLast()) {
                     logger.info("Sending mutants of:\n" + nextMutationSpotCandidate.toString());
                     generateMutationsFor(nextMutationSpotCandidate);
                 }
@@ -121,6 +119,7 @@ public class CandidateGenerator  {
             outputChannel.addToPriorityChannel(Candidate.GENERATION_FAILED);
             return;
         }
+        boolean fromPriority = from.isPartialRepair();
         Optional<Mutation> fromLastMutation = from.getLastMutation();
         AtomicReference<Candidate> updatedFrom = new AtomicReference<>(Candidate.original(context));
         updatedFrom.get().setCurrentMarkedExpression(from.getCurrentMarkedExpression());
@@ -166,6 +165,8 @@ public class CandidateGenerator  {
                     } else {
                         throw new IllegalStateException("A new candidate was created with no mutations " + newCandidate.toString());
                     }
+                } else {
+                    RepairReport.getInstance().incRepeatedCandidates();
                 }
             }));
         }
@@ -174,8 +175,16 @@ public class CandidateGenerator  {
         else if (!newCandidates.isEmpty()) {
             RepairReport.getInstance().incGenerations(from.getCurrentMarkedExpression());
             mutationsAdded += newCandidates.size();
-            outputChannel.addAll(newCandidates);
+            //outputChannel.addAll(newCandidates);
+            sendNewCandidatesToOutput(newCandidates, fromPriority);
         }
+    }
+
+    private void sendNewCandidatesToOutput(List<Candidate> nextGeneration, boolean priority) {
+        if (priority)
+            nextGeneration.forEach(outputChannel::addToPriorityChannel);
+        else
+            outputChannel.addAll(nextGeneration);
     }
 
     private boolean variabilizationCheck(Candidate candidate) {

@@ -29,6 +29,7 @@ public class AStrykerCLI {
     private static final String REPAIR = "REPAIR";
     private static final String TESTGEN = "TESTS";
     private static final String CHECK = "CHECK";
+    private static final String MUTANTGEN = "MUTANTS";
     public static void main(String[] args) throws IOException {
         AlloyCore.debug = false;
         if (args.length == 0) throw new IllegalArgumentException("At least one argument (the module to repair) is required");
@@ -42,6 +43,8 @@ public class AStrykerCLI {
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_OUTPUT_TO_FILES, true);
             } else if (mode.compareToIgnoreCase(CHECK) == 0) {
                 astryker_mode = ASTRYKER_MODE.CHECK;
+            } else if (mode.compareToIgnoreCase(MUTANTGEN) == 0) {
+                astryker_mode = ASTRYKER_MODE.MUTANTGENERATION;
             } else {
                 throw new IllegalArgumentException("The second argument must either be REPAIR, TESTS, or CHECK (got " + mode + " instead)");
             }
@@ -99,7 +102,9 @@ public class AStrykerCLI {
                     throw new IllegalArgumentException("Expecting config key but got a value instead " + arg.trim());
                 if (astryker_mode.equals(ASTRYKER_MODE.REPAIR))
                     setConfig_repair(configKey, arg.trim());
-                else
+                else if (astryker_mode.equals(ASTRYKER_MODE.MUTANTGENERATION))
+                    setConfig_mutantgen(configKey, arg.trim());
+                else if (astryker_mode.equals(ASTRYKER_MODE.TESTGENERATION))
                     setConfig_tests(configKey, arg.trim());
                 configKeyRead = false;
                 configKey = null;
@@ -206,6 +211,52 @@ public class AStrykerCLI {
             }
             default : throw new IllegalArgumentException("Invalid configuration key for test generation " + key);
         }
+    }
+
+    private static final String MUTANT_GENERATION_CHECK_KEY = "check";
+    private static final String MUTANT_GENERATION_LIMIT_KEY = "limit";
+    private static void setConfig_mutantgen(String key, String value) {
+        switch (key.toLowerCase()) {
+            case TIMEOUT_KEY: {
+                int toValue = getIntegerValue(TIMEOUT_KEY, value);
+                AStrykerConfigReader.getInstance().setIntArgument(TIMEOUT, toValue);
+                break;
+            }
+            case MAXDEPTH_KEY: {
+                int maxDepth = getIntegerValue(MAXDEPTH_KEY, value);
+                AStrykerConfigReader.getInstance().setIntArgument(MAX_DEPTH, maxDepth);
+                break;
+            }
+            case OUTPUT_FOLDER_KEY: {
+                File outFolder = new File(value);
+                if (!outFolder.exists())
+                    throw new IllegalArgumentException("mutants output folder doesn't exists ( " + value + ")");
+                if (!outFolder.isDirectory())
+                    throw new IllegalArgumentException("mutants output folder is not a folder ( " + value + ")");
+                if (!outFolder.canExecute() || !outFolder.canWrite())
+                    throw new IllegalArgumentException("Insufficient access to mutants output folder ( " + value + ")");
+                AStrykerConfigReader.getInstance().setStringArgument(MUTANTS_GENERATION_OUTPUT_FOLDER, value);
+                break;
+            }
+            case MUTANT_GENERATION_CHECK_KEY: {
+                boolean booleanValue = getBooleanValue(key, value);
+                AStrykerConfigReader.getInstance().setBooleanArgument(MUTANTS_GENERATION_CHECK, booleanValue);
+                break;
+            }
+            case MUTANT_GENERATION_LIMIT_KEY: {
+                int limit = getIntegerValue(MUTANT_GENERATION_LIMIT_KEY, value);
+                AStrykerConfigReader.getInstance().setIntArgument(MUTANTS_GENERATION_LIMIT, limit);
+                break;
+            }
+            default : throw new IllegalArgumentException("Invalid configuration key for mutants generation " + key);
+        }
+    }
+
+    private static Boolean getBooleanValue(String key, String originalValue) {
+        Optional<Boolean> boolVal = parseBooleanValue(originalValue);
+        if (!boolVal.isPresent())
+            throw new IllegalArgumentException("Invalid value for " + key + " expecting boolean but got " + originalValue + " instead");
+        return boolVal.get();
     }
 
     private static Integer getIntegerValue(String key, String originalValue) {

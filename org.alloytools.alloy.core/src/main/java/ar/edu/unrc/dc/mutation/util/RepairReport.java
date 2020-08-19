@@ -28,9 +28,11 @@ public class RepairReport {
 
     private final int mutationDepth;
 
+    private boolean mutantGeneration = false;
     private int examinedCandidates;
     private int generatedCandidates;
     private int invalidCandidates;
+    private int repeatedCandidates;
     private int irrelevantMutationsSkipped;
     private int variabilizationChecks;
     private int variabilizationChecksPassed;
@@ -41,7 +43,7 @@ public class RepairReport {
     private int commands;
     private int variabilizationRelatedCommands;
 
-    private long time =0; //used to calculate the whole repair process time
+    private long time = 0; //used to calculate the whole repair process time
 
     private Map<Integer, int[]> mutationsPerIndex; //(index, generations, mutants)
     private int[] averageMutationsPerIndex;
@@ -58,6 +60,7 @@ public class RepairReport {
         examinedCandidates = 0;
         generatedCandidates = 0;
         invalidCandidates = 0;
+        repeatedCandidates = 0;
         irrelevantMutationsSkipped = 0;
         variabilizationChecks = 0;
         variabilizationChecksPassed = 0;
@@ -72,6 +75,10 @@ public class RepairReport {
         mutationDepth = (int) MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_MAX_DEPTH).orElse(ConfigKey.REPAIR_MAX_DEPTH.defaultValue());
     }
 
+    public void setAsMutantGenerationRun() {
+        mutantGeneration = true;
+    }
+
     public void incExaminedCandidates() {
         examinedCandidates++;
     }
@@ -79,6 +86,8 @@ public class RepairReport {
     public void incGeneratedCandidates() {
         generatedCandidates++;
     }
+
+    public void incRepeatedCandidates() {repeatedCandidates++;}
 
     public void incInvalidCandidates() {
         invalidCandidates++;
@@ -257,12 +266,16 @@ public class RepairReport {
         calculateVariabilizationEstimatedPruning();
         boolean variabilizationEnabledAndSupported = CandidateGenerator.useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
         StringBuilder sb = new StringBuilder("***AStryker report***\n");
-        if (repair != null) {
-            sb.append("REPAIR FOUND\n");
-            generateRepairRepresentation();
-            sb.append(repairRepresentation);
+        if (mutantGeneration) {
+            sb.append("Mutants generation mode\n");
         } else {
-            sb.append("REPAIR NOT FOUND\n");
+            if (repair != null) {
+                sb.append("REPAIR FOUND\n");
+                generateRepairRepresentation();
+                sb.append(repairRepresentation);
+            } else {
+                sb.append("REPAIR NOT FOUND\n");
+            }
         }
         sb.append("Expressions marked to be mutated:").append("\t").append(markedExpressions).append("\n");
         sb.append(String.join("\n", initialMarkedExpressions));
@@ -290,6 +303,7 @@ public class RepairReport {
         sb.append("Examined:").append("\t").append(examinedCandidates).append("\n");
         sb.append("Generated:").append("\t").append(generatedCandidates).append("\n");
         sb.append("Invalid:").append("\t").append(invalidCandidates).append("\n");
+        sb.append("Repeated:").append("\t").append(repeatedCandidates).append("\n");
         sb.append("Irrelevant mutations skipped:").append("\t").append(irrelevantMutationsSkipped).append("\n");
         sb.append("Average mutations per generation:").append("\t").append(averageMutations).append("\n");
         sb.append("Average mutations per generation, per marked expression:").append("\t").append(Arrays.toString(averageMutationsPerIndex)).append("\n");

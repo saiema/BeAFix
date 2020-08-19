@@ -1019,10 +1019,17 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 runmenu.add(new JSeparator(), 1);
             }
             //@Test generation
-            JMenuItem testGenerationMenu = new JMenuItem("Generate tests from counterexamples", null);
-            testGenerationMenu.addActionListener(doAStryker(AStrykerTESTGENERATION));
-            runmenu.add(new JSeparator(), runmenu.getItemCount());
-            runmenu.add(testGenerationMenu, runmenu.getItemCount());
+            if (!text.get().getText().trim().isEmpty()) {
+                JMenuItem testGenerationMenu = new JMenuItem("Generate tests from counterexamples", null);
+                testGenerationMenu.addActionListener(doAStryker(AStrykerTESTGENERATION));
+                runmenu.add(new JSeparator(), runmenu.getItemCount());
+                runmenu.add(testGenerationMenu, runmenu.getItemCount());
+                //@Mutant generation
+                JMenuItem mutantGenerationMenu = new JMenuItem("Generate mutants", null);
+                mutantGenerationMenu.addActionListener(doAStryker(AStrykerMUTANTGENERATION));
+                runmenu.add(new JSeparator(), runmenu.getItemCount());
+                runmenu.add(mutantGenerationMenu, runmenu.getItemCount());
+            }
             //@Mutants
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 JMenuItem y = new JMenuItem("Repair by mutating marked exprs (#m#)", null);
@@ -1117,6 +1124,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
 
     private final int AStrykerREPAIR = 1;
     private final int AStrykerTESTGENERATION = 2;
+    private final int AStrykerMUTANTGENERATION = 3;
     private Runner doAStryker(int index) {
         AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES, false);
         try {
@@ -1126,7 +1134,6 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
         if (wrap)
             return wrapMe(index);
-        boolean onlyTestGeneration = index == AStrykerTESTGENERATION;
         if (WorkerEngine.isBusy())
             return null;
         // To update the accelerator to point to the command actually chosen
@@ -1134,15 +1141,51 @@ public final class SimpleGUI implements ComponentListener, Listener {
         OurUtil.enableAll(runmenu);
         if (commands == null)
             return null;
-        if (commands.size() == 0 ) {
-            log.logRed(onlyTestGeneration?"There are no commands for test generation.\n\n":"There are no commands for repair validation.\n\n");
-            return null;
+        ASTRYKER_MODE mode;
+        switch (index) {
+            case AStrykerREPAIR : {
+                mode = ASTRYKER_MODE.REPAIR;
+                break;
+            }
+            case AStrykerTESTGENERATION : {
+                mode = ASTRYKER_MODE.TESTGENERATION;
+                break;
+            }
+            case AStrykerMUTANTGENERATION : {
+                mode = ASTRYKER_MODE.MUTANTGENERATION;
+                break;
+            }
+            default: {
+                log.logRed("Invalid index used to call doAStryker ( " + index + " )");
+                return null;
+            }
+        }
+        if (commands.size() == 0) {
+            switch (mode) {
+                case REPAIR: {
+                    log.logRed("There are no commands for repair validation.\n\n");
+                    return null;
+                }
+                case TESTGENERATION: {
+                    log.logRed("There are no commands for test generation.\n\n");
+                    return null;
+                }
+                case MUTANTGENERATION: {
+                    if ((Boolean)MutationConfiguration.getInstance().getConfigValueOrDefault(MUTANT_GENERATION_CHECK)) {
+                        log.logRed("There are no commands to check mutants for mutant generation.\n" +
+                                "Either disable check or add commands.\n\n"
+                        );
+                        return null;
+                    }
+                }
+            }
+
         }
         SimpleCallback1 cb = new SimpleCallback1(this, null, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
         //@Atryker
         cb.reparing=true;
         SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
-        repair1.mode = onlyTestGeneration? ASTRYKER_MODE.TESTGENERATION: ASTRYKER_MODE.REPAIR;
+        repair1.mode = mode;
         A4Options opt = new A4Options();
         opt.tempDirectory = alloyHome() + fs + "tmp";
         opt.solverDirectory = alloyHome() + fs + "binary";
@@ -1185,71 +1228,6 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
         return null;
     }
-
-//    /**
-//     * This method executes a reparation on a marked source.
-//     */
-//    private Runner doRepair(int index) {
-//        if (wrap)
-//            return wrapMe(index);
-//        if (WorkerEngine.isBusy())
-//            return null;
-//        // To update the accelerator to point to the command actually chosen
-//      //  doRefreshRun();
-//        OurUtil.enableAll(runmenu);
-//        if (commands == null)
-//            return null;
-//        if (commands.size() == 0 ) {
-//            log.logRed("There are no commands for repair validation.\n\n");
-//            return null;
-//        }
-//        SimpleCallback1 cb = new SimpleCallback1(this, null, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
-//        //@Atryker
-//        cb.reparing=true;
-//        SimpleReporter.SimpleTaskRepair1 repair1 = new SimpleReporter.SimpleTaskRepair1();
-//        A4Options opt = new A4Options();
-//        opt.tempDirectory = alloyHome() + fs + "tmp";
-//        opt.solverDirectory = alloyHome() + fs + "binary";
-//        opt.recordKodkod = RecordKodkod.get();
-//        opt.noOverflow = NoOverflow.get();
-//        opt.unrolls = Version.experimental ? Unrolls.get() : (-1);
-//        opt.skolemDepth = SkolemDepth.get();
-//        opt.coreMinimization = CoreMinimization.get();
-//        opt.inferPartialInstance = InferPartialInstance.get();
-//        opt.coreGranularity = CoreGranularity.get();
-//        opt.originalFilename = Util.canon(text.get().getFilename());
-//        opt.solver = Solver.get();
-//        //repairtask.bundleIndex = i;
-//        //repairtask.bundleWarningNonFatal = WarningNonfatal.get();
-//        repair1.map = text.takeSnapshot();
-//        repair1.options = opt.dup();
-//        repair1.resolutionMode = (Version.experimental && ImplicitThis.get()) ? 2 : 1;
-//        repair1.tempdir = maketemp();
-//        try {
-//            runmenu.setEnabled(false);
-//            runbutton.setVisible(false);
-//            showbutton.setEnabled(false);
-//            stopbutton.setVisible(true);
-//            int newmem = SubMemory.get(), newstack = SubStack.get();
-//            if (newmem != subMemoryNow || newstack != subStackNow)
-//                WorkerEngine.stop();
-//            //TODO: repair run
-//            if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
-//                WorkerEngine.runLocally(repair1, cb);
-//            else
-//                WorkerEngine.run(repair1, newmem, newstack, alloyHome() + fs + "binary", "", cb);
-//            subMemoryNow = newmem;
-//            subStackNow = newstack;
-//        } catch (Throwable ex) {
-//            WorkerEngine.stop();
-//            log.logBold("Fatal Error: Solver failed due to unknown reason.\n" + "One possible cause is that, in the Options menu, your specified\n" + "memory size is larger than the amount allowed by your OS.\n" + "Also, please make sure \"java\" is in your program path.\n");
-//            log.logDivider();
-//            log.flush();
-//            doStop(2);
-//        }
-//        return null;
-//    }
-
 
     /**
      * This method stops the current run or check (how==0 means DONE, how==1 means
@@ -1527,6 +1505,14 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                 asConfig.setIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP, AStrykerTestGenerationTestsPerStep.get());
                                 break;
                             }
+                            case "AStrykerMutantGenerationCheck" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_CHECK, AStrykerMutantGenerationCheck.get());
+                                break;
+                            }
+                            case "AStrykerMutantGenerationLimit" : {
+                                asConfig.setIntArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_LIMIT, AStrykerMutantGenerationLimit.get());
+                                break;
+                            }
                         }
                     }
                     AStrykerConfigReader.getInstance().saveConfig();
@@ -1557,7 +1543,6 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerPartialRepairFullCGraphValidation);
                 addToMenu(optmenu, AStrykerPartialRepairIndependentTestsForAll);
                 addToMenu(optmenu, AStrykerRepairTimeout);
-                addToMenu(optmenu, AStrykerRepairDepth);
                 addToMenu(optmenu, AStrykerUseTestsOnly);
                 AStrykerVariabilization.addChangeListener(astrykerChangeListener);
                 AStrykerVariabilizationTestGeneration.addChangeListener(astrykerChangeListener);
@@ -1566,13 +1551,21 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerPartialRepairFullCGraphValidation.addChangeListener(astrykerChangeListener);
                 AStrykerPartialRepairIndependentTestsForAll.addChangeListener(astrykerChangeListener);
                 AStrykerRepairTimeout.addChangeListener(astrykerChangeListener);
-                AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
+
                 AStrykerUseTestsOnly.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationMaxTestsPerCommand.addChangeListener(astrykerChangeListener);
-            } else {
+            } else if (!text.get().getText().trim().isEmpty()) {
                 addToMenu(optmenu, AStrykerTestGenerationTestsPerStep);
             }
-            AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
+            if (!text.get().getText().trim().isEmpty()) {
+                addToMenu(optmenu, AStrykerRepairDepth);
+                addToMenu(optmenu, AStrykerMutantGenerationLimit);
+                addToMenu(optmenu, AStrykerMutantGenerationCheck);
+                AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
+                AStrykerMutantGenerationCheck.addChangeListener(astrykerChangeListener);
+                AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
+                AStrykerMutantGenerationLimit.addChangeListener(astrykerChangeListener);
+            }
         } finally {
             wrap = false;
         }

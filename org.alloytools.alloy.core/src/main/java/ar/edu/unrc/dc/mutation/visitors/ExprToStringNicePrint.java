@@ -12,21 +12,15 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
     private final StringBuilder sb;
     private int indent;
     private final Candidate candidate;
-    private final boolean nicePrint;
 
     public ExprToStringNicePrint(Candidate candidate) {
-        this(candidate, false);
+        this(candidate, 0);
     }
 
-    public ExprToStringNicePrint(Candidate candidate, boolean nicePrint) {
-        this(candidate, nicePrint, 0);
-    }
-
-    public ExprToStringNicePrint(Candidate candidate, boolean nicePrint, int startingIndentation) {
+    public ExprToStringNicePrint(Candidate candidate, int startingIndentation) {
         sb = new StringBuilder();
         indent = 0;
         this.candidate = candidate;
-        this.nicePrint = nicePrint;
         this.indent = startingIndentation;
     }
 
@@ -251,7 +245,7 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
 
     @Override
     public Void visit(ExprUnary x) throws Err {
-        if (nicePrint && unaryOpToString(x.op) == null) {
+        if (unaryOpToString(x.op) == null) {
             visitThis(x.sub);
         } else {
             sb.append(unaryOpToString(x.op));

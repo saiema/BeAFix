@@ -81,6 +81,27 @@ public class AStrykerConfigReader {
             public String getKey() {
                 return "astryker.testgeneration.outputtofiles";
             }
+        },
+
+        MUTANTS_GENERATION_OUTPUT_FOLDER {
+            @Override
+            public String getKey() {
+                return "astryker.mutantgeneration.outputfolder";
+            }
+        },
+
+        MUTANTS_GENERATION_CHECK {
+            @Override
+            public String getKey() {
+                return "astryker.mutantgeneration.check";
+            }
+        },
+
+        MUTANTS_GENERATION_LIMIT {
+            @Override
+            public String getKey() {
+                return "astryker.mutantgeneration.limit";
+            }
         }
 
         ;
@@ -215,6 +236,7 @@ public class AStrykerConfigReader {
             case PARTIAL_REPAIR_FULLCGRAPH_VALIDATION:
             case PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL:
             case TEST_GENERATION_OUTPUT_TO_FILES:
+            case MUTANTS_GENERATION_CHECK:
             case PARTIAL_REPAIR: return true;
             default : return false;
         }
@@ -225,6 +247,7 @@ public class AStrykerConfigReader {
             case TIMEOUT    :
             case TEST_GENERATION_MAX_TESTS_PER_COMMAND:
             case TEST_GENERATION_TESTS_PER_STEP:
+            case MUTANTS_GENERATION_LIMIT:
             case MAX_DEPTH  :  return true;
             default : return false;
         }
@@ -232,6 +255,7 @@ public class AStrykerConfigReader {
 
     private boolean isStringKey(Config_key key) {
         switch (key) {
+            case MUTANTS_GENERATION_OUTPUT_FOLDER:
             case TEST_GENERATION_OUTPUT_FOLDER: return true;
             default : return false;
         }

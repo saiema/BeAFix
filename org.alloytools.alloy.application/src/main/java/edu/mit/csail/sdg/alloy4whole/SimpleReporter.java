@@ -19,6 +19,8 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.mutantLab.*;
+import ar.edu.unrc.dc.mutation.mutantLab.mutantGeneration.ExpressionsMarker;
+import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGenerationResult;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestsGenerator;
 import ar.edu.unrc.dc.mutation.util.*;
 import ar.edu.unrc.dc.mutation.visitors.ExprToString;
@@ -803,7 +805,7 @@ final class SimpleReporter extends A4Reporter {
             }
         }
 
-        public enum ASTRYKER_MODE {REPAIR, TESTGENERATION, CHECK}
+        public enum ASTRYKER_MODE {REPAIR, TESTGENERATION, CHECK, MUTANTGENERATION}
 
         private static final long serialVersionUID = 0;
         public A4Options          options;
@@ -868,6 +870,10 @@ final class SimpleReporter extends A4Reporter {
                         runCheck(out);
                         break;
                     }
+                    case MUTANTGENERATION: {
+                        runMutantGeneration(out);
+                        break;
+                    }
                 }
             } catch (Exception e) {
                 logger.info("Exception in run:\n" + Arrays.toString(e.getStackTrace()).replace( ',', '\n' ));
@@ -876,6 +882,139 @@ final class SimpleReporter extends A4Reporter {
                 logger.info("FATAL Exception in run:\n" + Arrays.toString(e.getStackTrace()).replace( ',', '\n' ));
                 throw e;
             }
+        }
+
+        private void runMutantGeneration(WorkerCallback out) throws Exception {
+            cb(out, "RepairTittle", "Mutants generation...\n\n");
+            logger.info("Starting mutants generation on model: " + options.originalFilename);
+            setupMutationConfiguration(out, true);
+            final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
+            final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
+            ASTMutator.startInstance(world);
+            //==========================================
+            fixParentRelationship(world);
+            NodeAliasingFixer nodeAliasingFixer = new NodeAliasingFixer();
+            nodeAliasingFixer.fixSigNodes(world);
+            if (world.markedEprsToMutate.isEmpty()) {
+                ExpressionsMarker.markAllExpressions(world);
+            }
+            DependencyScanner.scanDependencies(world);
+            // Generate and build the mutation manager
+            cb(out, "RepairSubTittle", world.markedEprsToMutate.size()+  " mutations mark detected Executing \n");
+            ContextExpressionExtractor.reInitialize(world);
+            Variabilization.initializeInstance(null, options);
+            Ops[] availableOps = Ops.values();
+            logger.info("***Mutation operators***\n" +
+                    Arrays.stream(availableOps).filter(Ops::isImplemented).map(Enum::toString).collect(Collectors.joining(",")));
+            RepairTimeOut.initialize(repairTimeout());
+            MutantLab.initialize(world, maxDepthForRepair(), availableOps);
+            MutantLab mutantLab = MutantLab.getInstance();
+            RepairReport.getInstance().setCommands(DependencyGraph.getInstance().getAllCommands().size());
+            RepairReport.getInstance().setVariabilizationRelatedCommands((int) DependencyGraph.getInstance().getAllCommands().stream().filter(Command::isVariabilizationTest).count());
+            RepairReport.getInstance().setMarkedExpressions(MutantLab.getInstance().getMarkedExpressions());
+            //disable variabilization and test generation
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, Boolean.FALSE);
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, Boolean.FALSE);
+            //create mutants folder
+            File outFolder = new File((String) MutationConfiguration.getInstance().getConfigValue(ConfigKey.MUTANT_GENERATION_OUTPUT_FOLDER).orElse(ConfigKey.MUTANT_GENERATION_OUTPUT_FOLDER.defaultValue()));
+            if (outFolder.toString().isEmpty()) {
+                Path modelFolder = Paths.get(options.originalFilename).getParent();
+                if (modelFolder != null)
+                    outFolder = modelFolder.toFile();
+                else
+                    outFolder = Paths.get(System.getProperty("user.dir")).toFile();
+            }
+            if (!outFolder.exists()) {
+                logger.info("Mutants output folder doesn't exists ( " + outFolder.toString() + ") .. creating");
+                if (!outFolder.isDirectory())
+                    throw new IllegalStateException("Mutants output folder is not a folder ( " + outFolder.toString() + ")");
+                if (!outFolder.canExecute() || !outFolder.canWrite())
+                    throw new IllegalStateException("Insufficient access to output folder ( " + outFolder.toString() + ")");
+                if (!outFolder.mkdirs()) {
+                    throw new IllegalStateException("Couldn't create mutants output folder ( " + outFolder.toString() + ")");
+                }
+            }
+            //======================== mutants test cycle ===========
+            int count = 1;
+            int mutationsLimit = (int) MutationConfiguration.getInstance().getConfigValueOrDefault(ConfigKey.MUTANT_GENERATION_LIMIT);
+            int initialCommands = world.getAllCommands().size();
+            cb(out, "RepairSubTittle", "Generating... ");
+            RepairReport.getInstance().setAsMutantGenerationRun();
+            RepairReport.getInstance().clockStart();
+            RepairTimeOut.getInstance().start();
+            FileUtils.setLogger(logger);
+            Candidate current;
+            while ((current = mutantLab.advance()) != null) {
+                cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + initialCommands + " commands...\n");
+                count++;
+                //report current mutation
+                if (current.isFirst() || current.mutations() == 0) {
+                    logger.info("Skipping original");
+                } else {
+                    if (current == Candidate.TIMEOUT) {
+                        logger.info("Timeout reached");
+                        cb(out, "RepairSubTittle", "Timeout reached");
+                        break;
+                    }
+                    RepairReport.getInstance().incExaminedCandidates();
+                    for (Triplet<String, String, String> em : current.getCurrentMutationsInfo()) {
+                        cb(out, "RepairExprOrig->Mut", em.a, em.b, em.c + "  \n");
+                    }
+                    logger.info("Validating mutant " + count);
+                    logger.info(current.toString());
+                    // check all commands
+
+                    boolean isValid = true;
+                    if ((Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(ConfigKey.MUTANT_GENERATION_CHECK)) {
+                        Browsable.freezeParents();
+                        current.clearMutatedStatus();
+                        try {
+                            EvaluationResults results = evaluateCandidateNormalEvaluation(current, rep);
+                            isValid = results != null && !results.isDiscarded();
+                        } catch (Throwable e) {
+                            isValid = false;
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String exceptionAsString = sw.toString();
+                            String errorType = (e instanceof Exception) ? "Evaluation Error" : "Fatal Error";
+                            cb(out, "RepairError", errorType + "\n" + exceptionAsString);
+                            logger.info(errorType + "\n" + exceptionAsString);
+                        }
+                        Browsable.unfreezeParents();
+                    }
+                    current.clearMutatedStatus();
+                    if (isValid) {
+                        String mutantPostFix = "_mutant_" + count;
+                        Path modelFileAsPath = Paths.get(options.originalFilename);
+                        String mutantModelFile = modelFileAsPath.getFileName().toString().replace(".als", mutantPostFix + ".als");
+                        File mutantFile = Paths.get(outFolder.getPath(), mutantModelFile).toFile();
+                        File mutant = FileUtils.writeCandidateToFile(current, mutantFile.toString(), false, true);
+                        if (mutant != null) {
+                            logger.info("Mutant written to " + mutant.toString());
+                            cb(out, "RepairSubTittle", "Mutant written to file : " + mutant.toString());
+                        } else {
+                            logger.info("Failed to write mutants\n" + current.toString());
+                            cb(out, "RepairError", "Failed to write mutants\n" + current.toString());
+                        }
+                    } else {
+                        current.markAsInvalid();
+                        cb(out, "RepairError", "Invalid mutant\n" + current.toString());
+                        logger.info("Invalid mutant\n" + current.toString());
+                    }
+                }
+                if (mutationsLimit > 0 && current.mutations() < mutationsLimit)
+                    MutantLab.getInstance().sendCandidateToInput(current);
+            }
+            RepairReport.getInstance().clockEnd();
+            cb(out, "RepairSubTittle", "***REPORT***\n" + RepairReport.getInstance().toString() + "\n*********\n");
+            logger.info(RepairReport.getInstance().toString());
+            ASTMutator.destroyInstance();
+            DependencyGraph.destroyInstance();
+            Variabilization.destroyInstance();
+            MutantLab.destroyInstance();
+            RepairReport.destroyInstance();
+            (new File(tempdir)).delete(); // In case it was UNSAT, or
+            // canceled...
         }
 
         private void runCheck(WorkerCallback out) throws Exception {
@@ -896,14 +1035,14 @@ final class SimpleReporter extends A4Reporter {
             Candidate original = Candidate.original(world);
             EvaluationResults result = evaluateCandidateNormalEvaluation(original, rep);
             if (result.isRepaired()) {
-                writeCheckReportToFile(options.originalFilename, "VALID");
+                FileUtils.writeCheckReportToFile(options.originalFilename, "VALID");
             } else if (result.isDiscarded()) {
                 StringWriter sw = new StringWriter();
                 result.getException().printStackTrace(new PrintWriter(sw));
                 String exceptionAsString = sw.toString();
-                writeCheckReportToFile(options.originalFilename, "EXCEPTION\n"+exceptionAsString);
+                FileUtils.writeCheckReportToFile(options.originalFilename, "EXCEPTION\n"+exceptionAsString);
             } else {
-                writeCheckReportToFile(options.originalFilename, "INVALID");
+                FileUtils.writeCheckReportToFile(options.originalFilename, "INVALID");
             }
             //--------------------------
             ASTMutator.destroyInstance();
@@ -911,31 +1050,11 @@ final class SimpleReporter extends A4Reporter {
             Variabilization.destroyInstance();
         }
 
-        private void writeCheckReportToFile(String originalFileName, String result) {
-            try {
-                File repairFile = new File(originalFileName.replace(".als", ".verification"));
-                if (repairFile.exists()) {
-                    if (!repairFile.delete()) {
-                        logger.info("Failed to write verification file : " + repairFile.toString());
-                        return;
-                    }
-                }
-                FileWriter myWriter = new FileWriter(repairFile);;
-                myWriter.write(result);
-                myWriter.close();
-            } catch (Exception e) {
-                StringWriter sw = new StringWriter();
-                e.printStackTrace(new PrintWriter(sw));
-                String exceptionAsString = sw.toString();
-                logger.info("Error occurred while writing verification file\n" + exceptionAsString);
-            }
-        }
-
         private void runTestGeneration(WorkerEngine.WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Test generation started...\n\n");
             logger.info("Starting test generation for model: " + options.originalFilename);
             setupMutationConfiguration(out, false);
-            File[] outputFiles = writeTestsToFile()?setUpTestGenerationFiles():null;
+            File[] outputFiles = writeTestsToFile()?FileUtils.setUpTestGenerationFiles(options.originalFilename):null;
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
             ASTMutator.startInstance(world);
@@ -977,117 +1096,14 @@ final class SimpleReporter extends A4Reporter {
                 logger.info(sb.toString());
             }
             if (writeTestsToFile() && outputFiles != null)
-                writeTests(outputFiles[0], world);
+                FileUtils.writeTests(outputFiles[0], world);
             if (writeTestsToFile() && outputFiles != null)
-                writeReport(outputFiles[1], world);
+                FileUtils.writeReport(outputFiles[1], lastTestGenerationRes);
             ASTMutator.destroyInstance();
             MutantLab.destroyInstance();
             Variabilization.destroyInstance();
         }
 
-        private void writeTests(File testsFile, CompModule world) {
-            FileWriter myWriter;
-            try {
-                myWriter = new FileWriter(testsFile);
-            } catch (IOException e) {
-                throw new Error("Error occurred while creating FileWriter for tests", e);
-            }
-            for (Command c : world.getAllCommands()) {
-                if (c.isGenerated()) {
-                    String command = c.toString();
-                    Optional<Func> testFunc = DependencyScanner.getFuncByName(((ExprHasName)c.nameExpr).label, world.getAllFunc());
-                    if (!testFunc.isPresent())
-                        throw new Error("Something went wrong, test command " + command + " has no associated predicate");
-                    ExprToString toString = new ExprToString(null, true);
-                    toString.visitPredicate(testFunc.get());
-                    String predicate = toString.getStringRepresentation();
-                    try {
-                        myWriter.write(predicate);
-                        myWriter.write("\n\n");
-                        myWriter.write(command);
-                        myWriter.write("\n\n");
-                    } catch (IOException e) {
-                        throw new Error("An error occurred while trying to write generated test", e);
-                    }
-                }
-            }
-            try {
-                myWriter.close();
-            } catch (IOException e) {
-                throw new Error("An error occurred while closing tests file", e);
-            }
-        }
-
-        private void writeReport(File reportFile, CompModule world) {
-            FileWriter myWriter;
-            try {
-                myWriter = new FileWriter(reportFile);
-            } catch (IOException e) {
-                throw new Error("Error occurred while creating FileWriter for report", e);
-            }
-            switch (lastTestGenerationRes) {
-                case UNDEFINED:
-                case NO_TESTS_TO_RUN:
-                case NO_CHECK_TESTS_TO_RUN:
-                case NO_FAILING_TEST: {
-                    try {
-                        myWriter.write(lastTestGenerationRes.toString());
-                        myWriter.write("\n");
-                    } catch (IOException e) {
-                        throw new Error("An error occurred while trying to write report", e);
-                    }
-                    break;
-                }
-                case GENERATED: {
-                    StringBuilder sb = new StringBuilder("Generated tests per command\n");
-                    for (Entry<String, Integer> propertyTestAmount : TestsGenerator.getInstance().getTestAmountPerProperty().entrySet()) {
-                        sb.append(propertyTestAmount.getKey()).append(" : ").append(propertyTestAmount.getValue()).append("\n");
-                    }
-                    try {
-                        myWriter.write(sb.toString());
-                    } catch (IOException e) {
-                        throw new Error("An error occurred while trying to write report", e);
-                    }
-                    break;
-                }
-            }
-            try {
-                myWriter.close();
-            } catch (IOException e) {
-                throw new Error("An error occurred while closing report file", e);
-            }
-        }
-
-
-        private File[] setUpTestGenerationFiles() {
-            String outputFolderPath = (String) MutationConfiguration.getInstance().getConfigValue(ConfigKey.TEST_GENERATION_OUTPUT_FOLDER).orElse("");
-            File outFolder = new File(outputFolderPath);
-            if (!outFolder.exists())
-                throw new IllegalStateException("tests output folder doesn't exists ( " + outputFolderPath + ")");
-            if (!outFolder.isDirectory())
-                throw new IllegalStateException("tests output folder is not a folder ( " + outputFolderPath + ")");
-            if (!outFolder.canExecute() || !outFolder.canWrite())
-                throw new IllegalStateException("Insufficient access to output folder ( " + outputFolderPath + ")");
-            Path modelFileAsPath = Paths.get(options.originalFilename);
-            String modelName = modelFileAsPath.getFileName().toString().replace(".als", "");
-            File testsFile = Paths.get(outputFolderPath, modelName + ".tests").toFile();
-            File reportFile = Paths.get(outputFolderPath, modelName + ".report").toFile();
-            if (testsFile.exists())
-                throw new IllegalStateException("Tests file already exists ( " + testsFile.toString() + " )");
-            try {
-                testsFile.createNewFile();
-            } catch (IOException e) {
-                throw new Error("Couldn't create tests file ( " + testsFile.toString() + " )", e);
-            }
-            if (reportFile.exists())
-                throw new IllegalStateException("Report file already exists ( " + reportFile.toString() + " )");
-            try {
-                reportFile.createNewFile();
-            } catch (IOException e) {
-                throw new Error("Couldn't create report file ( " + reportFile.toString() + " )", e);
-            }
-            return new File[] {testsFile, reportFile};
-        }
 
 
         public void runRepair(WorkerCallback out) throws Exception {
@@ -1144,7 +1160,7 @@ final class SimpleReporter extends A4Reporter {
             RepairReport.getInstance().setVariabilizationRelatedCommands((int) DependencyGraph.getInstance().getAllCommands().stream().filter(Command::isVariabilizationTest).count());
             RepairReport.getInstance().setMarkedExpressions(MutantLab.getInstance().getMarkedExpressions());
             //======================== mutants test cycle ===========
-            int count =0;
+            int count = 0;
             boolean repairFound = false;
             Candidate repair = null;
             int initialCommands = world.getAllCommands().size();
@@ -1157,17 +1173,9 @@ final class SimpleReporter extends A4Reporter {
             boolean timeoutReached = false;
             Candidate current;
             while ((current = mutantLab.advance()) != null) {
-                cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + initialCommands + " commands...\n");
                 count++;
+                cb(out, "RepairSubTittle", "Validating mutant " + count + " for " + initialCommands + " commands...\n");
                 //report current mutation
-                if (current == Candidate.SEARCH_SPACE_EXHAUSTED) {
-                    logger.info("Got SEARCH_SPACE_EXHAUSTED candidate but no other termination condition has been met");
-                    break;
-                }
-                if (current == Candidate.CANT_REPAIR) {
-                    logger.info("Variabilization deemed this specification as non repairable... stopping search");
-                    break;
-                }
                 if (current == Candidate.TIMEOUT) {
                     logger.info("Time out reached");
                     timeoutReached = true;
@@ -1261,7 +1269,7 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "RepairSubTittle", "***REPORT***\n" + RepairReport.getInstance().toString() + "\n*********\n");
             cb(out, "RepairSubTittle", "Repair time: " + RepairReport.getInstance().getTime() + "ms\n");
             if (repairFound) {
-                File repairFile = writeRepairToFile(repair, options.originalFilename);
+                File repairFile = FileUtils.writeCandidateToFile(repair, options.originalFilename, true, true);
                 if (repairFile != null) {
                     logger.info("Repair written to " + repairFile.toString());
                     cb(out, "RepairSubTittle", "Repair written to file : " + repairFile.toString());
@@ -1277,30 +1285,6 @@ final class SimpleReporter extends A4Reporter {
             // canceled...
         }
 
-        private File writeRepairToFile(Candidate repair, String originalFileName) {
-            try {
-                File repairFile = new File(originalFileName.replace(".als", "_repair.als"));
-                if (repairFile.exists()) {
-                    if (!repairFile.delete()) {
-                        logger.info("Failed to write repair file : " + repairFile.toString());
-                        return null;
-                    }
-                }
-                CandidateWriter candidateWriter = new CandidateWriter(repair);
-                FileWriter myWriter = new FileWriter(repairFile);;
-                myWriter.write(candidateWriter.candidateStringRepresentation());
-                myWriter.close();
-                return repairFile;
-            } catch (Exception e) {
-                StringWriter sw = new StringWriter();
-                e.printStackTrace(new PrintWriter(sw));
-                String exceptionAsString = sw.toString();
-                logger.info("Error occurred while writing repair file\n" + exceptionAsString);
-                return null;
-            }
-        }
-
-        private enum TestGenerationResult {UNDEFINED, NO_TESTS_TO_RUN, NO_CHECK_TESTS_TO_RUN, NO_FAILING_TEST, GENERATED};
         TestGenerationResult lastTestGenerationRes = TestGenerationResult.UNDEFINED;
         private void generateVariabilizationTests(CompModule world, SimpleReporter rep, boolean onlyTestGeneration) {
             //check if there are at least one variabilization test

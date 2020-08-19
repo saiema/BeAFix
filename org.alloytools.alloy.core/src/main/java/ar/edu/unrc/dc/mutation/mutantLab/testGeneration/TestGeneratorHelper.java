@@ -109,7 +109,7 @@ class TestGeneratorHelper {
 
      static Optional<Sig> nameToSig(Relation relation, CompModule context) {
         String targetName = relation.name().replace(" remainder", "");
-        for (Sig sig : context.getAllSigs()) {
+        for (Sig sig : getAllSigs(context)) {
              if (targetName.compareTo(sig.label) == 0)
                  return Optional.of(sig);
          }
@@ -117,7 +117,7 @@ class TestGeneratorHelper {
      }
 
      static Optional<Sig.Field> nameToField(Relation relation, CompModule context) {
-         for (Sig sig : context.getAllSigs()) {
+         for (Sig sig : getAllSigs(context)) {
              for (Sig.Field field : sig.getFields()) {
                  String fieldName = sig.label + "." + field.label;
                  if (relation.name().compareTo(fieldName) == 0)
@@ -284,6 +284,10 @@ class TestGeneratorHelper {
             }
         }
         return extendingSigs;
+    }
+
+    private static List<Sig> getAllSigs(CompModule root) {
+        return root.getAllReachableSigs();
     }
 
 }

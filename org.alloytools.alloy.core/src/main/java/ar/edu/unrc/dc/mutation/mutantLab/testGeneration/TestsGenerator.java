@@ -10,6 +10,7 @@ import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.translator.A4Solution;
+import edu.mit.csail.sdg.translator.A4TupleSet;
 import kodkod.ast.Relation;
 import kodkod.engine.Evaluator;
 import kodkod.instance.Tuple;
@@ -309,7 +310,7 @@ public class TestsGenerator {
 
     private Map<Field, List<Expr>> getFieldsValues(A4Solution solution, CompModule context, Map<Sig, List<ExprVar>> signatureValues) {
         Map<Field, List<Expr>> fieldValues = new HashMap<>();
-        Map<Relation, TupleSet> counterExampleFields = getCounterExampleFields(solution);
+        Map<Relation, TupleSet> counterExampleFields = getCounterExampleFields(solution, context);
         for (Map.Entry<Relation, TupleSet> ceField : counterExampleFields.entrySet()) {
             Optional<Field> oField = nameToField(ceField.getKey(), context);
             if (!oField.isPresent())
@@ -356,8 +357,18 @@ public class TestsGenerator {
         return variables;
     }
 
-    private Map<Relation, TupleSet> getCounterExampleFields(A4Solution solution) {
-        return getCounterExampleRelations(solution, false);
+    private Map<Relation, TupleSet> getCounterExampleFields(A4Solution solution, CompModule context) {
+        Map<Relation, TupleSet> fieldValues = new HashMap<>();
+        for (Sig s : context.getAllReachableSigs()) {
+            for (Field f : s.getFields()) {
+                A4TupleSet values = solution.eval(f);
+                Relation rel = Relation.nary(s.label + "." + f.label, f.type().arity());
+                TupleSet tupleSet = values.debugGetKodkodTupleset();
+                fieldValues.put(rel, tupleSet);
+            }
+        }
+        return fieldValues;
+        //return getCounterExampleRelations(solution, false);
     }
 
     private Map<Relation, TupleSet> getCounterExampleSignatures(A4Solution solution) {

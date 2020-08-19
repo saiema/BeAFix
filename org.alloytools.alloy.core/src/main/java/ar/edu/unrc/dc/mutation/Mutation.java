@@ -6,6 +6,7 @@ import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprHasName;
 import edu.mit.csail.sdg.ast.ExprQt;
+import edu.mit.csail.sdg.parser.CompModule;
 
 import java.util.Iterator;
 import java.util.Optional;
@@ -72,6 +73,12 @@ public class Mutation {
     }
 
     public Expr getMayorAffectedExpression() {
+        return TypeChecking.getMayorExpression(original);
+    }
+
+    public Expr getMayorAffectedExpression(CompModule context) {
+        if (context != null)
+            return TypeChecking.getMayorExpression(original, context);
         return TypeChecking.getMayorExpression(original);
     }
 

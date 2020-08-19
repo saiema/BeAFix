@@ -1,9 +1,11 @@
 package ar.edu.unrc.dc.mutation.util;
 
 import ar.edu.unrc.dc.mutation.visitors.VarBoundReplacementVerifier;
+import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.ast.Type.ProductType;
+import edu.mit.csail.sdg.parser.CompModule;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -383,6 +385,31 @@ public final class TypeChecking {
         }
         if (!(current instanceof Expr)) throw new IllegalStateException("current should be an Expr");
         return (Expr) current;
+    }
+
+    public static Expr getMayorExpression(Expr of, CompModule context) {
+        Browsable current = of;
+        while((current instanceof Expr) && isMinor(current) && !isAssertionFactOrFunctionBody(current, context)) {
+            current = current.getBrowsableParent();
+        }
+        if (!(current instanceof Expr)) throw new IllegalStateException("current should be an Expr");
+        return (Expr) current;
+    }
+
+    public static boolean isAssertionFactOrFunctionBody(Browsable x, CompModule context) {
+        for (Pair<String, Expr> fact : context.getAllFacts()) {
+            if (x.getID() == fact.b.getID())
+                return true;
+        }
+        for (Pair<String, Expr> assertion : context.getAllAssertions()) {
+            if (x.getID() == assertion.b.getID())
+                return true;
+        }
+        for (Func f : context.getAllFunc()) {
+            if (x.getID() == f.getBody().getID())
+                return true;
+        }
+        return false;
     }
 
     public static boolean emptyOrNone(Type joinedType) {

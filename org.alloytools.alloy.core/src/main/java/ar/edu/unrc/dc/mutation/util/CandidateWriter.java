@@ -26,12 +26,17 @@ public class CandidateWriter {
         }
         sb = new StringBuilder();
         CompModule root = candidate.getContext();
+        for (CompModule.Open open : root.getOpens()) {
+            sb.append(open.explain()).append("\n");
+        }
+        if (!root.getOpens().isEmpty())
+            sb.append("\n\n");
         for (Sig s : root.getAllSigs()) {
             writeSig(s);
             sb.append("\n");
         }
         for (Pair<String, Expr> fact : root.getAllFacts()) {
-            ExprToStringNicePrint exprToString = new ExprToStringNicePrint(candidate, true);
+            ExprToStringNicePrint exprToString = new ExprToStringNicePrint(candidate);
             exprToString.visitFact(fact.b, fact.a);
             sb.append(exprToString.getStringRepresentation());
             sb.append("\n");
@@ -39,7 +44,7 @@ public class CandidateWriter {
         for (Func f : root.getAllFunc()) {
             if (f.isGenerated())
                 continue;
-            ExprToStringNicePrint exprToString = new ExprToStringNicePrint(candidate, true);
+            ExprToStringNicePrint exprToString = new ExprToStringNicePrint(candidate);
             if (f.isPred)
                 exprToString.visitPredicate(f);
             else
@@ -48,7 +53,7 @@ public class CandidateWriter {
             sb.append("\n");
         }
         for (Pair<String, Expr> assertions : root.getAllAssertions()) {
-            ExprToStringNicePrint exprToString = new ExprToStringNicePrint(candidate, true);
+            ExprToStringNicePrint exprToString = new ExprToStringNicePrint(candidate);
             exprToString.visitAssertion(assertions.b, assertions.a);
             sb.append(exprToString.getStringRepresentation());
             sb.append("\n");
@@ -110,7 +115,7 @@ public class CandidateWriter {
         if (facts.hasNext()) {
             sb.append(" {\n");
             while(facts.hasNext()) {
-                ExprToStringNicePrint exprToString = new ExprToStringNicePrint(candidate, true, indent);
+                ExprToStringNicePrint exprToString = new ExprToStringNicePrint(candidate, indent);
                 exprToString.visitThis(facts.next());
                 sb.append(exprToString.getStringRepresentation());
                 sb.append("\n");

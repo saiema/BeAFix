@@ -117,7 +117,7 @@ public class MutantLab {
         if (initialMarkedExpressions == null)
             throw new IllegalArgumentException("marked expressions list can't be null");
         for (Expr me : initialMarkedExpressions) {
-            Expr mayorExpr = TypeChecking.getMayorExpression(me);
+            Expr mayorExpr = TypeChecking.getMayorExpression(me, context);
             for (Pair<String, Expr> namedFact : context.getAllFacts()) {
                 if (Browsable.equals(mayorExpr, namedFact.b))
                     return true;
@@ -136,7 +136,7 @@ public class MutantLab {
         int currentIdx = 0;
         start:
         for (Expr me : initialMarkedExpressions) {
-            Expr mayorExpr = TypeChecking.getMayorExpression(me);
+            Expr mayorExpr = TypeChecking.getMayorExpression(me, context);
             currentIdx++;
             for (Pair<String, Expr> namedAssertions : context.getAllAssertions()) {
                 if (Browsable.equals(namedAssertions.b, mayorExpr)) {
@@ -218,11 +218,11 @@ public class MutantLab {
         }
         if (current.get() == Candidate.SEARCH_SPACE_EXHAUSTED) {
             logger.info("Search space exhausted");
-            return current.get();
+            return null;
         }
         if (current.get() == Candidate.CANT_REPAIR) {
             logger.info("Received can't repair candidate, passing it through to SimpleReporter");
-            return current.get();
+            return null;
         }
         if (current.get() == Candidate.GENERATION_FAILED) {
             logger.info("Candidate generation failed, something went wrong on the generation process, stopping search");

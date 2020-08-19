@@ -406,6 +406,48 @@ public class MutationConfiguration {
                 return Boolean.FALSE;
             }
 
+        },
+
+        MUTANT_GENERATION_OUTPUT_FOLDER {
+
+            @Override
+            public Class<?> getValueType() {
+                return String.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return "";
+            }
+
+        },
+
+        MUTANT_GENERATION_CHECK {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.TRUE;
+            }
+
+        },
+
+        MUTANT_GENERATION_LIMIT {
+
+            @Override
+            public Class<?> getValueType() {
+                return Integer.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return 0;
+            }
+
         }
 
         ;
@@ -473,6 +515,15 @@ public class MutationConfiguration {
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES)) {
                 setConfig(ConfigKey.TEST_GENERATION_OUTPUT_TO_FILES, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES));
             }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_OUTPUT_FOLDER)) {
+                setConfig(ConfigKey.MUTANT_GENERATION_OUTPUT_FOLDER, aconfig.getStringArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_OUTPUT_FOLDER));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_CHECK)) {
+                setConfig(ConfigKey.MUTANT_GENERATION_CHECK, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_CHECK));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_LIMIT)) {
+                setConfig(ConfigKey.MUTANT_GENERATION_LIMIT, aconfig.getIntArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_LIMIT));
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -500,6 +551,11 @@ public class MutationConfiguration {
             return Optional.of(this.config.get(configKey.toString()));
         }
         return Optional.empty();
+    }
+
+    public Object getConfigValueOrDefault(ConfigKey configKey) {
+        Optional<Object> resOp = getConfigValue(configKey);
+        return resOp.orElseGet(configKey::defaultValue);
     }
 
     @Override

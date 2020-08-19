@@ -119,7 +119,7 @@ public final class ContextExpressionExtractor {
         if (!validateInstance())
             throw new IllegalStateException("The method initialize must be run once before running any other method");
         Set<Expr> localVariablesFound = new TreeSet<>(Comparator.comparing(Expr::toString));
-        Expr mayorExpr = TypeChecking.getMayorExpression(x);
+        Expr mayorExpr = TypeChecking.getMayorExpression(x, context);
         Browsable current = x;
         Browsable parent = current.getBrowsableParent();
         SearchExpr searcher = new SearchExpr((Expr) current);

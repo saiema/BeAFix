@@ -675,11 +675,13 @@ public class A4Preferences {
     public static final BooleanPref AStrykerPartialRepair = new BooleanPref("AStrykerPartialRepair", "AStryker | Use Partial Repair");
     public static final BooleanPref AStrykerPartialRepairFullCGraphValidation = new BooleanPref("AStrykerPartialRepairFullCGraphValidation", "AStryker | Full Call Graph Validation (Partial Repair)");
     public static final BooleanPref AStrykerPartialRepairIndependentTestsForAll = new BooleanPref("AStrykerPartialRepairIndependentTestsForAll", "AStryker | Require independent tests for all (Partial Repair)");
-    public static final IntChoicePref AStrykerRepairTimeout = new IntChoicePref("AStrykerRepairTimeout",Arrays.asList(0, 5, 10, 30, 60, 120, 180, 240, 360, 480, 720, 1440, 2880), 0);
-    public static final IntChoicePref AStrykerRepairDepth = new IntChoicePref("AStrykerRepairDepth", Arrays.asList(1, 2, 3, 4, 5), 2);
+    public static final IntChoicePref AStrykerRepairTimeout = new IntChoicePref("AStrykerRepairTimeout", "AStryker | timeout (minutes)", Arrays.asList(0, 5, 10, 30, 60, 120, 180, 240, 360, 480, 720, 1440, 2880), 0);
+    public static final IntChoicePref AStrykerRepairDepth = new IntChoicePref("AStrykerRepairDepth", "AStryker | max mutations per expression", Arrays.asList(1, 2, 3, 4, 5), 2);
     public static final BooleanPref AStrykerUseTestsOnly = new BooleanPref("AStrykerUseTestsOnly", "AStryker | Use Perfect oracle tests to validate repair");
     public static final IntChoicePref AStrykerTestGenerationMaxTestsPerCommand = IntChoicePref.range("AStrykerTestGenerationMaxTestsPerCommand", "AStryker (Test Generation) | Max Tests Per Command", 2, 2, 30, 4);
     public static final IntChoicePref AStrykerTestGenerationTestsPerStep = IntChoicePref.range("AStrykerTestGenerationTestsPerStep", "AStryker (Test Generation) | Tests Per Generation", 1, 1, 30, 1);
+    public static final BooleanPref AStrykerMutantGenerationCheck = new BooleanPref("AStrykerMutantGenerationCheck", "AStryker (Mutants Generation) | check mutants with existing commands (Mutant Generation)");
+    public static final IntChoicePref AStrykerMutantGenerationLimit = IntChoicePref.range("AStrykerMutantGenerationLimit", "AStryker (Mutants Generation) | mutations per candidate", 0, 1, 10, 0);
     //==================================================================
 
     public enum Verbosity {

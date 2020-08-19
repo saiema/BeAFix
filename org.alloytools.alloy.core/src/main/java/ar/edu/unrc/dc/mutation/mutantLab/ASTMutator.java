@@ -4,6 +4,7 @@ import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Cheats;
 import ar.edu.unrc.dc.mutation.Mutation;
 import ar.edu.unrc.dc.mutation.Ops;
+import ar.edu.unrc.dc.mutation.util.TypeChecking;
 import ar.edu.unrc.dc.mutation.visitors.SearchAndReplace;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.*;
@@ -77,7 +78,7 @@ public class ASTMutator {
     private boolean applyMutation(Mutation m, boolean undo) {
         Expr original = undo ? m.mutant() : m.original();
         Expr mutant = undo ? m.original() : m.mutant();
-        Expr mayorExpr = undo ? original : m.getMayorAffectedExpression();
+        Expr mayorExpr = undo ? original : m.getMayorAffectedExpression(ast);//m.getMayorAffectedExpression();
         SearchAndReplace replacer = new SearchAndReplace(original, mutant);
         Optional<Expr> mutatedExpr = replacer.visitThis(mayorExpr);
         if (mutatedExpr.isPresent()) {
@@ -99,7 +100,7 @@ public class ASTMutator {
         if (replacement.isPresent()) {
             Expr newExpression = replacement.get();
             Browsable initialExpressionParent = original.getBrowsableParent();
-            if (initialExpressionParent == null) {
+            if (initialExpressionParent == null || TypeChecking.isAssertionFactOrFunctionBody(original, ast)) {
                 //first we should check if original is a fact
                 for (Pair<String, Expr> fact : ast.getAllFacts()) {
                     if (fact.b.getID() == original.getID()) {
@@ -111,6 +112,13 @@ public class ASTMutator {
                 for (Func func : ast.getAllFunc()) {
                     if (func.getBody().getID() == original.getID()) {
                         Cheats.changeFuncBody(func, newExpression);
+                        return replacement;
+                    }
+                }
+                //finally we should check if original is in an assertion
+                for (Pair<String, Expr> assertion : ast.getAllAssertions()) {
+                    if (assertion.b.getID() == original.getID()) {
+                        Cheats.changeAssertion(assertion.a, newExpression, ast);
                         return replacement;
                     }
                 }

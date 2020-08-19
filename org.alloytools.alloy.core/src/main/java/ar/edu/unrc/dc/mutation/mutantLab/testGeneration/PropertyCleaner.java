@@ -100,7 +100,7 @@ public class PropertyCleaner extends VisitReturn<Expr> {
 
     @Override
     public Expr visit(ExprQt x) throws Err {
-        throw new IllegalStateException("There shouldn't be any quantified expression");
+        return x;
     }
 
     @Override
