@@ -15,30 +15,19 @@
 
 package edu.mit.csail.sdg.translator;
 
-import static edu.mit.csail.sdg.ast.Sig.NONE;
-import static edu.mit.csail.sdg.ast.Sig.SEQIDX;
-import static edu.mit.csail.sdg.ast.Sig.SIGINT;
-import static edu.mit.csail.sdg.ast.Sig.STRING;
-import static edu.mit.csail.sdg.ast.Sig.UNIV;
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.CommandScope;
+import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.Sig.*;
+import edu.mit.csail.sdg.parser.CompUtil;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorAPI;
-import edu.mit.csail.sdg.alloy4.ErrorSyntax;
-import edu.mit.csail.sdg.alloy4.Pair;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.SafeList;
-import edu.mit.csail.sdg.alloy4.UniqueNameGenerator;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.CommandScope;
-import edu.mit.csail.sdg.ast.Sig;
-import edu.mit.csail.sdg.ast.Sig.PrimSig;
+import static edu.mit.csail.sdg.ast.Sig.*;
 
 /**
  * Immutable; this class computes the scopes for each sig and computes the
@@ -348,7 +337,7 @@ final class ScopeComputer {
     private ScopeComputer(A4Reporter rep, Iterable<Sig> sigs, Command cmd) throws Err {
         this.rep = rep;
         this.cmd = cmd;
-        boolean shouldUseInts = true; // TODO CompUtil.areIntsUsed(sigs, cmd);
+        boolean shouldUseInts = CompUtil.areIntsUsed(sigs, cmd);
         // Process each sig listed in the command
         for (CommandScope entry : cmd.scope) {
             Sig s = entry.sig;
