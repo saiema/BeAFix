@@ -74,7 +74,11 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
                 if (varNamesIterator.hasNext())
                     sb.append(", ");
             }
-            sb.append(" : ").append(currentDecl.expr.toString());
+            String type = currentDecl.expr.type().toString();
+            if (currentDecl.expr.type().arity() == 1) {
+                type = type.replaceAll("\\{","").replaceAll("}", "");
+            }
+            sb.append(" : ").append(type);
             if (declIterator.hasNext())
                 sb.append(", ");
         }
