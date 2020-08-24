@@ -43,7 +43,11 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
                 if (varNamesIterator.hasNext())
                     sb.append(", ");
             }
-            sb.append(" : ").append(currentDecl.expr.toString());
+            String type = currentDecl.expr.type().toString();
+            if (currentDecl.expr.type().arity() == 1) {
+                type = type.replaceAll("\\{","").replaceAll("}", "");
+            }
+            sb.append(" : ").append(type);
             if (declIterator.hasNext())
                 sb.append(", ");
         }
@@ -250,7 +254,10 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
         } else {
             sb.append(unaryOpToString(x.op));
             sb.append(" ");
-            visitWithParenthesis(x.sub);
+            if (x.op.equals(ExprUnary.Op.CARDINALITY))
+                visitWithParenthesis(x.sub, '{', '}');
+            else
+                visitWithParenthesis(x.sub);
         }
         return null;
     }
@@ -293,14 +300,18 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
     }
 
     private void visitWithParenthesis(Expr x) {
+        visitWithParenthesis(x, '(', ')');
+    }
+
+    private void visitWithParenthesis(Expr x, char open, char close) {
         if (x instanceof ExprCall || x instanceof ExprConstant || x instanceof ExprVar || x instanceof Sig || x instanceof Sig.Field) {
             checkBlockAndVisit(x);
         } else if (x instanceof ExprUnary && unaryOpToString(((ExprUnary) x).op) == null) {
             checkBlockAndVisit(x);
         } else {
-            sb.append("(");
+            sb.append(open);
             checkBlockAndVisit(x);
-            sb.append(")");
+            sb.append(close);
         }
     }
 
