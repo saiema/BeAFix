@@ -10,6 +10,7 @@ import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class RepairReport {
 
@@ -44,6 +45,10 @@ public class RepairReport {
     private int variabilizationRelatedCommands;
 
     private long time = 0; //used to calculate the whole repair process time
+    private long timeSpentInVariabilization = 0;
+    private long timeSpentInGeneration = 0;
+    private long timeSpentInValidation = 0;
+    private long timeSpentInTestGeneration = 0;
 
     private Map<Integer, int[]> mutationsPerIndex; //(index, generations, mutants)
     private int[] averageMutationsPerIndex;
@@ -216,12 +221,56 @@ public class RepairReport {
     }
 
     public void clockStart() {
-        this.time=System.currentTimeMillis();
+        this.time=System.nanoTime();
     }
 
     public void clockEnd() {
         repairEnded = true;
-        this.time=System.currentTimeMillis()-this.time;
+        this.time=System.nanoTime()-this.time;
+    }
+
+    private long variabilizationStartTime;
+    public void variabilizationClockStart() {
+        variabilizationStartTime = System.nanoTime();
+    }
+
+    public void variabilizationClockEnd() {
+        long timeSpent = System.nanoTime() - variabilizationStartTime;
+        timeSpentInVariabilization += timeSpent;
+        variabilizationStartTime = 0;
+    }
+
+    private long generationStartTime;
+    public void generationClockStart() {
+        generationStartTime = System.nanoTime();
+    }
+
+    public void generationClockEnd() {
+        long timeSpent = System.nanoTime() - generationStartTime;
+        timeSpentInGeneration += timeSpent;
+        generationStartTime = 0;
+    }
+
+    private long validationStartTime;
+    public void validationClockStart() {
+        validationStartTime = System.nanoTime();
+    }
+
+    public void validationClockEnd() {
+        long timeSpent = System.nanoTime() - validationStartTime;
+        timeSpentInValidation += timeSpent;
+        validationStartTime = 0;
+    }
+
+    private long testGenerationStartTime;
+    public void testGenerationClockStart() {
+        testGenerationStartTime = System.nanoTime();
+    }
+
+    public void testGenerationClockEnd() {
+        long timeSpent = System.nanoTime() - testGenerationStartTime;
+        timeSpentInTestGeneration += timeSpent;
+        testGenerationStartTime = 0;
     }
 
     public long getTime() {
@@ -260,8 +309,17 @@ public class RepairReport {
         return repairRepresentation;
     }
 
+    private void timesToMs() {
+        time = TimeUnit.NANOSECONDS.toMillis(time);
+        timeSpentInVariabilization = TimeUnit.NANOSECONDS.toMillis(timeSpentInVariabilization);
+        timeSpentInValidation = TimeUnit.NANOSECONDS.toMillis(timeSpentInValidation);
+        timeSpentInGeneration = TimeUnit.NANOSECONDS.toMillis(timeSpentInGeneration);
+        timeSpentInTestGeneration = TimeUnit.NANOSECONDS.toMillis(timeSpentInTestGeneration);
+    }
+
     @Override
     public String toString() {
+        timesToMs();
         calculateAvgMutations();
         calculateVariabilizationEstimatedPruning();
         boolean variabilizationEnabledAndSupported = CandidateGenerator.useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
@@ -313,8 +371,22 @@ public class RepairReport {
         sb.append("Checks passed:").append("\t").append(variabilizationChecksPassed).append("\n");
         sb.append("Checks failed:").append("\t").append(variabilizationChecksFailed).append("\n");
         sb.append("Estimated candidates pruned:").append("\t").append(variabilizationEstimatedPrunedCandidates).append("\n");
+        sb.append("---Times---").append("\n");
+        sb.append("Time spent in variabilization:").append("\t").append(timeSpentInVariabilization).append("ms");
+        sb.append(" (").append(percentage(timeSpentInVariabilization, time)).append("%)").append("\n");
+        sb.append("Time spent in generation:").append("\t").append(timeSpentInGeneration).append("ms");
+        sb.append(" (").append(percentage(timeSpentInGeneration, time)).append("%)").append("\n");
+        sb.append("Time spent in validation:").append("\t").append(timeSpentInValidation).append("ms");
+        sb.append(" (").append(percentage(timeSpentInValidation, time)).append("%)").append("\n");
+        sb.append("Time spent in test generation:").append("\t").append(timeSpentInTestGeneration).append("ms");
+        sb.append(" (").append(percentage(timeSpentInTestGeneration, time)).append("%)").append("\n");
         sb.append("\n");
-        sb.append("Total time (ms): ").append(time);
+        sb.append("Total time :").append("\t").append(time).append("ms");
         return sb.toString();
     }
+
+    private double percentage(long value, long of) {
+        return ((value * 100.0) / of);
+    }
+
 }

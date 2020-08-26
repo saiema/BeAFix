@@ -112,6 +112,12 @@ public class CandidateGenerator  {
     }
 
     private void generateMutationsFor(Candidate from) {
+        RepairReport.getInstance().generationClockStart();
+        generateMutationsFor_impl(from);
+        RepairReport.getInstance().generationClockEnd();
+    }
+
+    private void generateMutationsFor_impl(Candidate from) {
         if (from.mutationsForCurrentIndex() >= MutantLab.getInstance().getMaxDepth())
             return;
         CompModule context = from.getContext();
@@ -192,7 +198,18 @@ public class CandidateGenerator  {
             logger.info("variabilization check is disabled, returning true");
             return true;
         }
-        return Variabilization.getInstance().variabilizationCheck(candidate, MutantLab.getInstance().getCommandsToRunFor(candidate, true), logger);
+        boolean variabilization = true;
+//        if (usePartialRepairPruning()) {
+//            RepairReport.getInstance().variabilizationClockStart();
+//            variabilization = Variabilization.getInstance().independentCommandsVariabilizationCheck(candidate, logger);
+//            RepairReport.getInstance().variabilizationClockEnd();
+//        }
+        //if (variabilization) {
+            RepairReport.getInstance().variabilizationClockStart();
+            variabilization = Variabilization.getInstance().variabilizationCheck(candidate, MutantLab.getInstance().getCommandsToRunFor(candidate, true), logger);
+            RepairReport.getInstance().variabilizationClockEnd();
+        //}
+        return variabilization;
     }
 
     public static boolean useVariabilization() {

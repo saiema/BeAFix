@@ -3,6 +3,7 @@ package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Cheats;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pair;
@@ -103,6 +104,19 @@ public class TestsGenerator {
     }
 
     private Command generateNewTest(A4Solution solution, CompModule context, Command command) {
+        Command cmd;
+        RepairReport.getInstance().testGenerationClockStart();
+        try {
+            cmd = generateNewTest_impl(solution, context, command);
+        } catch (Exception e) {
+            RepairReport.getInstance().testGenerationClockEnd();
+            throw e;
+        }
+        RepairReport.getInstance().testGenerationClockEnd();
+        return cmd;
+    }
+
+    private Command generateNewTest_impl(A4Solution solution, CompModule context, Command command) {
         clearVarsCache();
         Map<Sig, List<ExprVar>> signatureValues = getSignaturesAtoms(solution, context);
         mergeExtendingSignaturesValues(signatureValues);

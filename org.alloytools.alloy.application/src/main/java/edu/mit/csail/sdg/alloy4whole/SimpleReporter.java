@@ -1469,7 +1469,16 @@ final class SimpleReporter extends A4Reporter {
         private A4Solution evaluateCandidateWithCommand(Candidate candidate, Command cmd, A4Reporter rep) throws Err {
             if (skipVerification())
                 return null;
-            return TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, candidate.getContext().getAllReachableSigs(), cmd, options, candidate);
+            A4Solution sol;
+            RepairReport.getInstance().validationClockStart();
+            try {
+                sol = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(rep, candidate.getContext().getAllReachableSigs(), cmd, options, candidate);
+            } catch (Exception e) {
+                RepairReport.getInstance().validationClockEnd();
+                throw e;
+            }
+            RepairReport.getInstance().validationClockEnd();
+            return sol;
         }
 
         private void fixParentRelationship(CompModule module) {
