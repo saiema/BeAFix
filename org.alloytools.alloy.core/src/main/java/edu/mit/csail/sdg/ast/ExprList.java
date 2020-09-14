@@ -338,6 +338,7 @@ public final class ExprList extends Expr {
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
         mutant.setVariabilizationVariables(directVariabilizationVariables());
+        mutant.copyCommentsFrom(this);
         return mutant;
     }
 
@@ -353,6 +354,7 @@ public final class ExprList extends Expr {
         mutant.mutGenLimit(directMutGenLimit());
         mutant.skipBlockMutation = skipBlockMutation;
         mutant.setVariabilizationVariables(directVariabilizationVariables());
+        mutant.copyCommentsFrom(this);
         return mutant;
     }
 
@@ -368,6 +370,7 @@ public final class ExprList extends Expr {
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
         clone.setVariabilizationVariables(directVariabilizationVariables());
+        clone.copyCommentsFrom(this);
         return clone;
     }
 }

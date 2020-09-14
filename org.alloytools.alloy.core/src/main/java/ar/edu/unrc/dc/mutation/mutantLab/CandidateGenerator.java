@@ -1,8 +1,6 @@
 package ar.edu.unrc.dc.mutation.mutantLab;
 
 import ar.edu.unrc.dc.mutation.Mutation;
-import ar.edu.unrc.dc.mutation.MutationConfiguration;
-import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.util.CandidateChannel;
 import ar.edu.unrc.dc.mutation.util.IrrelevantMutationChecker;
@@ -84,9 +82,15 @@ public class CandidateGenerator  {
             if (variabilizationCheck(from)) {
                 logger.info("variabilization check SUCCEEDED");
                 Candidate nextMutationSpotCandidate = from.copy();
+                nextMutationSpotCandidate.copyAllMutationsRepsFrom(from);
                 nextMutationSpotCandidate.currentMarkedExpressionInc();
                 logger.info("Sending next index candidate:\n" + nextMutationSpotCandidate.toString());
-                outputChannel.add(nextMutationSpotCandidate);
+                if (!nextMutationSpotCandidate.isLast()) {
+                    if (from.isPartialRepair())
+                        outputChannel.addToPriorityChannel(nextMutationSpotCandidate);
+                    else
+                        outputChannel.add(nextMutationSpotCandidate);
+                }
                 if (!nextMutationSpotCandidate.isLast()) {
                     logger.info("Sending mutants of:\n" + nextMutationSpotCandidate.toString());
                     generateMutationsFor(nextMutationSpotCandidate);
@@ -99,6 +103,7 @@ public class CandidateGenerator  {
                     return;
                 }
             }
+            //from.clearCommandsResults();
             if (!from.isFirst()) {
                 logger.info("Sending mutants of:\n" + from.toString());
                 generateMutationsFor(from);
@@ -125,8 +130,8 @@ public class CandidateGenerator  {
             outputChannel.addToPriorityChannel(Candidate.GENERATION_FAILED);
             return;
         }
-        boolean fromPriority = from.isPartialRepair();
-        Optional<Mutation> fromLastMutation = from.getLastMutation();
+        boolean fromPriority = from.isPartialRepair() && Pruning.getInstance().partialPruning();
+//        Optional<Mutation> fromLastMutation = from.getLastMutation();
         AtomicReference<Candidate> updatedFrom = new AtomicReference<>(Candidate.original(context));
         updatedFrom.get().setCurrentMarkedExpression(from.getCurrentMarkedExpression());
         AtomicReference<Candidate> lastCandidate = new AtomicReference<>(updatedFrom.get());
@@ -135,7 +140,7 @@ public class CandidateGenerator  {
             lastCandidate.set(updatedFrom.get());
         });
         updatedFrom.get().copyMutationsFrom(from);
-        Variabilization.getInstance().blockAllButCurrent(from);
+        Pruning.getInstance().blockAllButCurrent(from);
         List<Candidate> newCandidates = new LinkedList<>();
         for (Ops o : ops) {
             if (!o.isImplemented())
@@ -143,8 +148,8 @@ public class CandidateGenerator  {
             Optional<List<Mutation>> mutationsOp = o.getOperator(context).getMutations();
             mutationsOp.ifPresent(mutations -> mutations.forEach(m -> {
                 Candidate newCandidate = Candidate.mutantFromCandidate(updatedFrom.get(), m);
-                newCandidate.copyMutationsRepsFrom(from);
-                fromLastMutation.ifPresent(newCandidate::addMutationRep);
+                newCandidate.copyAllMutationsRepsFrom(from);
+//                fromLastMutation.ifPresent(newCandidate::addMutationRep);
                 newCandidate.addMutationRep(m);
                 newCandidate.increaseMutations(newCandidate.getCurrentMarkedExpression());
                 RepairReport.getInstance().incGeneratedCandidates();
@@ -194,27 +199,22 @@ public class CandidateGenerator  {
     }
 
     private boolean variabilizationCheck(Candidate candidate) {
-        if (!useVariabilization()) {
-            logger.info("variabilization check is disabled, returning true");
+        if (!Pruning.getInstance().useVariabilization() && !Pruning.getInstance().partialPruning()) {
+            logger.info("variabilization check and partial pruning are disabled, returning true");
             return true;
         }
         boolean variabilization = true;
-//        if (usePartialRepairPruning()) {
-//            RepairReport.getInstance().variabilizationClockStart();
-//            variabilization = Variabilization.getInstance().independentCommandsVariabilizationCheck(candidate, logger);
-//            RepairReport.getInstance().variabilizationClockEnd();
-//        }
-        //if (variabilization) {
+        if (Pruning.getInstance().partialPruning()) {
             RepairReport.getInstance().variabilizationClockStart();
-            variabilization = Variabilization.getInstance().variabilizationCheck(candidate, MutantLab.getInstance().getCommandsToRunFor(candidate, true), logger);
+            variabilization = Pruning.getInstance().independentCommandsVariabilizationCheck(candidate, logger);
             RepairReport.getInstance().variabilizationClockEnd();
-        //}
+        }
+        if (variabilization && Pruning.getInstance().useVariabilization()) {
+            RepairReport.getInstance().variabilizationClockStart();
+            variabilization = Pruning.getInstance().variabilizationCheck(candidate, MutantLab.getInstance().getCommandsToRunFor(candidate, true), logger);
+            RepairReport.getInstance().variabilizationClockEnd();
+        }
         return variabilization;
-    }
-
-    public static boolean useVariabilization() {
-        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION);
-        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION.defaultValue());
     }
 
 

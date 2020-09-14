@@ -243,20 +243,25 @@ class TestGeneratorHelper {
         boolean modified = true;
         while (modified) {
             modified = false;
-            for (Sig s : signaturesValues.keySet()) {
+            List<Sig> sigs = new LinkedList<>(signaturesValues.keySet());
+            for (Sig s : sigs) {
                 List<ExprVar> sVars = signaturesValues.get(s);
                 Set<String> sVarsNames = sVars.stream().map(v -> v.label).collect(Collectors.toCollection(TreeSet::new));
-                for (Sig extendingSig : extendingSignatures(s, signaturesValues.keySet())) {
-                    List<ExprVar> extendingSigVars = signaturesValues.get(extendingSig);
+                for (Sig extendingSig : extendingSignatures(s, sigs)) {
+                    List<ExprVar> extendingSigVars = signaturesValues.getOrDefault(extendingSig, new LinkedList<>());
                     for (ExprVar eVar : extendingSigVars) {
                         if (sVarsNames.contains(eVar.label)) {
                             remove(eVar.label, sVars);
+                            modified = true;
                         }
-                        sVars.add(eVar);
-                        sVarsNames.add(eVar.label);
+//                        sVars.add(eVar);
+//                        sVarsNames.add(eVar.label);
                     }
                 }
-                signaturesValues.put(s, sVars);
+                if (sVars.isEmpty() && modified)
+                    signaturesValues.remove(s);
+                else
+                    signaturesValues.put(s, sVars);
             }
         }
     }

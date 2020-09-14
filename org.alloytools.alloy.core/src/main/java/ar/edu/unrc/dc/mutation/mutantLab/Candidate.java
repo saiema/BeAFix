@@ -446,6 +446,11 @@ public class Candidate {
         this.hasPartialResults = !commandsResults.isEmpty();
     }
 
+    public void clearCommandsResults() {
+        this.commandsResults = null;
+        this.hasPartialResults = false;
+    }
+
     public boolean hasPartialResults() {
         return hasPartialResults;
     }
@@ -492,6 +497,10 @@ public class Candidate {
         }
         fromMutReps.addAll(mutationsRepresentations);
         this.mutationsRepresentations = fromMutReps;
+    }
+
+    public void copyAllMutationsRepsFrom(Candidate from) {
+        this.mutationsRepresentations = new LinkedList<>(from.mutationsRepresentations);
     }
 
     /**

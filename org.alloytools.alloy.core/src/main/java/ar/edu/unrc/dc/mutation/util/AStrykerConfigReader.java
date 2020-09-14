@@ -30,6 +30,12 @@ public class AStrykerConfigReader {
                 return "astryker.testgeneration.testsperstep";
             }
         },
+        TEST_GENERATION_AREPAIR_INTEGRATION {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.arepairintegration";
+            }
+        },
         VARIABILIZATION_SAME_TYPE {
             @Override
             public String getKey() {
@@ -40,6 +46,12 @@ public class AStrykerConfigReader {
             @Override
             public String getKey() {
                 return "astryker.repair.partialrepair";
+            }
+        },
+        PARTIAL_REPAIR_PRUNING {
+            @Override
+            public String getKey() {
+                return "astryker.repair.partialrepair.pruning";
             }
         },
         PARTIAL_REPAIR_FULLCGRAPH_VALIDATION {
@@ -236,7 +248,9 @@ public class AStrykerConfigReader {
             case PARTIAL_REPAIR_FULLCGRAPH_VALIDATION:
             case PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL:
             case TEST_GENERATION_OUTPUT_TO_FILES:
+            case TEST_GENERATION_AREPAIR_INTEGRATION:
             case MUTANTS_GENERATION_CHECK:
+            case PARTIAL_REPAIR_PRUNING:
             case PARTIAL_REPAIR: return true;
             default : return false;
         }

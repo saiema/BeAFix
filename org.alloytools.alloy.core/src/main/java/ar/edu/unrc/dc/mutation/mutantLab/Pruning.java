@@ -1,7 +1,9 @@
 package ar.edu.unrc.dc.mutation.mutantLab;
 
 import ar.edu.unrc.dc.mutation.*;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.util.ContextExpressionExtractor;
+import ar.edu.unrc.dc.mutation.util.DependencyGraph;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import ar.edu.unrc.dc.mutation.visitors.MarkedExpressionsCollector;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
@@ -13,23 +15,22 @@ import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
-import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class Variabilization {
+public class Pruning {
 
-    private static Variabilization instance;
+    private static Pruning instance;
 
     public synchronized static void initializeInstance(A4Reporter reporter, A4Options options) {
         if (instance != null)
             throw new IllegalStateException("Variabilization already initialized");
-        instance = new Variabilization(reporter, options);
+        instance = new Pruning(reporter, options);
     }
 
-    public synchronized static Variabilization getInstance() {
+    public synchronized static Pruning getInstance() {
         if (instance == null)
             throw new IllegalStateException("Variabilization not initialized");
         return instance;
@@ -44,11 +45,56 @@ public class Variabilization {
     private final A4Reporter reporter;
     private final A4Options options;
 
-    private Variabilization(A4Reporter reporter, A4Options options) {
+    private Pruning(A4Reporter reporter, A4Options options) {
         if (options == null)
             throw new IllegalArgumentException("options can't be null");
         this.reporter = reporter;
         this.options = options;
+    }
+
+    public boolean independentCommandsVariabilizationCheck(Candidate from, Logger logger) throws Err {
+        if (from == null)
+            throw new IllegalArgumentException("from can't be null");
+        if (from.isLast())
+            throw new IllegalArgumentException("from candidate can't be a last candidate");
+        if (!MutantLab.getInstance().isPartialRepairSupported())
+            return true;
+        logger.info("independent commands variabilization check for:\n" + from.toString());
+        CompModule context = from.getContext();
+        List<Browsable> relatedFullyModifiedPFAs = MutantLab.getInstance().fullyModifiedPFAs(from);
+        StringBuilder sb = new StringBuilder();
+        for (Browsable relatedFPA : relatedFullyModifiedPFAs) {
+            if (relatedFPA instanceof Func)
+                sb.append(((Func)relatedFPA).toString());
+            else
+                sb.append(relatedFPA.toString());
+            sb.append(" ");
+        }
+        boolean checkReported = false;
+        logger.info("Fully modified FPAs (Functions, Predicates, Assertions) : " + sb.toString());
+        for (Browsable fullyModifiedFPA : relatedFullyModifiedPFAs) {
+            List<Command> independentCommands = DependencyGraph.getInstance().getDirectIndependentCommandsFor(fullyModifiedFPA);
+            if (!independentCommands.isEmpty()) {
+                if (!checkReported) {
+                    RepairReport.getInstance().incVariabilizationChecks();
+                    checkReported = true;
+                }
+                logger.info("Checking independent commands for " + fullyModifiedFPA.toString() + "[" + independentCommands.stream().map(Command::toString).collect(Collectors.joining(",")) + "]");
+                boolean solverResult = independentCommands.stream().allMatch(c -> from.getCommandsResults().containsKey(c) && from.getCommandsResults().get(c));//runSolver(context, independentCommands, from, logger);
+                //boolean solverResult = runSolver(context, independentCommands, from, logger);
+                if (!solverResult) {
+                    logger.info("independent commands variabilization check failed");
+                    RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression());
+                    return false;
+                }
+            } else {
+                logger.info(fullyModifiedFPA.toString() + " has no independent commands");
+            }
+        }
+        if (checkReported)
+            RepairReport.getInstance().incVariabilizationChecksPassed();
+        logger.info("independent commands variabilization check succeeded");
+        return true;
     }
 
     public boolean variabilizationCheck(Candidate from, List<Command> commands, Logger logger) throws Err {
@@ -498,6 +544,23 @@ public class Variabilization {
     private static boolean useSameTypesForVariabilization() {
         Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES);
         return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION_USE_SAME_TYPES.defaultValue());
+    }
+
+    public boolean partialRepair() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR);
+        boolean repairConfigValue = configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR.defaultValue());
+        return repairConfigValue && MutantLab.getInstance().isPartialRepairSupported();
+    }
+
+    public boolean partialPruning() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR_PRUNING);
+        boolean pruningConfigValue = configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR_PRUNING.defaultValue());
+        return pruningConfigValue && MutantLab.getInstance().isPartialRepairSupported();
+    }
+
+    public boolean useVariabilization() {
+        Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_VARIABILIZATION);
+        return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_VARIABILIZATION.defaultValue());
     }
 
 }

@@ -120,14 +120,26 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
 
     @Override
     public Void visitThis(Expr x) throws Err {
+        Expr xToVisit = x;
         if (candidate != null) {
             Optional<Expr> mutatedExpr = candidate.getMutatedExpr(x);
             if (mutatedExpr.isPresent()) {
                 candidate.markAsAlreadyMutated(x);
-                return visitThis(mutatedExpr.get());
+                xToVisit = mutatedExpr.get();
             }
         }
-        return super.visitThis(x);
+        if (x.hasCommentsPreviousLine()) {
+            sb.append("--").append(x.getCommentPreviousLine()).append("\n");
+            addIndent();
+        }
+        if (x.hasCommentsBefore()) {
+            sb.append("/*").append(x.getCommentBefore()).append("*/ ");
+        }
+        super.visitThis(xToVisit);
+        if (x.hasCommentsAfter()) {
+            sb.append(" /*").append(x.getCommentAfter()).append("*/");
+        }
+        return null;
     }
 
     @Override
@@ -153,7 +165,10 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
             }
         } else {
             Iterator<Expr> it = x.args.iterator();
-            sb.append(x.op);
+            if (x.op.equals(ExprList.Op.DISJOINT))
+                sb.append("disj");
+            else
+                sb.append(x.op);
             sb.append(" [");
             while (it.hasNext()) {
                 visitWithParenthesis(it.next());
@@ -236,6 +251,8 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
         while(it.hasNext()) {
             Decl d = it.next();
             Iterator<? extends ExprHasName> varsIt = d.names.iterator();
+            if (d.disjoint != null)
+                sb.append("disj ");
             while (varsIt.hasNext()) {
                 visitThis(varsIt.next());
                 if (varsIt.hasNext())

@@ -15,23 +15,13 @@
 
 package edu.mit.csail.sdg.parser;
 
+import edu.mit.csail.sdg.alloy4.*;
+import edu.mit.csail.sdg.ast.*;
+import edu.mit.csail.sdg.parser.CompModule.Context;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
-import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.ErrorFatal;
-import edu.mit.csail.sdg.alloy4.ErrorType;
-import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.Util;
-import edu.mit.csail.sdg.ast.Browsable;
-import edu.mit.csail.sdg.ast.Expr;
-import edu.mit.csail.sdg.ast.ExprBad;
-import edu.mit.csail.sdg.ast.ExprCustom;
-import edu.mit.csail.sdg.ast.ExprVar;
-import edu.mit.csail.sdg.parser.CompModule.Context;
 
 /** Immutable; this class represents a macro. */
 
@@ -167,6 +157,7 @@ final class Macro extends ExprCustom {
         Macro clone = new Macro(this.pos, this.isPrivate, realModuleClone, this.name, paramsClone, argsClone, bodyClone);
         clone.setID(getID());
         clone.setIDEnv(getIDEnv());
+        clone.copyCommentsFrom(this);
         return clone;
     }
 

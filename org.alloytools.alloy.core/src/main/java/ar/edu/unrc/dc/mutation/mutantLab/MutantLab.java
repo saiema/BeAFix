@@ -84,7 +84,7 @@ public class MutantLab {
         this.ops.addAll(Arrays.asList(ops));
         this.maxDepth = maxDepth;
         searchStarted = false;
-        Optional<List<Expr>> initialMarkedExpressions = Variabilization.getInstance().getMarkedExpressions(context);
+        Optional<List<Expr>> initialMarkedExpressions = Pruning.getInstance().getMarkedExpressions(context);
         markedExpressions = initialMarkedExpressions.map(List::size).orElse(0);
         variabilizationSupported = markedExpressions > 1;
         AtomicBoolean factsAffected = new AtomicBoolean(false);
@@ -237,7 +237,7 @@ public class MutantLab {
         return current.get();
     }
 
-    public void sendCandidateToInput(Candidate current) {
+    public void sendCandidateToInput(Candidate current, boolean partialRepair) {
         if (!current.isValid()) {
             logger.info("candidate was invalid, ignoring...");
             return;
@@ -246,7 +246,7 @@ public class MutantLab {
             logger.info("candidate was last, ignoring...");
             return;
         }
-        if (current.hasPartialResults()) { //partial repair
+        if (current.hasPartialResults() && partialRepair) { //partial repair
             List<Integer> indexesToBlock = new LinkedList<>();
             Map<Command, Boolean> testsResults = current.getCommandsResults();
             for (Browsable affectedFPA : affectedFunctionsPredicatesAndAssertions) {
@@ -266,7 +266,8 @@ public class MutantLab {
             }
             if (!indexesToBlock.isEmpty()) {
                 Candidate partiallyFixedCandidate = current.copy();
-                partiallyFixedCandidate.copyMutationsRepsFrom(current);
+                partiallyFixedCandidate.copyAllMutationsRepsFrom(current);
+                partiallyFixedCandidate.setCommandsResults(current.getCommandsResults());
                 for (int indexToBlock : indexesToBlock) {
                     partiallyFixedCandidate.blockIndex(indexToBlock);
                 }
@@ -344,7 +345,7 @@ public class MutantLab {
 
     private List<Browsable> partiallyFixedPFAs(Candidate candidate) {
         if (!partialRepairSupported)
-            throw new IllegalStateException("This method shouldn't be called when partial repairs are not supprted");
+            throw new IllegalStateException("This method shouldn't be called when partial repairs are not supported");
         List<Browsable> partiallyFixedFPAs = new LinkedList<>();
         for (int i = 1; i <= markedExpressions; i++) {
             if (candidate.isIndexBlocked(i)) {
@@ -357,6 +358,19 @@ public class MutantLab {
             }
         }
         return partiallyFixedFPAs;
+    }
+
+    public List<Browsable> fullyModifiedPFAs(Candidate candidate) {
+        if (!partialRepairSupported)
+            throw new IllegalStateException("This method shouldn't be called when partial repairs are not supported");
+        List<Browsable> fullyModifiedPFAs = new LinkedList<>();
+        for (Map.Entry<Browsable, Pair<Integer, Integer>> indexesPFA : indexesPerFPAs.entrySet()) {
+            Pair<Integer, Integer> indexes = indexesPFA.getValue();
+            if (candidate.getCurrentMarkedExpression() >= indexes.b && !fullyModifiedPFAs.contains(indexesPFA.getKey())) {
+                fullyModifiedPFAs.add(indexesPFA.getKey());
+            }
+        }
+        return fullyModifiedPFAs;
     }
 
     public List<Expr> getModifiedAssertionsFunctionsAndFacts(Candidate candidate) {

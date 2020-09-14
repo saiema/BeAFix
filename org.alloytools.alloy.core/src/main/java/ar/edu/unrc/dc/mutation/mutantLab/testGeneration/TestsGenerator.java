@@ -7,6 +7,7 @@ import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pair;
+import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -25,8 +26,7 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
 
-import static ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND;
-import static ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey.TEST_GENERATION_TESTS_PER_STEP;
+import static ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey.*;
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.*;
 
 public class TestsGenerator {
@@ -68,6 +68,10 @@ public class TestsGenerator {
 
     public static int testsPerGeneration() {
         return (Integer) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_TESTS_PER_STEP).orElse(TEST_GENERATION_TESTS_PER_STEP.defaultValue());
+    }
+
+    public static boolean arepairIntegration() {
+        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION).orElse(TEST_GENERATION_AREPAIR_INTEGRATION.defaultValue());
     }
 
     public List<Command> generateTestsFor(A4Solution solution, CompModule context, Command command) throws Err {
@@ -141,11 +145,16 @@ public class TestsGenerator {
             throw new IllegalStateException("Cleaned formula is null");
         VariableExchanger variableExchanger = new VariableExchanger(variableMapping);
         Expr testFormula = variableExchanger.replaceVariables((Expr)cleanedFormula.clone());
+        testFormula.setCommentBefore("testFormula");
         if (GENERATE_DEBUG_TESTS) {
             testFormula = ExprUnary.Op.NOT.make(null, testFormula);
         } else {
-            Expr negateFacts = ExprUnary.Op.NOT.make(null, getFacts(context));
-            testFormula = ExprBinary.Op.OR.make(null, null, negateFacts, testFormula);
+            Expr facts = getFacts(context);
+            if (!(facts instanceof ExprConstant)) {
+                Expr negateFacts = ExprUnary.Op.NOT.make(null, getFacts(context));
+                testFormula = ExprBinary.Op.OR.make(null, null, negateFacts, testFormula);
+                testFormula.setCommentPreviousLine("testFormulaWithFacts");
+            }
         }
         Map<ExprVar, List<Expr>> usedVariablesValues = new HashMap<>();
         List<ExprVar> usedVariables = new LinkedList<>();
@@ -187,15 +196,30 @@ public class TestsGenerator {
 
     private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
         Expr sub = ExprBinary.Op.AND.make(null, null, initialization, testFormula);
-        List<Decl> decls = new LinkedList<>();
-        Map<String, List<ExprHasName>> variablesPerType = new TreeMap<>();
-        Map<String, Type> typeMap = new HashMap<>();
-        List<ExprVar> varsToDeclare = new LinkedList<>(skolemVariables);
+        List<ExprVar> varsToDeclare = new LinkedList<>();//new LinkedList<>(skolemVariables);
         for (Entry<Sig, List<ExprVar>> sValues : signatureValues.entrySet()) {
-            if (extendsNonBuiltIn(sValues.getKey()))
-                continue;
             varsToDeclare.addAll(sValues.getValue());
         }
+        List<Decl> signatureDecls = getVariablesDecls(varsToDeclare);
+        List<Decl> skolemDecls = getVariablesDecls(skolemVariables);
+        Expr body;
+        if (!skolemDecls.isEmpty()) {
+            body = generateDisjSome(skolemDecls, sub);
+            body = generateDisjSome(signatureDecls, body);
+        } else {
+            body = generateDisjSome(signatureDecls, sub);
+        }
+        String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
+        String name = "CE_" + from + "_" + generateRandomName(10);
+        Func testPredicate = new Func(null, name, null, null, body);
+        testPredicate.setGenerated();
+        return testPredicate;
+    }
+
+    private List<Decl> getVariablesDecls(List<ExprVar> varsToDeclare) {
+        Map<String, List<ExprHasName>> variablesPerType = new TreeMap<>();
+        Map<String, Type> typeMap = new HashMap<>();
+        List<Decl> decls = new LinkedList<>();
         for (ExprVar v : varsToDeclare) {
             Type t = v.type();
             String tString = t.toString();
@@ -216,12 +240,32 @@ public class TestsGenerator {
             Decl d = new Decl(null, null, null, variables, bound);
             decls.add(d);
         }
-        Expr body = ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
-        String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
-        String name = "CE_" + from + "_" + generateRandomName(10);
-        Func testPredicate = new Func(null, name, null, null, body);
-        testPredicate.setGenerated();
-        return testPredicate;
+        return decls;
+    }
+
+    private Expr generateDisjSome(List<Decl> decls, Expr sub) {
+        if (decls.isEmpty())
+            return sub;
+        List<Decl> newdecls = new LinkedList<>();
+        Expr guard = null;
+        for (Decl d : decls) {
+            if (d.names.size() <= 1 || arepairIntegration()) {
+                boolean disjoint = d.names.size() > 1 && arepairIntegration();
+                if (disjoint) {
+                    Decl disjDecl = new Decl(null, Pos.UNKNOWN, null, d.names, d.expr);
+                    newdecls.add(disjDecl);
+                } else {
+                    newdecls.add(d);
+                }
+                continue;
+            }
+            guard = ExprList.makeDISJOINT(d.disjoint, null, d.names).and(guard);
+            newdecls.add(new Decl(null, null, null, d.names, d.expr));
+        }
+        if (guard != null) {
+            sub = guard.and(sub);
+        }
+        return ExprQt.Op.SOME.make(null, null, ConstList.make(newdecls), sub);
     }
 
     private Expr getFacts(CompModule context) {
@@ -299,7 +343,7 @@ public class TestsGenerator {
     private final Map<String, ExprVar> varsCache = new TreeMap<>();
     private void clearVarsCache() {varsCache.clear();}
     private Map<Sig, List<ExprVar>> getSignaturesAtoms(A4Solution solution, CompModule context) {
-        Map<Relation, TupleSet> counterExampleSignatures = getCounterExampleSignatures(solution);
+        Map<Relation, TupleSet> counterExampleSignatures = getCounterExampleSignatures(solution, context);
         Map<Sig, List<ExprVar>> signatureAtoms = new HashMap<>();
         for (Map.Entry<Relation, TupleSet> ceSignature : counterExampleSignatures.entrySet()) {
             Optional<Sig> oSig = nameToSig(ceSignature.getKey(), context);
@@ -382,30 +426,31 @@ public class TestsGenerator {
             }
         }
         return fieldValues;
-        //return getCounterExampleRelations(solution, false);
     }
 
-    private Map<Relation, TupleSet> getCounterExampleSignatures(A4Solution solution) {
-        return getCounterExampleRelations(solution, true);
+    private Map<Relation, TupleSet> getCounterExampleSignatures(A4Solution solution, CompModule context) {
+        return getCounterExampleRelations(solution, context);
     }
 
-    private Map<Relation, TupleSet> getCounterExampleRelations(A4Solution solution, boolean sigs) {
-        Map<Relation, TupleSet> relations = new HashMap<>();
-        Evaluator evaluator = solution.getEvaluator();
-        if (evaluator != null) {
-            for (Map.Entry<Relation, TupleSet> relation : evaluator.instance().relationTuples().entrySet()) {
-                if (relation.getKey().name().trim().isEmpty())
-                    continue;
-                if (filterRelation(relation.getKey(), solution))
-                    continue;
-                if (isSignature(relation.getKey()) && !sigs)
-                    continue;
-                if (isField(relation.getKey()) && sigs)
-                    continue;
-                relations.put(relation.getKey(), relation.getValue());
-            }
+    private Map<Relation, TupleSet> getCounterExampleRelations(A4Solution solution, CompModule context) {
+        Map<Relation, TupleSet> sigValues = new HashMap<>();
+        for (Sig s : context.getAllReachableSigs()) {
+            if (s.label.compareTo(Sig.PrimSig.UNIV.label) == 0)
+                continue;
+            if (s.label.compareTo(Sig.PrimSig.SIGINT.label) == 0)
+                continue;
+            if (s.label.compareTo(Sig.PrimSig.SEQIDX.label) == 0)
+                continue;
+            if (s.label.compareTo(Sig.PrimSig.STRING.label) == 0)
+                continue;
+            if (s.label.compareTo(Sig.PrimSig.NONE.label) == 0)
+                continue;
+            A4TupleSet values = solution.eval(s);
+            Relation rel = Relation.nary(s.label, s.type().arity());
+            TupleSet tupleSet = values.debugGetKodkodTupleset();
+            sigValues.put(rel, tupleSet);
         }
-        return relations;
+        return sigValues;
     }
 
 }

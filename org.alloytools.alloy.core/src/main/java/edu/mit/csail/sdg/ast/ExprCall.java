@@ -455,6 +455,7 @@ public final class ExprCall extends Expr {
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
         clone.setVariabilizationVariables(directVariabilizationVariables());
+        clone.copyCommentsFrom(this);
         return clone;
     }
 
@@ -471,6 +472,7 @@ public final class ExprCall extends Expr {
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
         clone.setVariabilizationVariables(directVariabilizationVariables());
+        clone.copyCommentsFrom(this);
         return clone;
     }
 

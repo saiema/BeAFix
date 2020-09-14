@@ -3,8 +3,8 @@ package ar.edu.unrc.dc.mutation.util;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
-import ar.edu.unrc.dc.mutation.mutantLab.CandidateGenerator;
 import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
+import ar.edu.unrc.dc.mutation.mutantLab.Pruning;
 import ar.edu.unrc.dc.mutation.visitors.ExprToString;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
@@ -322,7 +322,7 @@ public class RepairReport {
         timesToMs();
         calculateAvgMutations();
         calculateVariabilizationEstimatedPruning();
-        boolean variabilizationEnabledAndSupported = CandidateGenerator.useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
+        boolean variabilizationEnabledAndSupported = Pruning.getInstance().useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
         StringBuilder sb = new StringBuilder("***AStryker report***\n");
         if (mutantGeneration) {
             sb.append("Mutants generation mode\n");

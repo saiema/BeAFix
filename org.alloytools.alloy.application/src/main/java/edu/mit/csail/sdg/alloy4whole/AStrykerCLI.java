@@ -30,14 +30,23 @@ public class AStrykerCLI {
     private static final String TESTGEN = "TESTS";
     private static final String CHECK = "CHECK";
     private static final String MUTANTGEN = "MUTANTS";
+    private static final String HELP = "--help";
     public static void main(String[] args) throws IOException {
         AlloyCore.debug = false;
         if (args.length == 0) throw new IllegalArgumentException("At least one argument (the module to repair) is required");
-        String sourcefile = args[0];
+        if (args[0].compareToIgnoreCase(HELP) == 0) {
+            if (args.length > 1)
+                printHelp(args[1].toUpperCase());
+            else
+                printHelp();
+            return;
+        }
+        String sourcefile = args[0];;
         if (args.length > 1) {
             String mode = args[1];
             if (mode.compareToIgnoreCase(REPAIR) == 0) {
                 astryker_mode = ASTRYKER_MODE.REPAIR;
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION, false);
             } else if (mode.compareToIgnoreCase(TESTGEN) == 0) {
                 astryker_mode = ASTRYKER_MODE.TESTGENERATION;
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_OUTPUT_TO_FILES, true);
@@ -140,8 +149,9 @@ public class AStrykerCLI {
                             break;
                         }
                         case PARTIALREPAIR_KEY: {
-                            Boolean partialRepair = varValue.get();
+                            boolean partialRepair = varValue.get();
                             AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR, partialRepair);
+                            AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_PRUNING, partialRepair);
                             if (partialRepair) {
                                 AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL, Boolean.FALSE);
                                 AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, Boolean.TRUE);
@@ -188,6 +198,7 @@ public class AStrykerCLI {
 
     private static final String TESTS_TO_GENERATE_KEY = "generate";
     private static final String OUTPUT_FOLDER_KEY = "out";
+    private static final String TESTS_AREPAIR_INTEGRATION_KEY = "arepair";
     private static void setConfig_tests(String key, String value) {
         switch (key.toLowerCase()) {
             case TESTS_TO_GENERATE_KEY: {
@@ -207,6 +218,11 @@ public class AStrykerCLI {
                 if (!outFolder.canExecute() || !outFolder.canWrite())
                     throw new IllegalArgumentException("Insufficient access to output folder ( " + value + ")");
                 AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_OUTPUT_FOLDER, value);
+                break;
+            }
+            case TESTS_AREPAIR_INTEGRATION_KEY: {
+                boolean arepairIntegration = getBooleanValue(TESTS_AREPAIR_INTEGRATION_KEY, value);
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION, arepairIntegration);
                 break;
             }
             default : throw new IllegalArgumentException("Invalid configuration key for test generation " + key);
@@ -287,6 +303,98 @@ public class AStrykerCLI {
         } catch (NumberFormatException e) {
             return Optional.empty();
         }
+    }
+
+    private static void printHelp() {
+        String sb = "BeAFix" + "\n" +
+                "--help                               :   To print this help." + "\n" +
+                "--help (mode)                        :   To print mode specific help" + "\n" +
+                "<path to model> REPAIR [options]     :   To repair a model." + "\n" +
+                "<path to model> TESTS [options]      :   To generate tests from counterexamples." + "\n" +
+                "<path to model> MUTANTS [options]    :   To generate mutants from a model." + "\n" +
+                "<path to model> CHECK                :   To validate a model (similar to running execute all in GUI mode)." + "\n";
+        System.out.println(sb);
+    }
+
+    private static void printHelp(String mode) {
+        switch (mode) {
+            case REPAIR: {printRepairHelp(); break;}
+            case TESTGEN: {printTestGenerationHelp(); break;}
+            case MUTANTGEN: {printMutantGenerationHelp(); break;}
+            case CHECK: {printValidationHelp(); break;}
+            default: printHelp();
+        }
+    }
+
+    private static void printRepairHelp() {
+        String sb = "Model repair mode, this will take a model with marked expressions and try to repair it." + "\n" +
+                "A marked expression has the form {#m#([vars]) expression} where vars is a comma separated list of variables" + "\n" +
+                "of which the expression depends. These are used by the variabilization pruning technique." + "\n" +
+                "\n" +
+                "Example without variables: {#m#() some x : T | P[x]}." + "\n" +
+                "Example with variables: some x : T | {#m#(x) P[x]}." + "\n" +
+                "\n" +
+                "Usage:" + "\n" +
+                "<path to model> REPAIR [options]" + "\n" +
+                "\n" +
+                "Options:" + "\n" +
+                "--maxdepth <int>            :     How many mutations are allowed per marked expressions (default is 2)." + "\n" +
+                "--timeout <int>             :     Time budget (in minutes) for the repair process (default is 0, unlimited)." + "\n" +
+                "--variabilization <boolean> :     Enables/disables variabilization pruning technique (default is false)." + "\n" +
+                "--sametypes <boolean>       :     If variabilization will use expressions exact types for constructed relation or more general ones (default and suggested is false)." + "\n" +
+                "--testgeneration <boolean>  :     When variabilization is enabled, specific commands can be set to be used only by the variabilization technique" + "\n" +
+                "                                  these commands must be prefixed by #t#. Any signature that is used only by this commands can also be marked by #t#" + "\n" +
+                "                                  which will make the mutation process ignore these. Variabilization commands must be run <pred> expect 1." + "\n" +
+                "                                  When test generation is enabled, commands and predicates will be automatically constructed from counterexamples." + "\n" +
+                "                                  Default is false, but the suggested is using true." + "\n" +
+                "--maxtestspercommand <int>  :     How many tests can be constructed from counterexamples from a particular command (default is 4)." + "\n" +
+                "--testspergeneration <int>  :     How many tests can be constructed each time a counterexample is found. This is an upper bound when there are several counterexamples." + "\n" +
+                "--partialrepair <boolean>   :     Enables/disables the partial repair pruning and partial repair prioritization." + "\n" +
+                "                                  This option only works when there is more than one bugged predicate, function, or assertion" + "\n" +
+                "                                  and no fact is bugged. And requires that at least one of bugged predicate, function or assertions has" + "\n" +
+                "                                  a related command which doesn't call (directly or indirectly) another of the bugged ones." + "\n" +
+                "--validatewithpo <boolean>  :     Enables/disables repair validation against commands prefixed by #po#, these commands will not be used" + "\n" +
+                "                                  during the repair process but only used after a repair is found to validate it." + "\n";
+        System.out.println(sb);
+    }
+
+    private static void printTestGenerationHelp() {
+        String sb = "Test generation mode, this will take a model with at least one run <pred> expect 0, or check <assertion> command" + "\n" +
+                "and will generate tests from obtained counterexamples." + "\n" +
+                "\n" +
+                "Usage:" + "\n" +
+                "<path to model> TESTS [options]" + "\n" +
+                "\n" +
+                "Options:" + "\n" +
+                "--generate <int>                    :     How many tests to generate (default is 4)." + "\n" +
+                "--out <path to existing folder>     :     Where to store tests (default is the model's folder)." + "\n" +
+                "--arepair <boolean>                 :     Enables/disables arepair integration (default is false)." + "\n";
+        System.out.println(sb);
+    }
+
+    private static void printValidationHelp() {
+        String sb = "Model validation mode, this will take a model and run all declared commands." + "\n" +
+                "\n" +
+                "Usage:" + "\n" +
+                "<path to model> CHECK" + "\n";
+        System.out.println(sb);
+    }
+
+    private static void printMutantGenerationHelp() {
+        String sb = "Mutant generation mode, this will take a model an generate mutants." + "\n" +
+                "If the model have marked expressions then mutants will be generated for these, otherwise it will generate mutants" + "\n" +
+                "for every supported expression." + "\n" +
+                "\n" +
+                "Usage:" + "\n" +
+                "<path to model> MUTANTS [options]" + "\n" +
+                "\n" +
+                "Options:" + "\n" +
+                "--out <path to existing folder>     :     Where to store the mutated models (default is the model's directory)." + "\n" +
+                "--timeout <int>                     :     Time budget (in minutes) for the mutation process (default is 0, unlimited)." + "\n" +
+                "--maxdepth <int>                    :     How many mutations are allowed per marked expressions (default is 2)." + "\n" +
+                "--limit <int>                       :     How many mutations in total will can a mutant have (default is 1)" + "\n" +
+                "--check <boolean>                   :     Enables/disables mutant validation, commands are run to check that no error is thrown." + "\n";
+        System.out.println(sb);
     }
 
 }

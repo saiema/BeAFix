@@ -1477,6 +1477,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR, AStrykerPartialRepair.get());
                                 break;
                             }
+                            case "AStrykerPartialRepairPruning" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_PRUNING, AStrykerPartialRepairPruning.get());
+                                break;
+                            }
                             case "AStrykerPartialRepairFullCGraphValidation" : {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, AStrykerPartialRepairFullCGraphValidation.get());
                                 break;
@@ -1503,6 +1507,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                             }
                             case "AStrykerTestGenerationTestsPerStep" : {
                                 asConfig.setIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP, AStrykerTestGenerationTestsPerStep.get());
+                                break;
+                            }
+                            case "AStrykerTestGenerationARepairIntegration" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION, AStrykerTestGenerationARepairIntegration.get());
                                 break;
                             }
                             case "AStrykerMutantGenerationCheck" : {
@@ -1540,6 +1548,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerTestGenerationTestsPerStep);
                 addToMenu(optmenu, AStrykerVariabilizationUseSameType);
                 addToMenu(optmenu, AStrykerPartialRepair);
+                addToMenu(optmenu, AStrykerPartialRepairPruning);
                 addToMenu(optmenu, AStrykerPartialRepairFullCGraphValidation);
                 addToMenu(optmenu, AStrykerPartialRepairIndependentTestsForAll);
                 addToMenu(optmenu, AStrykerRepairTimeout);
@@ -1551,7 +1560,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerPartialRepairFullCGraphValidation.addChangeListener(astrykerChangeListener);
                 AStrykerPartialRepairIndependentTestsForAll.addChangeListener(astrykerChangeListener);
                 AStrykerRepairTimeout.addChangeListener(astrykerChangeListener);
-
+                AStrykerPartialRepairPruning.addChangeListener(astrykerChangeListener);
                 AStrykerUseTestsOnly.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationMaxTestsPerCommand.addChangeListener(astrykerChangeListener);
             } else if (!text.get().getText().trim().isEmpty()) {
@@ -1561,7 +1570,9 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerRepairDepth);
                 addToMenu(optmenu, AStrykerMutantGenerationLimit);
                 addToMenu(optmenu, AStrykerMutantGenerationCheck);
+                addToMenu(optmenu, AStrykerTestGenerationARepairIntegration);
                 AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationARepairIntegration.addChangeListener(astrykerChangeListener);
                 AStrykerMutantGenerationCheck.addChangeListener(astrykerChangeListener);
                 AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
                 AStrykerMutantGenerationLimit.addChangeListener(astrykerChangeListener);

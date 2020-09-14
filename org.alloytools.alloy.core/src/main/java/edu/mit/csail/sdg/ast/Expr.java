@@ -35,6 +35,53 @@ import static edu.mit.csail.sdg.ast.Type.EMPTY;
 
 public abstract class Expr extends Browsable {
 
+
+    private String commentPreviousLine;
+    private String commentBefore;
+    private String commentAfter;
+
+    public String getCommentPreviousLine() {
+        return commentPreviousLine;
+    }
+
+    public void setCommentPreviousLine(String commentPreviousLine) {
+        this.commentPreviousLine = commentPreviousLine;
+    }
+
+    public String getCommentBefore() {
+        return commentBefore;
+    }
+
+    public void setCommentBefore(String commentBefore) {
+        this.commentBefore = commentBefore;
+    }
+
+    public String getCommentAfter() {
+        return commentAfter;
+    }
+
+    public void setCommentAfter(String commentAfter) {
+        this.commentAfter = commentAfter;
+    }
+
+    public boolean hasCommentsPreviousLine() {
+        return commentPreviousLine != null && !commentPreviousLine.trim().isEmpty();
+    }
+
+    public boolean hasCommentsBefore() {
+        return commentBefore != null && !commentBefore.trim().isEmpty();
+    }
+
+    public boolean hasCommentsAfter() {
+        return commentAfter != null && !commentAfter.trim().isEmpty();
+    }
+
+    protected void copyCommentsFrom(Expr other) {
+        this.commentPreviousLine = other.commentPreviousLine;
+        this.commentBefore = other.commentBefore;
+        this.commentAfter = other.commentAfter;
+    }
+
     /**
      * The filename, line, and column position in the original Alloy model file
      * (cannot be null).

@@ -629,6 +629,7 @@ public abstract class Sig extends Expr implements Clause {
             clone.mutGenLimit(directMutGenLimit());
             clone.skipBlockMutation = skipBlockMutation;
             clone.setVariabilizationVariables(directVariabilizationVariables());
+            clone.copyCommentsFrom(this);
             //copyComponentsToClone(clone);
             return clone;
         }
@@ -735,6 +736,7 @@ public abstract class Sig extends Expr implements Clause {
             clone.setID(getID());
             clone.setIDEnv(getIDEnv());
             copyComponentsToClone(clone);
+            clone.copyCommentsFrom(this);
             return clone;
         }
 
@@ -901,6 +903,7 @@ public abstract class Sig extends Expr implements Clause {
             clone.setID(getID());
             clone.setIDEnv(getIDEnv());
             clone.FIELD_ID = FIELD_ID;
+            clone.copyCommentsFrom(this);
             return clone;
         }
 

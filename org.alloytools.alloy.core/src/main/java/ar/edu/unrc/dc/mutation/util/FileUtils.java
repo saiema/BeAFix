@@ -4,7 +4,7 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGenerationResult;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestsGenerator;
-import ar.edu.unrc.dc.mutation.visitors.ExprToString;
+import ar.edu.unrc.dc.mutation.visitors.ExprToStringNicePrint;
 import edu.mit.csail.sdg.alloy4.Triplet;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.ExprHasName;
@@ -67,7 +67,7 @@ public class FileUtils {
                 Optional<Func> testFunc = DependencyScanner.getFuncByName(((ExprHasName)c.nameExpr).label, world.getAllFunc());
                 if (!testFunc.isPresent())
                     throw new Error("Something went wrong, test command " + command + " has no associated predicate");
-                ExprToString toString = new ExprToString(null, true);
+                ExprToStringNicePrint toString = new ExprToStringNicePrint(null);
                 toString.visitPredicate(testFunc.get());
                 String predicate = toString.getStringRepresentation();
                 try {

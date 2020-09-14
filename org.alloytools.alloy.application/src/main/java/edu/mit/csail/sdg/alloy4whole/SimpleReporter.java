@@ -23,7 +23,7 @@ import ar.edu.unrc.dc.mutation.mutantLab.mutantGeneration.ExpressionsMarker;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGenerationResult;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestsGenerator;
 import ar.edu.unrc.dc.mutation.util.*;
-import ar.edu.unrc.dc.mutation.visitors.ExprToString;
+import ar.edu.unrc.dc.mutation.visitors.ExprToStringNicePrint;
 import ar.edu.unrc.dc.mutation.visitors.NodeAliasingFixer;
 import ar.edu.unrc.dc.mutation.visitors.ParentRelationshipFixer;
 import edu.mit.csail.sdg.alloy4.*;
@@ -836,11 +836,20 @@ final class SimpleReporter extends A4Reporter {
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR));
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_FULLCGRAPH_VALIDATION));
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_REQUIRE_TESTS_FOR_ALL, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL));
+                MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_PRUNING, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_PRUNING));
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_MAX_DEPTH, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.MAX_DEPTH));
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TESTS_ONLY, aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.USE_PO_TO_VALIDATE));
+                boolean partialRepair = aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR);
+                boolean partialPruning = aStrykerConfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_PRUNING);
+                if (partialRepair || partialPruning) {
+                    MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DETAILED_TESTS_RESULTS, Boolean.TRUE);
+                } else {
+                    MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_DETAILED_TESTS_RESULTS, Boolean.FALSE);
+                }
                 int timeoutInMinutes = aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TIMEOUT);
                 long timeout = (timeoutInMinutes * 60) * 1000;
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
+                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION, Boolean.FALSE);
             }
             MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
             MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND));
@@ -902,7 +911,7 @@ final class SimpleReporter extends A4Reporter {
             // Generate and build the mutation manager
             cb(out, "RepairSubTittle", world.markedEprsToMutate.size()+  " mutations mark detected Executing \n");
             ContextExpressionExtractor.reInitialize(world);
-            Variabilization.initializeInstance(null, options);
+            Pruning.initializeInstance(null, options);
             Ops[] availableOps = Ops.values();
             logger.info("***Mutation operators***\n" +
                     Arrays.stream(availableOps).filter(Ops::isImplemented).map(Enum::toString).collect(Collectors.joining(",")));
@@ -1003,14 +1012,14 @@ final class SimpleReporter extends A4Reporter {
                     }
                 }
                 if (mutationsLimit > 0 && current.mutations() < mutationsLimit)
-                    MutantLab.getInstance().sendCandidateToInput(current);
+                    MutantLab.getInstance().sendCandidateToInput(current, false);
             }
             RepairReport.getInstance().clockEnd();
             cb(out, "RepairSubTittle", "***REPORT***\n" + RepairReport.getInstance().toString() + "\n*********\n");
             logger.info(RepairReport.getInstance().toString());
             ASTMutator.destroyInstance();
             DependencyGraph.destroyInstance();
-            Variabilization.destroyInstance();
+            Pruning.destroyInstance();
             MutantLab.destroyInstance();
             RepairReport.destroyInstance();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
@@ -1029,7 +1038,7 @@ final class SimpleReporter extends A4Reporter {
             nodeAliasingFixer.fixSigNodes(world);
             DependencyScanner.scanDependencies(world);
             ContextExpressionExtractor.reInitialize(world);
-            Variabilization.initializeInstance(null, options);
+            Pruning.initializeInstance(null, options);
             MutantLab.initialize(world, maxDepthForRepair());
             //verify
             Candidate original = Candidate.original(world);
@@ -1047,7 +1056,7 @@ final class SimpleReporter extends A4Reporter {
             //--------------------------
             ASTMutator.destroyInstance();
             MutantLab.destroyInstance();
-            Variabilization.destroyInstance();
+            Pruning.destroyInstance();
         }
 
         private void runTestGeneration(WorkerEngine.WorkerCallback out) throws Exception {
@@ -1064,7 +1073,7 @@ final class SimpleReporter extends A4Reporter {
             nodeAliasingFixer.fixSigNodes(world);
             DependencyScanner.scanDependencies(world);
             ContextExpressionExtractor.reInitialize(world);
-            Variabilization.initializeInstance(null, options);
+            Pruning.initializeInstance(null, options);
             MutantLab.initialize(world, maxDepthForRepair());
             generateVariabilizationTests(world, rep, true);
             for (Command c : world.getAllCommands()) {
@@ -1073,7 +1082,7 @@ final class SimpleReporter extends A4Reporter {
                     Optional<Func> testFunc = DependencyScanner.getFuncByName(((ExprHasName)c.nameExpr).label, world.getAllFunc());
                     if (!testFunc.isPresent())
                         throw new Error("Something went wrong, test command " + command + " has no associated predicate");
-                    ExprToString toString = new ExprToString(null, true);
+                    ExprToStringNicePrint toString = new ExprToStringNicePrint(null);
                     toString.visitPredicate(testFunc.get());
                     String predicate = toString.getStringRepresentation();
                     cb(out, "TestGeneration", command, predicate);
@@ -1101,7 +1110,7 @@ final class SimpleReporter extends A4Reporter {
                 FileUtils.writeReport(outputFiles[1], lastTestGenerationRes);
             ASTMutator.destroyInstance();
             MutantLab.destroyInstance();
-            Variabilization.destroyInstance();
+            Pruning.destroyInstance();
         }
 
 
@@ -1122,25 +1131,25 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "RepairSubTittle", world.markedEprsToMutate.size()+  " mutations mark detected Executing \n");
 
             ContextExpressionExtractor.reInitialize(world);
-            Variabilization.initializeInstance(null, options);
+            Pruning.initializeInstance(null, options);
             Ops[] availableOps = Ops.values();
             logger.info("***Mutation operators***\n" +
                     Arrays.stream(availableOps).filter(Ops::isImplemented).map(Enum::toString).collect(Collectors.joining(",")));
             RepairTimeOut.initialize(repairTimeout());
             MutantLab.initialize(world, maxDepthForRepair(), availableOps);
             MutantLab mutantLab = MutantLab.getInstance();
-            if (partialRepairEnabled()) {
-                logger.info("Partial Repair is ENABLED " + (MutantLab.getInstance().isPartialRepairSupported()?"AND SUPPORTED":"BUT NOT SUPPORTED"));
+            if (detailedTestResults()) {
+                logger.info("Detailed tests results is ENABLED " + (MutantLab.getInstance().isPartialRepairSupported()?"AND SUPPORTED":"BUT NOT SUPPORTED"));
                 if (MutantLab.getInstance().isPartialRepairSupported()) {
                     MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD, 0);
                     logger.info("Changing " + ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD.toString() + " to 0");
                     if (!MutantLab.partialRepairAllFPANeedTests()) {
-                        StringBuilder sb = new StringBuilder("Using partial repair for some bugged predicates/functions/assertions");
+                        StringBuilder sb = new StringBuilder("Using detailed tests results for some bugged predicates/functions/assertions");
                         sb.append("\n");
                         for (Entry<Browsable, List<Command>> indCommandsPerFPA : MutantLab.getInstance().originalCommandsPerFPA.entrySet()) {
                             sb.append(indCommandsPerFPA.getKey().toString());
                             if (indCommandsPerFPA.getValue().isEmpty()) {
-                                sb.append(" : has no independent tests for partial repair");
+                                sb.append(" : has no independent tests");
                             } else {
                                 sb.append(" : ").append(indCommandsPerFPA.getValue().stream().map(Command::toString).collect(Collectors.joining(", ")));
                             }
@@ -1151,7 +1160,7 @@ final class SimpleReporter extends A4Reporter {
                     }
                 }
             }
-            if (CandidateGenerator.useVariabilization() && !MutantLab.getInstance().isVariabilizationSupported()) {
+            if (Pruning.getInstance().useVariabilization() && !MutantLab.getInstance().isVariabilizationSupported()) {
                 logger.info("Variabilization is ENABLED BUT NOT SUPPORTED (disabling variabilization and test generation)");
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION, Boolean.FALSE);
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, Boolean.FALSE);
@@ -1192,7 +1201,7 @@ final class SimpleReporter extends A4Reporter {
                 EvaluationResults results = null;
                 current.clearMutatedStatus();
                 try {
-                    if (partialRepair()) {
+                    if (Pruning.getInstance().partialRepair() || Pruning.getInstance().partialPruning()) {
                         results = evaluateCandidatePartialRepairEvaluation(current, rep);
                     } else {
                         results = evaluateCandidateNormalEvaluation(current, rep);
@@ -1207,7 +1216,7 @@ final class SimpleReporter extends A4Reporter {
                 }
                 current.clearMutatedStatus();
                 if (results != null) {
-                    if (partialRepair())
+                    if (Pruning.getInstance().partialRepair() || Pruning.getInstance().partialPruning())
                         current.setCommandsResults(results.getCommandResults());
                     if (results.isDiscarded()) {
                         cb(out, "RepairResults", Collections.singletonList("E"));
@@ -1239,7 +1248,7 @@ final class SimpleReporter extends A4Reporter {
                 Browsable.unfreezeParents();
                 if (results == null)
                     break;
-                MutantLab.getInstance().sendCandidateToInput(current);
+                MutantLab.getInstance().sendCandidateToInput(current, Pruning.getInstance().partialRepair());
             }
             if (!repairFound) {
                 cb(out, "RepairTittle", "Model couldn't be repaired\n");
@@ -1278,7 +1287,7 @@ final class SimpleReporter extends A4Reporter {
             logger.info(RepairReport.getInstance().toString());
             ASTMutator.destroyInstance();
             DependencyGraph.destroyInstance();
-            Variabilization.destroyInstance();
+            Pruning.destroyInstance();
             MutantLab.destroyInstance();
             RepairReport.destroyInstance();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
@@ -1506,15 +1515,9 @@ final class SimpleReporter extends A4Reporter {
             return configValue.map(o -> (Integer) o).orElse((Integer) ConfigKey.REPAIR_MAX_DEPTH.defaultValue());
         }
 
-        private boolean partialRepair() {
-            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR);
-            boolean repairConfigValue = configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR.defaultValue());
-            return repairConfigValue && MutantLab.getInstance().isPartialRepairSupported();
-        }
-
-        private boolean partialRepairEnabled() {
-            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_PARTIAL_REPAIR);
-            return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_PARTIAL_REPAIR.defaultValue());
+        private boolean detailedTestResults() {
+            Optional<Object> configValue = MutationConfiguration.getInstance().getConfigValue(ConfigKey.REPAIR_DETAILED_TESTS_RESULTS);
+            return configValue.map(o -> (Boolean) o).orElse((Boolean) ConfigKey.REPAIR_DETAILED_TESTS_RESULTS.defaultValue());
         }
 
         private long repairTimeout() {

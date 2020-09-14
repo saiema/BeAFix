@@ -338,6 +338,20 @@ public class MutationConfiguration {
 
         },
 
+        REPAIR_PARTIAL_REPAIR_PRUNING {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
+        },
+
         REPAIR_PARTIAL_REPAIR_FULL_CALLGRAPH_VALIDATION {
 
             @Override
@@ -362,6 +376,20 @@ public class MutationConfiguration {
             @Override
             public Object defaultValue() {
                 return Boolean.TRUE;
+            }
+
+        },
+
+        REPAIR_DETAILED_TESTS_RESULTS {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
             }
 
         },
@@ -395,6 +423,20 @@ public class MutationConfiguration {
         },
 
         TEST_GENERATION_OUTPUT_TO_FILES {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
+        },
+
+        TEST_GENERATION_AREPAIR_INTEGRATION {
 
             @Override
             public Class<?> getValueType() {
@@ -523,6 +565,12 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_LIMIT)) {
                 setConfig(ConfigKey.MUTANT_GENERATION_LIMIT, aconfig.getIntArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_LIMIT));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_PRUNING)) {
+                setConfig(ConfigKey.REPAIR_PARTIAL_REPAIR_PRUNING, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.PARTIAL_REPAIR_PRUNING));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION)) {
+                setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION));
             }
         } catch (IOException e) {
             e.printStackTrace();
