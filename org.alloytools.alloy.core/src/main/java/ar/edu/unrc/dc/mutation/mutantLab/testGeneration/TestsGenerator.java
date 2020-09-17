@@ -13,9 +13,6 @@ import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.A4TupleSet;
-import kodkod.ast.Expression;
-import kodkod.ast.Formula;
-import kodkod.ast.IntExpression;
 import kodkod.ast.Relation;
 import kodkod.engine.Evaluator;
 import kodkod.instance.Tuple;
@@ -86,6 +83,8 @@ public class TestsGenerator {
             } catch (IOException e) {
                 throw new IllegalStateException("An error occurred while loading model overrides", e);
             }
+        } else {
+            CESigAndFieldOverriding.getInstance().noOverrides();
         }
     }
 
@@ -451,18 +450,18 @@ public class TestsGenerator {
                                 null, null, func.get(), null, 0
                         );
                         Object functionResult = getCounterExampleFunctionValues(solution, func.get());
-                        if (functionResult instanceof IntExpression) {
-                            int result = solution.getEvaluator().evaluate((IntExpression) functionResult);
+                        if (functionResult instanceof Integer) {
+                            int result = (Integer) functionResult;
                             ExprConstant intValue = (ExprConstant) ExprConstant.makeNUMBER(result);
                             fieldOverride = ExprBinary.Op.EQUALS.make(null, null, call, intValue);
-                        } else if (functionResult instanceof Formula) {
-                            boolean result = solution.getEvaluator().evaluate((Formula) functionResult);
+                        } else if (functionResult instanceof Boolean) {
+                            boolean result = (Boolean) functionResult;
                             if (!result)
                                 fieldOverride = ExprUnary.Op.NO.make(null, call);
                             else
                                 fieldOverride = call;
-                        } else if (functionResult instanceof Expression) {
-                            TupleSet tset = solution.getEvaluator().evaluate((Expression) functionResult);
+                        } else if (functionResult instanceof A4TupleSet) {
+                            TupleSet tset = ((A4TupleSet) functionResult).debugGetKodkodTupleset();
                             Expr rightHandSide = null;
                             for (Tuple rawValue : tset) {
                                 Expr vValue = tupleToExpr(rawValue, signatureValues);
