@@ -15,36 +15,16 @@
 
 package edu.mit.csail.sdg.alloy4;
 
-import static javax.swing.JOptionPane.ERROR_MESSAGE;
-import static javax.swing.JOptionPane.QUESTION_MESSAGE;
-import static javax.swing.JOptionPane.WARNING_MESSAGE;
-import static javax.swing.JOptionPane.YES_NO_OPTION;
-
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.FileDialog;
-import java.awt.Frame;
-import java.awt.GraphicsEnvironment;
-import java.awt.HeadlessException;
+import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.Locale;
 
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JComponent;
-import javax.swing.JDialog;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.WindowConstants;
-import javax.swing.filechooser.FileFilter;
+import static javax.swing.JOptionPane.*;
 
 /**
  * Graphical dialog methods for asking the user some questions.
@@ -371,6 +351,47 @@ public final class OurDialog {
                                 // chooses something or cancels the dialog.
         dialog.dispose();
         return pane.getValue() == "Ok";
+    }
+
+    public static String getStringInput(String msg, String initialValue) {
+        return JOptionPane.showInputDialog(msg, initialValue).trim();
+    }
+
+    public static int getIntInput(String msg, int initialValue) {
+        String value = JOptionPane.showInputDialog(msg, Integer.toString(initialValue)).trim();
+        try {
+            return Integer.parseInt(value);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public static File askDirectory(String dir, final String title) {
+        if (dir == null)
+            dir = Util.getCurrentDirectory();
+        if (!(new File(dir).isDirectory()))
+            dir = System.getProperty("user.home");
+        dir = Util.canon(dir);
+        String ans;
+        JFileChooser open = new JFileChooser(dir) {
+
+            private static final long serialVersionUID = 0;
+
+            @Override
+            public JDialog createDialog(Component parent) throws HeadlessException {
+                JDialog dialog = super.createDialog(null);
+                dialog.setAlwaysOnTop(true);
+                return dialog;
+            }
+        };
+        open.setDialogTitle(title);
+        open.setApproveButtonText("Open");
+        open.setDialogType(JFileChooser.OPEN_DIALOG);
+        open.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        if (open.showDialog(null, null) != JFileChooser.APPROVE_OPTION || open.getSelectedFile() == null)
+            return null;
+        ans = open.getSelectedFile().getPath();
+        return new File(Util.canon(ans));
     }
 
     /** Display a simple non-modal window showing some text. */

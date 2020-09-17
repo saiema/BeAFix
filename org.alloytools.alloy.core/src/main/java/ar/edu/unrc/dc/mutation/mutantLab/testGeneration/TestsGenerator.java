@@ -13,6 +13,9 @@ import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.A4TupleSet;
+import kodkod.ast.Expression;
+import kodkod.ast.Formula;
+import kodkod.ast.IntExpression;
 import kodkod.ast.Relation;
 import kodkod.engine.Evaluator;
 import kodkod.instance.Tuple;
@@ -48,6 +51,8 @@ public class TestsGenerator {
 
     private static final String FACTS_PROPERTY = "facts";
     private final Map<String, Integer> testsPerProperty;
+    private String testName;
+    private int testIndex;
 
     private static TestsGenerator instance;
 
@@ -60,6 +65,28 @@ public class TestsGenerator {
 
     private TestsGenerator() {
         testsPerProperty = new TreeMap<>();
+        String testBaseName = testBaseName();
+        if (!testBaseName.isEmpty()) {
+            this.testName = testBaseName;
+            this.testIndex = testBaseNameStartingIndex();
+        } else {
+            this.testName = null;
+        }
+        if (useModelOverriding()) {
+            String overridingFolder = modelOverridingFolder();
+            if (!overridingFolder.trim().isEmpty()) {
+                try {
+                    CESigAndFieldOverriding.getInstance().changeOverridesFolder(overridingFolder);
+                } catch (IOException e) {
+                    throw new IllegalStateException("An error occurred related to the model overriding folder", e);
+                }
+            }
+            try {
+                CESigAndFieldOverriding.getInstance().loadProperties();
+            } catch (IOException e) {
+                throw new IllegalStateException("An error occurred while loading model overrides", e);
+            }
+        }
     }
 
     public static int testsToGeneratePerCommand() {
@@ -72,6 +99,22 @@ public class TestsGenerator {
 
     public static boolean arepairIntegration() {
         return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION).orElse(TEST_GENERATION_AREPAIR_INTEGRATION.defaultValue());
+    }
+
+    public static String testBaseName() {
+        return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NAME).orElse(TEST_GENERATION_NAME.defaultValue());
+    }
+
+    public static int testBaseNameStartingIndex() {
+        return (int) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NAME_STARTING_INDEX).orElse(TEST_GENERATION_NAME_STARTING_INDEX.defaultValue());
+    }
+
+    public static boolean useModelOverriding() {
+        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_USE_MODEL_OVERRIDING).orElse(TEST_GENERATION_USE_MODEL_OVERRIDING.defaultValue());
+    }
+
+    public static String modelOverridingFolder() {
+        return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_MODEL_OVERRIDING_FOLDER).orElse(TEST_GENERATION_MODEL_OVERRIDING_FOLDER.defaultValue());
     }
 
     public List<Command> generateTestsFor(A4Solution solution, CompModule context, Command command) throws Err {
@@ -164,7 +207,8 @@ public class TestsGenerator {
                 usedVariables.add(vValues.getKey());
             }
         }
-        Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues);
+        List<Expr> fieldOverrides = getFieldOverrides(solution, context, signatureValues);
+        Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
         Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, signatureValues, command);
         Command testCommand = generateTestCommand(testPredicate);
         logger.info("Test generated\n" +
@@ -210,10 +254,17 @@ public class TestsGenerator {
             body = generateDisjSome(signatureDecls, sub);
         }
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
-        String name = "CE_" + from + "_" + generateRandomName(10);
+        String name = getTestName(from);
         Func testPredicate = new Func(null, name, null, null, body);
         testPredicate.setGenerated();
         return testPredicate;
+    }
+
+    private String getTestName(String from) {
+        if (this.testName == null) {
+            return "CE_" + from + "_" + generateRandomName(10);
+        }
+        return this.testName + this.testIndex++;
     }
 
     private List<Decl> getVariablesDecls(List<ExprVar> varsToDeclare) {
@@ -278,13 +329,14 @@ public class TestsGenerator {
         return facts;
     }
 
-    private Expr generateInitialization(Map<Sig, List<ExprVar>> signaturesValues, Map<Field, List<Expr>> fieldsValues, Map<ExprVar, List<Expr>> variablesValues) {
+    private Expr generateInitialization(Map<Sig, List<ExprVar>> signaturesValues, Map<Field, List<Expr>> fieldsValues, Map<ExprVar, List<Expr>> variablesValues, List<Expr> fieldOverridesInitialization) {
         List<Expr> sigsInitialization = generateInitialization(signaturesValues);
         List<Expr> fieldsInitialization = generateInitialization(fieldsValues);
         List<Expr> variablesInitialization = generateInitialization(variablesValues);
         List<Expr> initExpressions = new LinkedList<>(sigsInitialization);
         initExpressions.addAll(fieldsInitialization);
         initExpressions.addAll(variablesInitialization);
+        initExpressions.addAll(fieldOverridesInitialization);
         Expr initialization = initExpressions.isEmpty()?null:ExprList.make(null, null, ExprList.Op.AND, initExpressions);
         if (initialization != null && initialization.errors != null && !initialization.errors.isEmpty())
             throw new IllegalStateException("Bad expression generated when creating test initialization (\n" +
@@ -383,6 +435,53 @@ public class TestsGenerator {
         return fieldValues;
     }
 
+    private List<Expr> getFieldOverrides(A4Solution solution, CompModule context, Map<Sig, List<ExprVar>> signatureValues) {
+        List<Expr> fieldOverrides = new LinkedList<>();
+        if (!useModelOverriding())
+            return fieldOverrides;
+        for (Field f : getAllFields(context)) {
+            CompModule declaringModule = context.getDeclaringModule(f);
+            if (declaringModule != null && CESigAndFieldOverriding.getInstance().fieldOverridePresent(f, declaringModule.getModelName())) {
+                if (CESigAndFieldOverriding.getInstance().fieldIsOverridenByFunction(f, declaringModule.getModelName())) {
+                    String function = CESigAndFieldOverriding.getInstance().getFieldOverridingFunction(f, declaringModule.getModelName());
+                    Optional<Func> func = getNoParametersFunctionFromModel(function, declaringModule.getModelName(), context);
+                    if (func.isPresent()) {
+                        Expr fieldOverride = null;
+                        ExprCall call = (ExprCall) ExprCall.make(
+                                null, null, func.get(), null, 0
+                        );
+                        Object functionResult = getCounterExampleFunctionValues(solution, func.get());
+                        if (functionResult instanceof IntExpression) {
+                            int result = solution.getEvaluator().evaluate((IntExpression) functionResult);
+                            ExprConstant intValue = (ExprConstant) ExprConstant.makeNUMBER(result);
+                            fieldOverride = ExprBinary.Op.EQUALS.make(null, null, call, intValue);
+                        } else if (functionResult instanceof Formula) {
+                            boolean result = solution.getEvaluator().evaluate((Formula) functionResult);
+                            if (!result)
+                                fieldOverride = ExprUnary.Op.NO.make(null, call);
+                            else
+                                fieldOverride = call;
+                        } else if (functionResult instanceof Expression) {
+                            TupleSet tset = solution.getEvaluator().evaluate((Expression) functionResult);
+                            Expr rightHandSide = null;
+                            for (Tuple rawValue : tset) {
+                                Expr vValue = tupleToExpr(rawValue, signatureValues);
+                                if (rightHandSide == null)
+                                    rightHandSide = vValue;
+                                else
+                                    rightHandSide = ExprBinary.Op.PLUS.make(null, null, rightHandSide, vValue);
+                            }
+                            fieldOverride = ExprBinary.Op.EQUALS.make(null, null, call, rightHandSide);
+                        }
+                        if (fieldOverride != null)
+                            fieldOverrides.add(fieldOverride);
+                    }
+                }
+            }
+        }
+        return fieldOverrides;
+    }
+
     private Map<ExprVar, List<Expr>> getVariablesValues(A4Solution solution, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
         Map<ExprVar, List<Expr>> variablesValues = new HashMap<>();
         Map<ExprVar, TupleSet> counterExampleVariables = getCounterExampleVariables(solution);
@@ -419,6 +518,10 @@ public class TestsGenerator {
         Map<Relation, TupleSet> fieldValues = new HashMap<>();
         for (Sig s : context.getAllReachableSigs()) {
             for (Field f : s.getFields()) {
+                CompModule declaringModule = context.getDeclaringModule(f);
+                if (declaringModule != null && CESigAndFieldOverriding.getInstance().fieldOverridePresent(f, declaringModule.getModelName())) {
+                    continue;
+                }
                 A4TupleSet values = solution.eval(f);
                 Relation rel = Relation.nary(s.label + "." + f.label, f.type().arity());
                 TupleSet tupleSet = values.debugGetKodkodTupleset();
@@ -426,6 +529,15 @@ public class TestsGenerator {
             }
         }
         return fieldValues;
+    }
+
+    private Object getCounterExampleFunctionValues(A4Solution solution, Func f) {
+        if (!f.decls.isEmpty())
+            return Optional.empty();
+        ExprCall call = (ExprCall) ExprCall.make(
+                null, null, f, null, 0
+        );
+        return solution.eval(call);
     }
 
     private Map<Relation, TupleSet> getCounterExampleSignatures(A4Solution solution, CompModule context) {
@@ -445,6 +557,10 @@ public class TestsGenerator {
                 continue;
             if (s.label.compareTo(Sig.PrimSig.NONE.label) == 0)
                 continue;
+            CompModule declaringModule = context.getDeclaringModule(s);
+            if (declaringModule != null && CESigAndFieldOverriding.getInstance().signatureShouldBeIgnored(s, declaringModule.getModelName())) {
+                continue;
+            }
             A4TupleSet values = solution.eval(s);
             Relation rel = Relation.nary(s.label, s.type().arity());
             TupleSet tupleSet = values.debugGetKodkodTupleset();

@@ -199,6 +199,10 @@ public class AStrykerCLI {
     private static final String TESTS_TO_GENERATE_KEY = "generate";
     private static final String OUTPUT_FOLDER_KEY = "out";
     private static final String TESTS_AREPAIR_INTEGRATION_KEY = "arepair";
+    private static final String TESTS_NAME_KEY = "tname";
+    private static final String TESTS_NAME_STARTING_INDEX_KEY = "tindex";
+    private static final String MODEL_OVERRIDING_KEY = "modeloverriding";
+    private static final String MODEL_OVERRIDING_FOLDER_KEY = "moFolder";
     private static void setConfig_tests(String key, String value) {
         switch (key.toLowerCase()) {
             case TESTS_TO_GENERATE_KEY: {
@@ -223,6 +227,35 @@ public class AStrykerCLI {
             case TESTS_AREPAIR_INTEGRATION_KEY: {
                 boolean arepairIntegration = getBooleanValue(TESTS_AREPAIR_INTEGRATION_KEY, value);
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION, arepairIntegration);
+                break;
+            }
+            case TESTS_NAME_KEY: {
+                if (value.trim().isEmpty())
+                    throw new IllegalArgumentException("test name (tname value) can't be empty");
+                AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_NAME, value.trim());
+                break;
+            }
+            case TESTS_NAME_STARTING_INDEX_KEY: {
+                int intValue = getIntegerValue(TESTS_NAME_STARTING_INDEX_KEY, value);
+                if (intValue < 0)
+                    throw new IllegalArgumentException("test name index (tindex value) must be positive (" + intValue + ")");
+                AStrykerConfigReader.getInstance().setIntArgument(TEST_GENERATION_NAME_STARTING_INDEX, intValue);
+                break;
+            }
+            case MODEL_OVERRIDING_KEY: {
+                boolean boolValue = getBooleanValue(MODEL_OVERRIDING_KEY, value);
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_USE_MODEL_OVERRIDING, boolValue);
+                break;
+            }
+            case MODEL_OVERRIDING_FOLDER_KEY: {
+                File overridesFolder = new File(value);
+                if (!overridesFolder.exists())
+                    throw new IllegalArgumentException("model overriding folder doesn't exists ( " + value + ")");
+                if (!overridesFolder.isDirectory())
+                    throw new IllegalArgumentException("model overriding folder is not a folder ( " + value + ")");
+                if (!overridesFolder.canExecute() || !overridesFolder.canRead())
+                    throw new IllegalArgumentException("Insufficient access to model overriding folder ( " + value + ")");
+                AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_MODEL_OVERRIDING_FOLDER, value);
                 break;
             }
             default : throw new IllegalArgumentException("Invalid configuration key for test generation " + key);
@@ -312,7 +345,9 @@ public class AStrykerCLI {
                 "<path to model> REPAIR [options]     :   To repair a model." + "\n" +
                 "<path to model> TESTS [options]      :   To generate tests from counterexamples." + "\n" +
                 "<path to model> MUTANTS [options]    :   To generate mutants from a model." + "\n" +
-                "<path to model> CHECK                :   To validate a model (similar to running execute all in GUI mode)." + "\n";
+                "<path to model> CHECK                :   To validate a model (similar to running execute all in GUI mode)." + "\n" +
+                "\n" +
+                "note: all options will be saved in a astryker.properties file, so using all required options each time is suggested.";
         System.out.println(sb);
     }
 
@@ -366,9 +401,21 @@ public class AStrykerCLI {
                 "<path to model> TESTS [options]" + "\n" +
                 "\n" +
                 "Options:" + "\n" +
-                "--generate <int>                    :     How many tests to generate (default is 4)." + "\n" +
-                "--out <path to existing folder>     :     Where to store tests (default is the model's folder)." + "\n" +
-                "--arepair <boolean>                 :     Enables/disables arepair integration (default is false)." + "\n";
+                "--generate <int>                     :     How many tests to generate (default is 4)." + "\n" +
+                "--out <path to existing folder>      :     Where to store tests (default is the model's folder)." + "\n" +
+                "--arepair <boolean>                  :     Enables/disables arepair integration (default is false)." + "\n" +
+                "--tname <name>                       :     Base name for generated tests, all tests will start with name and be followed by an index." + "\n" +
+                "                                           if name is empty (or a string with all blank space) the base name will be that of the command" + "\n" +
+                "                                           from which the counterexample came, in this case no index will be used." + "\n" +
+                "--tindex <int>                       :     A positive number to be used with a non empty tname that defines the starting index for generated tests" + "\n" +
+                "--modeloverriding <boolean>          :     Enables/disables model overriding (can ignore signatures and use functions instead of fields). This requires" + "\n" +
+                "                                           a folder with files <model name>.overrides with the following lines" + "\n" +
+                "                                              * signatures.<signature name>=IGNORE : to ignore a signature in the generated test." + "\n" +
+                "                                              * field.<field name>=IGNORE : to ignore a field in the generated test." + "\n" +
+                "                                              * field.<signature name>=function.<no arguments function> : to use a function instead of a field in the generated test" + "\n" +
+                "                                           An example can be found in modelOverrides/ordering.overrides." + "\n" +
+                "                                           This feature is disabled by default." + "\n" +
+                "--moFolder <path to existing folder> :     From which directory to load the .overrides files, default is modelOverrides." + "\n";
         System.out.println(sb);
     }
 

@@ -36,6 +36,30 @@ public class AStrykerConfigReader {
                 return "astryker.testgeneration.arepairintegration";
             }
         },
+        TEST_GENERATION_NAME {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.testname";
+            }
+        },
+        TEST_GENERATION_NAME_STARTING_INDEX {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.testname.startingindex";
+            }
+        },
+        TEST_GENERATION_USE_MODEL_OVERRIDING {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.modeloverriding";
+            }
+        },
+        TEST_GENERATION_MODEL_OVERRIDING_FOLDER {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.modeloverriding.overridingfolder";
+            }
+        },
         VARIABILIZATION_SAME_TYPE {
             @Override
             public String getKey() {
@@ -249,6 +273,7 @@ public class AStrykerConfigReader {
             case PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL:
             case TEST_GENERATION_OUTPUT_TO_FILES:
             case TEST_GENERATION_AREPAIR_INTEGRATION:
+            case TEST_GENERATION_USE_MODEL_OVERRIDING:
             case MUTANTS_GENERATION_CHECK:
             case PARTIAL_REPAIR_PRUNING:
             case PARTIAL_REPAIR: return true;
@@ -261,6 +286,7 @@ public class AStrykerConfigReader {
             case TIMEOUT    :
             case TEST_GENERATION_MAX_TESTS_PER_COMMAND:
             case TEST_GENERATION_TESTS_PER_STEP:
+            case TEST_GENERATION_NAME_STARTING_INDEX:
             case MUTANTS_GENERATION_LIMIT:
             case MAX_DEPTH  :  return true;
             default : return false;
@@ -270,6 +296,8 @@ public class AStrykerConfigReader {
     private boolean isStringKey(Config_key key) {
         switch (key) {
             case MUTANTS_GENERATION_OUTPUT_FOLDER:
+            case TEST_GENERATION_NAME:
+            case TEST_GENERATION_MODEL_OVERRIDING_FOLDER:
             case TEST_GENERATION_OUTPUT_FOLDER: return true;
             default : return false;
         }

@@ -1521,6 +1521,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                 asConfig.setIntArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_LIMIT, AStrykerMutantGenerationLimit.get());
                                 break;
                             }
+                            case "AStrykerTestGenerationModelOverrides" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_USE_MODEL_OVERRIDING, AStrykerTestGenerationModelOverrides.get());
+                                break;
+                            }
                         }
                     }
                     AStrykerConfigReader.getInstance().saveConfig();
@@ -1571,14 +1575,65 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerMutantGenerationLimit);
                 addToMenu(optmenu, AStrykerMutantGenerationCheck);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegration);
+                addToMenu(optmenu, AStrykerTestGenerationModelOverrides);
                 AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegration.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationModelOverrides.addChangeListener(astrykerChangeListener);
+                menuItem(optmenu, "AStryker (Test Generation) | base test name", doBaseTestName());
+                menuItem(optmenu, "AStryker (Test Generation) | base test name starting index", doBaseTestNameStartingIndex());
+                menuItem(optmenu, "AStryker (Test Generation) | model overrides folder", doOpenOverridingFolder());
                 AStrykerMutantGenerationCheck.addChangeListener(astrykerChangeListener);
                 AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
                 AStrykerMutantGenerationLimit.addChangeListener(astrykerChangeListener);
             }
         } finally {
             wrap = false;
+        }
+        return null;
+    }
+
+
+    private Runner doBaseTestName() {
+        if (wrap)
+            return wrapMe();
+        String currentValue = (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NAME).orElse(TEST_GENERATION_NAME.defaultValue());
+        String baseTestName = OurDialog.getStringInput("Input tests base name (empty for default behaviour)", currentValue);
+        AStrykerConfigReader.getInstance().setStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME, baseTestName);
+        try {
+            AStrykerConfigReader.getInstance().saveConfig();
+        } catch (IOException e) {
+            throw new IllegalStateException("This should not be happening", e);
+        }
+        return null;
+    }
+
+    private Runner doBaseTestNameStartingIndex() {
+        if (wrap)
+            return wrapMe();
+        Integer currentValue = (Integer) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NAME_STARTING_INDEX).orElse(TEST_GENERATION_NAME_STARTING_INDEX.defaultValue());
+        int index = OurDialog.getIntInput("Input tests base name starting index", currentValue);
+        if (index < 0)
+            index = 0;
+        AStrykerConfigReader.getInstance().setIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME_STARTING_INDEX, index);
+        try {
+            AStrykerConfigReader.getInstance().saveConfig();
+        } catch (IOException e) {
+            throw new IllegalStateException("This should not be happening", e);
+        }
+        return null;
+    }
+
+    private Runner doOpenOverridingFolder() {
+        if (wrap)
+            return wrapMe();
+        File directory = OurDialog.askDirectory(null, "Select model overriding folder");
+        if (directory != null) {
+            AStrykerConfigReader.getInstance().setStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER, directory.getAbsolutePath());
+            try {
+                AStrykerConfigReader.getInstance().saveConfig();
+            } catch (IOException e) {
+                throw new IllegalStateException("This should not be happening", e);
+            }
         }
         return null;
     }

@@ -3,6 +3,7 @@ package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.translator.A4Solution;
+import edu.mit.csail.sdg.ast.Sig.Field;
 import kodkod.ast.Relation;
 import kodkod.instance.Tuple;
 
@@ -293,6 +294,37 @@ class TestGeneratorHelper {
 
     private static List<Sig> getAllSigs(CompModule root) {
         return root.getAllReachableSigs();
+    }
+
+    public static List<Field> getAllFields(CompModule root) {
+        List<Field> fields = new LinkedList<>();
+        for (Sig s : getAllSigs(root)) {
+            for (Field f : s.getFields()) {
+                fields.add(f);
+            }
+        }
+        return fields;
+    }
+
+    public static Optional<Func> getNoParametersFunctionFromModel(String functionName, String model, CompModule context) {
+        for (CompModule m : context.getAllReachableModules()) {
+            //search for specific model
+            if (m.getModelName().compareTo(model) == 0) {
+                //search for specific function
+                for (Func f : m.getAllFunc()) {
+                    if (removeAlias(f.label).compareTo(functionName) == 0 && f.decls.isEmpty())
+                        return Optional.of(f);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static String removeAlias(String key) {
+        int lastSlash = key.lastIndexOf('/');
+        if (lastSlash == -1)
+            return key;
+        return key.substring(lastSlash + 1);
     }
 
 }

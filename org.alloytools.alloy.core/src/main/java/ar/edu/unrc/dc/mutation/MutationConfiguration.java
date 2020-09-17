@@ -450,6 +450,62 @@ public class MutationConfiguration {
 
         },
 
+        TEST_GENERATION_NAME {
+
+            @Override
+            public Class<?> getValueType() {
+                return String.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return "";
+            }
+
+        },
+
+        TEST_GENERATION_NAME_STARTING_INDEX {
+
+            @Override
+            public Class<?> getValueType() {
+                return Integer.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return 1;
+            }
+
+        },
+
+        TEST_GENERATION_USE_MODEL_OVERRIDING {
+
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+
+        },
+
+        TEST_GENERATION_MODEL_OVERRIDING_FOLDER {
+
+            @Override
+            public Class<?> getValueType() {
+                return String.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return "";
+            }
+
+        },
+
         MUTANT_GENERATION_OUTPUT_FOLDER {
 
             @Override
@@ -571,6 +627,18 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION)) {
                 setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME)) {
+                setConfig(ConfigKey.TEST_GENERATION_NAME, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME_STARTING_INDEX)) {
+                setConfig(ConfigKey.TEST_GENERATION_NAME_STARTING_INDEX, aconfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME_STARTING_INDEX));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_USE_MODEL_OVERRIDING)) {
+                setConfig(ConfigKey.TEST_GENERATION_USE_MODEL_OVERRIDING, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_USE_MODEL_OVERRIDING));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER)) {
+                setConfig(ConfigKey.TEST_GENERATION_MODEL_OVERRIDING_FOLDER, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER));
             }
         } catch (IOException e) {
             e.printStackTrace();

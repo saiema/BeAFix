@@ -1040,6 +1040,14 @@ public final class CompModule extends Browsable implements Module {
         return x.makeConst();
     }
 
+    public CompModule getDeclaringModule(Sig s) {
+        return this.sig2module.getOrDefault(s, null);
+    }
+
+    public CompModule getDeclaringModule(Field f) {
+        return getDeclaringModule(f.sig);
+    }
+
     /**
      * Return the list containing all sigs defined in this module or a reachable
      * submodule.

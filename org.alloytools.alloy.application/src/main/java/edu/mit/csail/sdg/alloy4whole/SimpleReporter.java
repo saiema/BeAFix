@@ -850,6 +850,7 @@ final class SimpleReporter extends A4Reporter {
                 long timeout = (timeoutInMinutes * 60) * 1000;
                 MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_TIMEOUT, timeout);
                 MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION, Boolean.FALSE);
+                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_USE_MODEL_OVERRIDING, Boolean.FALSE);
             }
             MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
             MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND));

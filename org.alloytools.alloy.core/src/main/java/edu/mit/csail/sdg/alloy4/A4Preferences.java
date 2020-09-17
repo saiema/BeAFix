@@ -682,8 +682,10 @@ public class A4Preferences {
     public static final IntChoicePref AStrykerTestGenerationMaxTestsPerCommand = IntChoicePref.range("AStrykerTestGenerationMaxTestsPerCommand", "AStryker (Test Generation) | Max Tests Per Command", 2, 2, 30, 4);
     public static final IntChoicePref AStrykerTestGenerationTestsPerStep = IntChoicePref.range("AStrykerTestGenerationTestsPerStep", "AStryker (Test Generation) | Tests Per Generation", 1, 1, 30, 1);
     public static final BooleanPref AStrykerTestGenerationARepairIntegration = new BooleanPref("AStrykerTestGenerationARepairIntegration", "AStryker (Test Generation) | ARepair integration", false);
+    public static final BooleanPref AStrykerTestGenerationModelOverrides = new BooleanPref("AStrykerTestGenerationModelOverrides", "AStryker (Test Generation) | Use model overrides", false);
     public static final BooleanPref AStrykerMutantGenerationCheck = new BooleanPref("AStrykerMutantGenerationCheck", "AStryker (Mutants Generation) | check mutants with existing commands (Mutant Generation)");
     public static final IntChoicePref AStrykerMutantGenerationLimit = IntChoicePref.range("AStrykerMutantGenerationLimit", "AStryker (Mutants Generation) | mutations per candidate", 0, 1, 10, 0);
+
     //==================================================================
 
     public enum Verbosity {
