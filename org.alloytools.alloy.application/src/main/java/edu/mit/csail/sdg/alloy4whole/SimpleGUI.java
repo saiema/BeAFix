@@ -1626,7 +1626,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
     private Runner doOpenOverridingFolder() {
         if (wrap)
             return wrapMe();
-        File directory = OurDialog.askDirectory(null, "Select model overriding folder");
+        String initDir = (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_MODEL_OVERRIDING_FOLDER).orElse(System.getProperty("user.home"));
+        File directory = OurDialog.askDirectory(initDir, "Select model overriding folder");
         if (directory != null) {
             AStrykerConfigReader.getInstance().setStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER, directory.getAbsolutePath());
             try {
