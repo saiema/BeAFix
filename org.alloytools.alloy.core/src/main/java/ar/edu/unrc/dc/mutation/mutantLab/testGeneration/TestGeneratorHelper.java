@@ -1,5 +1,6 @@
 package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 
+import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.translator.A4Solution;
@@ -10,7 +11,7 @@ import kodkod.instance.Tuple;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class TestGeneratorHelper {
+public class TestGeneratorHelper {
 
     static boolean isNumber(Object o) {
         if (o == null) {
@@ -318,6 +319,30 @@ class TestGeneratorHelper {
             }
         }
         return Optional.empty();
+    }
+
+    public static Browsable getPredicateOrAssertionCalled(Command command, CompModule context) {
+        Browsable predicateOrAssertionCalled = null;
+        if (command.nameExpr instanceof ExprVar) {
+            String callee = ((ExprVar) command.nameExpr).label;
+            for (Func pred : context.getAllFunc()) {
+                if (pred.label.replace("this/", "").compareTo(callee) == 0) {
+                    predicateOrAssertionCalled = pred;
+                    break;
+                }
+            }
+            if (predicateOrAssertionCalled == null) {
+                for (Pair<String, Expr> assertion : context.getAllAssertions()) {
+                    if (assertion.a.compareTo(callee) == 0) {
+                        predicateOrAssertionCalled = assertion.b;
+                        break;
+                    }
+                }
+            }
+        } else {
+            predicateOrAssertionCalled = command.nameExpr;
+        }
+        return predicateOrAssertionCalled == null?null: (Browsable) predicateOrAssertionCalled.clone();
     }
 
     private static String removeAlias(String key) {

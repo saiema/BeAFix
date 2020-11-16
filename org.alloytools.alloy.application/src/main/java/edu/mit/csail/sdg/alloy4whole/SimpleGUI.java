@@ -56,6 +56,8 @@ import java.awt.event.ComponentListener;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.*;
 
@@ -1020,7 +1022,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             }
             //@Test generation
             if (!text.get().getText().trim().isEmpty()) {
-                JMenuItem testGenerationMenu = new JMenuItem("Generate tests from counterexamples", null);
+                JMenuItem testGenerationMenu = new JMenuItem("Generate tests", null);
                 testGenerationMenu.addActionListener(doAStryker(AStrykerTESTGENERATION));
                 runmenu.add(new JSeparator(), runmenu.getItemCount());
                 runmenu.add(testGenerationMenu, runmenu.getItemCount());
@@ -1525,6 +1527,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_USE_MODEL_OVERRIDING, AStrykerTestGenerationModelOverrides.get());
                                 break;
                             }
+                            case "AStrykerTestGenerationInstanceBasedTests" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION, AStrykerTestGenerationInstanceBasedTests.get());
+                                break;
+                            }
                         }
                     }
                     AStrykerConfigReader.getInstance().saveConfig();
@@ -1537,6 +1543,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             mconfig.loadConfigFromAStrykerConfig();
             AStrykerTestGenerationMaxTestsPerCommand.set((Integer) mconfig.getConfigValue(TEST_GENERATION_MAX_TESTS_PER_COMMAND).orElse(TEST_GENERATION_MAX_TESTS_PER_COMMAND.defaultValue()));
             AStrykerTestGenerationTestsPerStep.set((Integer) mconfig.getConfigValue(TEST_GENERATION_TESTS_PER_STEP).orElse(TEST_GENERATION_TESTS_PER_STEP.defaultValue()));
+            AStrykerTestGenerationInstanceBasedTests.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_INSTANCES_TESTS_GENERATION).orElse(TEST_GENERATION_INSTANCES_TESTS_GENERATION.defaultValue()));
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 AStrykerVariabilization.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION).orElse(REPAIR_VARIABILIZATION.defaultValue()));
                 AStrykerVariabilizationTestGeneration.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION_TEST_GENERATION).orElse(REPAIR_VARIABILIZATION_TEST_GENERATION.defaultValue()));
@@ -1576,12 +1583,15 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerMutantGenerationCheck);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegration);
                 addToMenu(optmenu, AStrykerTestGenerationModelOverrides);
+                addToMenu(optmenu, AStrykerTestGenerationInstanceBasedTests);
                 AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegration.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationModelOverrides.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationInstanceBasedTests.addChangeListener(astrykerChangeListener);
                 menuItem(optmenu, "AStryker (Test Generation) | base test name", doBaseTestName());
                 menuItem(optmenu, "AStryker (Test Generation) | base test name starting index", doBaseTestNameStartingIndex());
                 menuItem(optmenu, "AStryker (Test Generation) | model overrides folder", doOpenOverridingFolder());
+                menuItem(optmenu, "AStryker (Test Generation) | buggy funcs file", doOpenBuggyFuncsFile());
                 AStrykerMutantGenerationCheck.addChangeListener(astrykerChangeListener);
                 AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
                 AStrykerMutantGenerationLimit.addChangeListener(astrykerChangeListener);
@@ -1630,6 +1640,29 @@ public final class SimpleGUI implements ComponentListener, Listener {
         File directory = OurDialog.askDirectory(initDir, "Select model overriding folder");
         if (directory != null) {
             AStrykerConfigReader.getInstance().setStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER, directory.getAbsolutePath());
+            try {
+                AStrykerConfigReader.getInstance().saveConfig();
+            } catch (IOException e) {
+                throw new IllegalStateException("This should not be happening", e);
+            }
+        }
+        return null;
+    }
+
+    private Runner doOpenBuggyFuncsFile() {
+        if (wrap)
+            return wrapMe();
+        String currentValue = (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE).orElse("");
+        String initDir;
+        if (!currentValue.isEmpty()) {
+            Path parent = Paths.get(currentValue).getParent();
+            initDir = parent == null?System.getProperty("user.home"):parent.toAbsolutePath().toString();
+        } else {
+            initDir = System.getProperty("user.home");
+        }
+        File buggyFuncs = OurDialog.askFile(true, initDir, "", "");
+        if (buggyFuncs != null) {
+            AStrykerConfigReader.getInstance().setStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE, buggyFuncs.getAbsolutePath());
             try {
                 AStrykerConfigReader.getInstance().saveConfig();
             } catch (IOException e) {

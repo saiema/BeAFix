@@ -43,6 +43,9 @@ public final class Command extends Browsable {
     private boolean isVariabilizationTest = false;
     private boolean isPerfectOracleTest = false;
     private boolean isGenerated = false;
+    private boolean isInstanceTest = false;
+    private boolean isPositiveInstanceTest = false;
+    private boolean fromTrusted = true;
     public boolean isVariabilizationTest() {
         return isVariabilizationTest;
     }
@@ -53,6 +56,25 @@ public final class Command extends Browsable {
     public void setAsPerfectOracleTest() { isPerfectOracleTest = true; }
     public boolean isGenerated() {return isGenerated;}
     public void setAsGenerated() {isGenerated = true;}
+    public boolean isInstanceTest() {
+        return isInstanceTest;
+    }
+    public void setAsInstanceTest() {
+        isInstanceTest = true;
+    }
+    public boolean isPositiveInstanceTest() {
+        return isInstanceTest && isPositiveInstanceTest;
+    }
+    public void setAsPositiveInstanceTest() {
+        isInstanceTest = true;
+        isPositiveInstanceTest = true;
+    }
+    public boolean fromTrusted() {
+        return fromTrusted;
+    }
+    public void setAsFromUntrusted() {
+        fromTrusted = false;
+    }
 
 
     /**

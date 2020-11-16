@@ -384,6 +384,10 @@ public class MutantLab {
         return result;
     }
 
+    public List<Browsable> affectedFunctionsPredicatesAndAssertions() {
+        return affectedFunctionsPredicatesAndAssertions;
+    }
+
     public synchronized boolean applyCandidateToAst(Candidate candidate) {
         ASTMutator astMutator = ASTMutator.getInstance();
         candidate.getMutations().forEach(astMutator::pushNewMutation);

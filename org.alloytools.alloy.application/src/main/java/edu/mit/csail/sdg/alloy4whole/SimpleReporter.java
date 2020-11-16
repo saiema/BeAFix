@@ -20,6 +20,8 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.mutantLab.*;
 import ar.edu.unrc.dc.mutation.mutantLab.mutantGeneration.ExpressionsMarker;
+import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.BuggyPredsMarker;
+import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGenerationRequest;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGenerationResult;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestsGenerator;
 import ar.edu.unrc.dc.mutation.util.*;
@@ -825,6 +827,8 @@ final class SimpleReporter extends A4Reporter {
             aStrykerConfig.loadConfig();
             MutationConfiguration.getInstance().loadConfigFromAStrykerConfig();
             if (repair) {
+                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION, Boolean.FALSE);
+                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE, "");
                 MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_STRICT_TYPE_CHECKING, Boolean.FALSE);              //these lines should be later removed
                 MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_TOSTRING_FULL, Boolean.FALSE);                     //+
                 MutationConfiguration.getInstance().setConfig(ConfigKey.MUTATION_BOUND_MUTATION_BY_ANY_OPERATOR, Boolean.TRUE);     //+
@@ -1064,9 +1068,16 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "RepairTittle", "Test generation started...\n\n");
             logger.info("Starting test generation for model: " + options.originalFilename);
             setupMutationConfiguration(out, false);
-            File[] outputFiles = writeTestsToFile()?FileUtils.setUpTestGenerationFiles(options.originalFilename):null;
+            File[] outputFiles = writeTestsToFile()?FileUtils.setUpTestGenerationFiles(options.originalFilename, TestsGenerator.generateInstanceTests()):null;
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
+            if (world.markedEprsToMutate.isEmpty()) {
+                String buggyFuncsFileRaw = TestsGenerator.buggyFuncsFile();
+                if (!buggyFuncsFileRaw.trim().isEmpty()) {
+                    File buggyFuncsFile = new File(buggyFuncsFileRaw);
+                    BuggyPredsMarker.markBuggyFunctions(world, buggyFuncsFile);
+                }
+            }
             ASTMutator.startInstance(world);
             //==========================================
             fixParentRelationship(world);
@@ -1076,7 +1087,11 @@ final class SimpleReporter extends A4Reporter {
             ContextExpressionExtractor.reInitialize(world);
             Pruning.initializeInstance(null, options);
             MutantLab.initialize(world, maxDepthForRepair());
-            generateVariabilizationTests(world, rep, true);
+            TestGenerationResult lastCETestGenerationRes = generateVariabilizationTests(world, rep, true);
+            TestGenerationResult lastInstanceTestsGenerationRes = TestGenerationResult.UNDEFINED;
+            if (TestsGenerator.generateInstanceTests()) {
+                lastInstanceTestsGenerationRes = generateInstanceTests(world, rep);
+            }
             for (Command c : world.getAllCommands()) {
                 if (c.isGenerated()) {
                     String command = c.toString();
@@ -1087,14 +1102,21 @@ final class SimpleReporter extends A4Reporter {
                     toString.visitPredicate(testFunc.get());
                     String predicate = toString.getStringRepresentation();
                     cb(out, "TestGeneration", command, predicate);
+                    String msg = "";
+                    msg += "Origin: " + (c.isInstanceTest()?"from instance":"from counterexample") + "\n";
+                    if (c.isInstanceTest()) {
+                        msg += "From " + (c.fromTrusted()?"trusted":"untrusted") + " functions/predicates" + "\n";
+                        msg += "Generated as " + (c.isPositiveInstanceTest()?"positive":"negative") + " test" + "\n";
+                    }
                     logger.info("Test Generation, new test generated\n" +
                                     "Command: " + command + "\n" +
+                                    msg +
                                     "Test predicate:\n" +
                                     predicate + "\n"
                             );
                 }
             }
-            if (TestsGenerator.getInstance().getTestAmountPerProperty() == null | TestsGenerator.getInstance().getTestAmountPerProperty().isEmpty()) {
+            if (TestsGenerator.getInstance().getTestAmountPerProperty() == null || TestsGenerator.getInstance().getTestAmountPerProperty().isEmpty()) {
                 cb(out, "RepairSubTittle", "No tests generated");
                 logger.info("No tests generated");
             } else {
@@ -1105,10 +1127,16 @@ final class SimpleReporter extends A4Reporter {
                 cb(out, "RepairSubTittle", sb.toString());
                 logger.info(sb.toString());
             }
+            if (writeTestsToFile() && outputFiles != null) {
+                FileUtils.writeTests(outputFiles[0], world, FileUtils.TestType.CE);
+                if (TestsGenerator.generateInstanceTests() && lastInstanceTestsGenerationRes.equals(TestGenerationResult.GENERATED)) {
+                    FileUtils.writeTests(outputFiles[2], world, FileUtils.TestType.INS_POS_TRUSTED);
+                    FileUtils.writeTests(outputFiles[3], world, FileUtils.TestType.INS_POS_UNTRUSTED);
+                    FileUtils.writeTests(outputFiles[4], world, FileUtils.TestType.INS_NEG);
+                }
+            }
             if (writeTestsToFile() && outputFiles != null)
-                FileUtils.writeTests(outputFiles[0], world);
-            if (writeTestsToFile() && outputFiles != null)
-                FileUtils.writeReport(outputFiles[1], lastTestGenerationRes);
+                FileUtils.writeReport(outputFiles[1], lastCETestGenerationRes);
             ASTMutator.destroyInstance();
             MutantLab.destroyInstance();
             Pruning.destroyInstance();
@@ -1295,10 +1323,10 @@ final class SimpleReporter extends A4Reporter {
             // canceled...
         }
 
-        TestGenerationResult lastTestGenerationRes = TestGenerationResult.UNDEFINED;
-        private void generateVariabilizationTests(CompModule world, SimpleReporter rep, boolean onlyTestGeneration) {
+        //TestGenerationResult lastTestGenerationRes = TestGenerationResult.UNDEFINED;
+        private TestGenerationResult generateVariabilizationTests(CompModule world, SimpleReporter rep, boolean onlyTestGeneration) {
             //check if there are at least one variabilization test
-            lastTestGenerationRes = TestGenerationResult.NO_TESTS_TO_RUN;
+            TestGenerationResult lastTestGenerationRes = TestGenerationResult.NO_TESTS_TO_RUN;
             if (world.getAllCommands().stream().noneMatch(Command::isVariabilizationTest) || onlyTestGeneration) {
                 //we should run the original candidate to try to generate at least one variabilization test
                 boolean atLeastOneTestGenerated = false;
@@ -1311,7 +1339,7 @@ final class SimpleReporter extends A4Reporter {
                             A4Solution result = evaluateCandidateWithCommand(original, cmd, rep);
                             if (result != null && result.satisfiable()) {
                                 try {
-                                    List<Command> variabilizationTests = TestsGenerator.getInstance().generateTestsFor(result, world, cmd);
+                                    List<Command> variabilizationTests = TestsGenerator.getInstance().generateCEBasedTestsFor(result, world, cmd);
                                     if (!atLeastOneTestGenerated && !variabilizationTests.isEmpty()) {
                                         atLeastOneTestGenerated = true;
                                         lastTestGenerationRes = TestGenerationResult.GENERATED;
@@ -1348,6 +1376,63 @@ final class SimpleReporter extends A4Reporter {
                 if (atLeastOneCheckTest && !atLeastOneTestGenerated)
                     lastTestGenerationRes = TestGenerationResult.NO_FAILING_TEST;
             }
+            return lastTestGenerationRes;
+        }
+
+        private TestGenerationResult generateInstanceTests(CompModule world, SimpleReporter rep) {
+            TestGenerationResult testGenerationResult = TestGenerationResult.NO_TESTS_TO_RUN;
+            Candidate original = Candidate.original(world);
+            boolean atLeastOneTestGenerated = false;
+            boolean atLeastOneRunCommand = false;
+            for (Command c : world.getAllCommands()) {
+                if (c.check || c.expects == 0)
+                    continue;
+                if (c.isGenerated())
+                    continue;
+                atLeastOneRunCommand = true;
+                try {
+                    A4Solution result = evaluateCandidateWithCommand(original, c, rep);
+                    if (result != null && result.satisfiable()) {
+                        try {
+                            TestGenerationRequest request;
+                            if (DependencyGraph.getInstance().trustedCommand(c, world)) {
+                                request = TestGenerationRequest.createInstancePositiveTestRequestFromTrustedCommand(result, world, c);
+                            } else {
+                                request = TestGenerationRequest.createInstancePositiveAndNegativeTests(result, world, c);
+                            }
+                            List<Command> instanceTests = TestsGenerator.getInstance().generateTestsFor(request);
+                            if (!atLeastOneTestGenerated && !instanceTests.isEmpty()) {
+                                atLeastOneTestGenerated = true;
+                                testGenerationResult = TestGenerationResult.GENERATED;
+                            }
+                            for (Command varTest : instanceTests) {
+                                DependencyGraph.getInstance().addLooseCommand(varTest);
+                            }
+                        } catch (Exception e) {
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String exceptionAsString = sw.toString();
+                            logger.info("Error while generating instance tests\n" +
+                                    "Current candidate (should be original): " + original.toString() + "\n" +
+                                    "Current command (should be a run expect >0): " + c.toString() + "\n" +
+                                    "Exception:\n" +  exceptionAsString
+                            );
+                        }
+                    }
+                } catch (Exception e) {
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    String exceptionAsString = sw.toString();
+                    logger.info("Error while running tests\n" +
+                            "Exception:\n" +  exceptionAsString
+                    );
+                }
+            }
+            if (!world.getAllCommands().isEmpty() && !atLeastOneRunCommand)
+                testGenerationResult = TestGenerationResult.NO_RUN_TESTS_TO_RUN;
+            if (atLeastOneRunCommand && !atLeastOneTestGenerated)
+                testGenerationResult = TestGenerationResult.NO_INSTANCES_GENERATED;
+            return testGenerationResult;
         }
 
         private EvaluationResults evaluateCandidateNormalEvaluation(Candidate candidate, SimpleReporter rep) {
@@ -1438,7 +1523,7 @@ final class SimpleReporter extends A4Reporter {
                                 repaired = false;
                                 if (variabilizationTestGeneration()) {
                                     try {
-                                        List<Command> varTests = TestsGenerator.getInstance().generateTestsFor(ai, world, cmd);
+                                        List<Command> varTests = TestsGenerator.getInstance().generateCEBasedTestsFor(ai, world, cmd);
                                         for (Command varTest : varTests) {
                                             DependencyGraph.getInstance().addLooseCommand(varTest);
                                         }

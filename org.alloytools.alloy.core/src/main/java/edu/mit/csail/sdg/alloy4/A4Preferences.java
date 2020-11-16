@@ -685,6 +685,7 @@ public class A4Preferences {
     public static final BooleanPref AStrykerTestGenerationModelOverrides = new BooleanPref("AStrykerTestGenerationModelOverrides", "AStryker (Test Generation) | Use model overrides", false);
     public static final BooleanPref AStrykerMutantGenerationCheck = new BooleanPref("AStrykerMutantGenerationCheck", "AStryker (Mutants Generation) | check mutants with existing commands (Mutant Generation)");
     public static final IntChoicePref AStrykerMutantGenerationLimit = IntChoicePref.range("AStrykerMutantGenerationLimit", "AStryker (Mutants Generation) | mutations per candidate", 0, 1, 10, 0);
+    public static final BooleanPref AStrykerTestGenerationInstanceBasedTests = new BooleanPref("AStrykerTestGenerationInstanceBasedTests", "AStryker (Test Generation) | Instance based tests", false);
 
     //==================================================================
 

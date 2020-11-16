@@ -1,12 +1,15 @@
 package ar.edu.unrc.dc.mutation.util;
 
+import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
+import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
+import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper;
 import ar.edu.unrc.dc.mutation.visitors.FunctionsCollector;
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.Func;
-import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
-import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import edu.mit.csail.sdg.parser.CompModule;
 
 import java.util.*;
 
@@ -148,6 +151,56 @@ public class DependencyGraph {
 
     public List<Command> getDirectCommands(Browsable b) {
         return directDependencyGraph.containsKey(b)?directDependencyGraph.get(b):new LinkedList<>();
+    }
+
+    /**
+     * Checks whether a particular command ends up calling a buggy assertion, predicate or function.
+     * This method is intended to be used with run commands.
+     *
+     * @param c the command to check, must be a run command
+     * @param context the context (module) where to resolve if the command is trusted
+     * @return {@code true} iff {@code c} does not call any buggy assertion, predicate or function
+     */
+    public boolean trustedCommand(Command c, CompModule context) {
+        if (c.check || c.expects == 0)
+            throw new IllegalArgumentException("c must be a run command with expect greater than 0");
+        Browsable predicateOrAssertionCalled = TestGeneratorHelper.getPredicateOrAssertionCalled(c, context);
+        if (predicateOrAssertionCalled == null) {
+            if (c.formula != null)
+                predicateOrAssertionCalled = c.formula;
+            else
+                throw new IllegalStateException("Couldn't get predicate or assertion for " + c.toString());
+        }
+        Stack<Func> calledFunctions = new Stack<>();
+        if (predicateOrAssertionCalled instanceof Func) {
+            calledFunctions.add((Func) predicateOrAssertionCalled);
+        } else if (predicateOrAssertionCalled instanceof Expr) {
+            FunctionsCollector functionsCollector = new FunctionsCollector();
+            calledFunctions.addAll(functionsCollector.visitThis( (Expr) predicateOrAssertionCalled));
+        } else {
+            throw new IllegalStateException("Couldn't get a valid function or expression associated with command " + c.toString());
+        }
+        return onlyCallsNonBuggyFunctions(calledFunctions, MutantLab.getInstance().affectedFunctionsPredicatesAndAssertions());
+    }
+
+    private boolean onlyCallsNonBuggyFunctions(Stack<Func> calledFunctions, List<Browsable> allBuggedFunctionsAndAssertions) {
+        Set<String> visitedFunctions = new LinkedHashSet<>();
+        while (!calledFunctions.isEmpty()) {
+            Func calledFunc = calledFunctions.pop();
+            if (visitedFunctions.contains(calledFunc.label))
+                continue;
+            if (allBuggedFunctionsAndAssertions.contains(calledFunc)) {
+                return false;
+            }
+            visitedFunctions.add(calledFunc.label);
+            FunctionsCollector functionsCollector = new FunctionsCollector();
+            for (Func cFunc : functionsCollector.visitThis(calledFunc.getBody())) {
+                if (!visitedFunctions.contains(cFunc.label)) {
+                    calledFunctions.push(cFunc);
+                }
+            }
+        }
+        return true;
     }
 
     public List<Command> getAllCommands() {

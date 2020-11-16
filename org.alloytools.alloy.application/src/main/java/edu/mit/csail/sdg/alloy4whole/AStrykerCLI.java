@@ -57,6 +57,10 @@ public class AStrykerCLI {
             } else {
                 throw new IllegalArgumentException("The second argument must either be REPAIR, TESTS, or CHECK (got " + mode + " instead)");
             }
+            if (mode.compareToIgnoreCase(TESTGEN) != 0) {
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_INSTANCES_TESTS_GENERATION, false);
+                AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE, "");
+            }
             if (!astryker_mode.equals(ASTRYKER_MODE.CHECK)) {
                 parseCommandLine(Arrays.copyOfRange(args, 2, args.length));
                 AStrykerConfigReader.getInstance().saveConfig();
@@ -202,7 +206,9 @@ public class AStrykerCLI {
     private static final String TESTS_NAME_KEY = "tname";
     private static final String TESTS_NAME_STARTING_INDEX_KEY = "tindex";
     private static final String MODEL_OVERRIDING_KEY = "modeloverriding";
-    private static final String MODEL_OVERRIDING_FOLDER_KEY = "moFolder";
+    private static final String MODEL_OVERRIDING_FOLDER_KEY = "mofolder";
+    private static final String INSTANCES_TESTS_GENERATION_KEY = "itests";
+    private static final String BUGGY_FUNCS_FILE_KEY = "buggyfuncs";
     private static void setConfig_tests(String key, String value) {
         switch (key.toLowerCase()) {
             case TESTS_TO_GENERATE_KEY: {
@@ -256,6 +262,22 @@ public class AStrykerCLI {
                 if (!overridesFolder.canExecute() || !overridesFolder.canRead())
                     throw new IllegalArgumentException("Insufficient access to model overriding folder ( " + value + ")");
                 AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_MODEL_OVERRIDING_FOLDER, value);
+                break;
+            }
+            case INSTANCES_TESTS_GENERATION_KEY: {
+                boolean boolValue = getBooleanValue(INSTANCES_TESTS_GENERATION_KEY, value);
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_INSTANCES_TESTS_GENERATION, boolValue);
+                break;
+            }
+            case BUGGY_FUNCS_FILE_KEY: {
+                File buggyFuncs = new File(value);
+                if (!buggyFuncs.exists())
+                    throw new IllegalArgumentException("buggy functions file doesn't exists ( " + value + ")");
+                if (!buggyFuncs.isFile())
+                    throw new IllegalArgumentException("buggy functions file is not a file ( " + value + ")");
+                if (!buggyFuncs.canRead())
+                    throw new IllegalArgumentException("Insufficient access to buggy functions file ( " + value + ")");
+                AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE, value);
                 break;
             }
             default : throw new IllegalArgumentException("Invalid configuration key for test generation " + key);
@@ -415,7 +437,18 @@ public class AStrykerCLI {
                 "                                              * field.<signature name>=function.<no arguments function> : to use a function instead of a field in the generated test" + "\n" +
                 "                                           An example can be found in modelOverrides/ordering.overrides." + "\n" +
                 "                                           This feature is disabled by default." + "\n" +
-                "--moFolder <path to existing folder> :     From which directory to load the .overrides files, default is modelOverrides." + "\n";
+                "--mofolder <path to existing folder> :     From which directory to load the .overrides files, default is modelOverrides." + "\n" +
+                "--itests <boolean>                   :     Enables/disables instance based test generation. This will generate three types of tests:" + "\n" +
+                "                                              * positive trusted tests : the instances from which these tests come from are positive and" + "\n" +
+                "                                                does not they don't involve calling a bugged function or predicate." + "\n" +
+                "                                              * positive untrusted tests : the instances from which these tests come from are positive but" + "\n" +
+                "                                                involve calling at least one buggy function or predicate." + "\n" +
+                "                                              * negative tests : tests are made such that the originating property is negated." + "\n" +
+                "                                           This tests are created from run expect > 0 commands, buggy facts are not supported." + "\n" +
+                "                                           This feature is disabled by default." + "\n" +
+                "--buggyfuncs <path to existing file> :     When there are no expressions marked, lines in this file will be used to define which functions/predicates" + "\n" +
+                "                                           are to be considered as buggy. This is used in conjunction with the <itests> feature." + "\n" +
+                "                                           The default value is empty." + "\n";
         System.out.println(sb);
     }
 

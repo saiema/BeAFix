@@ -506,6 +506,30 @@ public class MutationConfiguration {
 
         },
 
+        TEST_GENERATION_INSTANCES_TESTS_GENERATION {
+            @Override
+            public Class<?> getValueType() {
+                return Boolean.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return Boolean.FALSE;
+            }
+        },
+
+        TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE {
+            @Override
+            public Class<?> getValueType() {
+                return String.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return "";
+            }
+        },
+
         MUTANT_GENERATION_OUTPUT_FOLDER {
 
             @Override
@@ -639,6 +663,12 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER)) {
                 setConfig(ConfigKey.TEST_GENERATION_MODEL_OVERRIDING_FOLDER, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION)) {
+                setConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE)) {
+                setConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE));
             }
         } catch (IOException e) {
             e.printStackTrace();

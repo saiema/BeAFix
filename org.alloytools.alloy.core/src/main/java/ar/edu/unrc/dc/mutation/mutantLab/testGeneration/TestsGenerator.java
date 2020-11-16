@@ -6,7 +6,6 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.Field;
@@ -48,7 +47,7 @@ public class TestsGenerator {
 
     private static final String FACTS_PROPERTY = "facts";
     private final Map<String, Integer> testsPerProperty;
-    private String testName;
+    private final String testName;
     private int testIndex;
 
     private static TestsGenerator instance;
@@ -116,44 +115,78 @@ public class TestsGenerator {
         return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_MODEL_OVERRIDING_FOLDER).orElse(TEST_GENERATION_MODEL_OVERRIDING_FOLDER.defaultValue());
     }
 
-    public List<Command> generateTestsFor(A4Solution solution, CompModule context, Command command) throws Err {
+    public static boolean generateInstanceTests() {
+        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_INSTANCES_TESTS_GENERATION).orElse(TEST_GENERATION_INSTANCES_TESTS_GENERATION.defaultValue());
+    }
+
+    public static String buggyFuncsFile() {
+        return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE).orElse(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE.defaultValue());
+    }
+
+    public List<Command> generateCEBasedTestsFor(A4Solution solution, CompModule context, Command command) throws Err {
         if (solution.getOriginalCommand().compareTo(command.toString()) != 0)
             throw new IllegalArgumentException("Command argument doesn't match the one use for the obtained solution");
+        if (!command.check && command.expects != 0)
+            throw new IllegalArgumentException("Command is not a check or run with expect 0");
+        TestGenerationRequest request = TestGenerationRequest.createCETestRequest(solution, context, command);
+        return generateTestsFor(request);
+    }
+
+    public List<Command> generateTestsFor(TestGenerationRequest request) throws Err {
+        A4Solution solution = request.solution();
+        Command command = request.command();
         logger.info("generate tests for\n" + command.toString());
-        if (command.check || command.expects == 0) {
-            List<Command> newTests = new LinkedList<>();
-            String property;
-            if (command.nameExpr instanceof ExprVar)
-                property = ((ExprVar) command.nameExpr).label;
-            else
-                property = FACTS_PROPERTY;
-            int currentTests = testsPerProperty.getOrDefault(property, 0);
-            int testsToGenerate = testsToGeneratePerCommand() - currentTests;
-            int testsGenerated = 0;
-            for (int i = 0; i < testsToGenerate && i < testsPerGeneration(); i++) {
-                logger.info("Generating test for instance\n" + solution.getEvaluator().instance().relationTuples().entrySet().toString());
-                Command newTest = generateNewTest(solution, context, command);
-                testsGenerated++;
-                newTests.add(newTest);
-                solution = solution.next();
-                if (solution.getEvaluator() == null)
-                    break;
+        List<Command> newTests = new LinkedList<>();
+        String property;
+        if (command.nameExpr instanceof ExprVar)
+            property = ((ExprVar) command.nameExpr).label;
+        else
+            property = FACTS_PROPERTY;
+        int currentTests = testsPerProperty.getOrDefault(property, 0);
+        int testsToGenerate = testsToGeneratePerCommand() - currentTests;
+        int testsGenerated = 0;
+        boolean positiveAndNegativeTestGeneration = false;
+        for (int i = 0; i < testsToGenerate && i < testsPerGeneration(); i++) {
+            String msg = "";
+            if (!request.isInstanceTestRequest()) {
+                msg = "Generating CE based test for instance\n";
+            } else if (request.isInstancePositiveTestRequest()) {
+                msg = "Generating positive test from " + (request.fromTrustedCommand()?"trusted":"untrusted") + " command for instance\n";
+            } else if (request.isInstanceNegativeTestRequest()) {
+                msg = "Generating negative test for instance\n";
+            } else if (request.isInstancePositiveAndNegativeTestRequest()) {
+                msg = "Generating positive and negative test from untrusted command for instance\n";
+                positiveAndNegativeTestGeneration = true;
             }
-            testsPerProperty.put(property, currentTests + testsGenerated);
-            return newTests;
+            logger.info(msg + solution.getEvaluator().instance().relationTuples().entrySet().toString());
+            if (positiveAndNegativeTestGeneration) {
+                List<TestGenerationRequest> positiveAndNegativeRequests = request.splitABothRequestIntoPositiveAndNegative();
+                Command positiveTest = generateNewTest(positiveAndNegativeRequests.get(0));
+                newTests.add(positiveTest);
+                Command negativeTest = generateNewTest(positiveAndNegativeRequests.get(1));
+                newTests.add(negativeTest);
+            } else {
+                Command newTest = generateNewTest(request);
+                newTests.add(newTest);
+            }
+            testsGenerated++;
+            solution = solution.next();
+            if (solution.getEvaluator() == null)
+                break;
         }
-        return new LinkedList<>();
+        testsPerProperty.put(property, currentTests + testsGenerated);
+        return newTests;
     }
 
     public Map<String, Integer> getTestAmountPerProperty() {
         return testsPerProperty;
     }
 
-    private Command generateNewTest(A4Solution solution, CompModule context, Command command) {
+    private Command generateNewTest(TestGenerationRequest request) {
         Command cmd;
         RepairReport.getInstance().testGenerationClockStart();
         try {
-            cmd = generateNewTest_impl(solution, context, command);
+            cmd = generateNewTest_impl(request);
         } catch (Exception e) {
             RepairReport.getInstance().testGenerationClockEnd();
             throw e;
@@ -162,8 +195,11 @@ public class TestsGenerator {
         return cmd;
     }
 
-    private Command generateNewTest_impl(A4Solution solution, CompModule context, Command command) {
+    private Command generateNewTest_impl(TestGenerationRequest request) {
         clearVarsCache();
+        A4Solution solution = request.solution();
+        Command command = request.command();
+        CompModule context = request.context();
         Map<Sig, List<ExprVar>> signatureValues = getSignaturesAtoms(solution, context);
         mergeExtendingSignaturesValues(signatureValues);
         Map<Field, List<Expr>> fieldValues = getFieldsValues(solution, context, signatureValues);
@@ -190,11 +226,24 @@ public class TestsGenerator {
         testFormula.setCommentBefore("testFormula");
         if (GENERATE_DEBUG_TESTS) {
             testFormula = ExprUnary.Op.NOT.make(null, testFormula);
-        } else {
+        } else if (!request.isInstanceTestRequest()) {
             Expr facts = getFacts(context);
             if (!(facts instanceof ExprConstant)) {
                 Expr negateFacts = ExprUnary.Op.NOT.make(null, getFacts(context));
                 testFormula = ExprBinary.Op.OR.make(null, null, negateFacts, testFormula);
+                testFormula.setCommentPreviousLine("testFormulaWithFacts");
+            }
+        } else if (request.isInstancePositiveTestRequest()) {
+            Expr facts = getFacts(context);
+            if (!(facts instanceof ExprConstant)) {
+                testFormula = ExprBinary.Op.AND.make(null, null, facts, testFormula);
+                testFormula.setCommentPreviousLine("testFormulaWithFacts");
+            }
+        } else if (request.isInstanceNegativeTestRequest()) {
+            testFormula = ExprUnary.Op.NOT.make(null, testFormula);
+            Expr facts = getFacts(context);
+            if (!(facts instanceof ExprConstant)) {
+                testFormula = ExprBinary.Op.AND.make(null, null, facts, testFormula);
                 testFormula.setCommentPreviousLine("testFormulaWithFacts");
             }
         }
@@ -209,7 +258,7 @@ public class TestsGenerator {
         List<Expr> fieldOverrides = getFieldOverrides(solution, context, signatureValues);
         Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
         Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, signatureValues, command);
-        Command testCommand = generateTestCommand(testPredicate);
+        Command testCommand = generateTestCommand(testPredicate, request);
         logger.info("Test generated\n" +
                     testPredicate.toString() + "\n" +
                     testPredicate.getBody().toString()
@@ -227,19 +276,25 @@ public class TestsGenerator {
         return testCommand;
     }
 
-    private Command generateTestCommand(Func testPredicate) {
+    private Command generateTestCommand(Func testPredicate, TestGenerationRequest request) {
         ExprVar predName = ExprVar.make(null, testPredicate.label);
         predName.setReferenced(testPredicate);
         Expr formula = testPredicate.getBody();
         Command testCommand = new Command(null, predName, testPredicate.label, false, -1, -1, -1, 1, null, null, formula, null);
         testCommand.setAsVariabilizationTest();
         testCommand.setAsGenerated();
+        if (request.isInstanceTestRequest() && request.isInstancePositiveTestRequest())
+            testCommand.setAsPositiveInstanceTest();
+        if (request.isInstanceTestRequest())
+            testCommand.setAsInstanceTest();
+        if (request.isInstanceTestRequest() && !request.fromTrustedCommand())
+            testCommand.setAsFromUntrusted();
         return testCommand;
     }
 
     private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
         Expr sub = ExprBinary.Op.AND.make(null, null, initialization, testFormula);
-        List<ExprVar> varsToDeclare = new LinkedList<>();//new LinkedList<>(skolemVariables);
+        List<ExprVar> varsToDeclare = new LinkedList<>();
         for (Entry<Sig, List<ExprVar>> sValues : signatureValues.entrySet()) {
             varsToDeclare.addAll(sValues.getValue());
         }
@@ -365,30 +420,6 @@ public class TestsGenerator {
             initExpressions.add(init);
         }
         return initExpressions;
-    }
-
-    private Browsable getPredicateOrAssertionCalled(Command command, CompModule context) {
-        Browsable predicateOrAssertionCalled = null;
-        if (command.nameExpr instanceof ExprVar) {
-            String callee = ((ExprVar) command.nameExpr).label;
-            for (Func pred : context.getAllFunc()) {
-                if (pred.label.replace("this/", "").compareTo(callee) == 0) {
-                    predicateOrAssertionCalled = pred;
-                    break;
-                }
-            }
-            if (predicateOrAssertionCalled == null) {
-                for (Pair<String, Expr> assertion : context.getAllAssertions()) {
-                    if (assertion.a.compareTo(callee) == 0) {
-                        predicateOrAssertionCalled = assertion.b;
-                        break;
-                    }
-                }
-            }
-        } else {
-            predicateOrAssertionCalled = command.nameExpr;
-        }
-        return predicateOrAssertionCalled == null?null:(Expr) predicateOrAssertionCalled.clone();
     }
 
     private final Map<String, ExprVar> varsCache = new TreeMap<>();

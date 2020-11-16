@@ -351,7 +351,12 @@ public final class Func extends Browsable implements Clause {
             Decl dclone = new Decl(d.isPrivate, d.disjoint, d.disjoint2, dnamesClone, exprClone);
             declsClone.add(dclone);
         }
-        Expr returnDeclClone = (Expr) this.returnDecl.clone();
+        Expr returnDeclClone;
+        if (isFalseConstant(this.returnDecl)) {
+            returnDeclClone = null;
+        } else {
+            returnDeclClone = (Expr) this.returnDecl.clone();
+        }
         Expr bodyClone = (Expr) this.body.clone();
         Func clone = new Func(this.pos, this.label, declsClone, returnDeclClone, bodyClone);
         clone.setID(getID());
@@ -360,6 +365,16 @@ public final class Func extends Browsable implements Clause {
         clone.skipBlockMutation = skipBlockMutation;
         clone.setVariabilizationVariables(directVariabilizationVariables());
         return clone;
+    }
+
+    private boolean isFalseConstant(Expr x) {
+        if (x instanceof ExprConstant) {
+            ExprConstant xAsConstant = (ExprConstant) x;
+            return xAsConstant.op.equals(ExprConstant.Op.FALSE);
+        } else if (x instanceof ExprUnary && ((ExprUnary)x).op.equals(ExprUnary.Op.NOOP)) {
+            return isFalseConstant(((ExprUnary)x).sub);
+        }
+        return false;
     }
 
 }

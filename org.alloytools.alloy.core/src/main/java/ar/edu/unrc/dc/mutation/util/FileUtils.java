@@ -54,7 +54,11 @@ public class FileUtils {
         }
     }
 
+    public enum TestType {CE, INS_POS_TRUSTED, INS_POS_UNTRUSTED, INS_NEG}
     public static void writeTests(File testsFile, CompModule world) {
+        writeTests(testsFile, world, TestType.CE);
+    }
+    public static void writeTests(File testsFile, CompModule world, TestType testType) {
         FileWriter myWriter;
         try {
             myWriter = new FileWriter(testsFile);
@@ -63,6 +67,27 @@ public class FileUtils {
         }
         for (Command c : world.getAllCommands()) {
             if (c.isGenerated()) {
+                switch (testType) {
+                    case CE: {
+                        if (c.isInstanceTest())
+                            continue;
+                        break;
+                    }
+                    case INS_POS_TRUSTED: {
+                        if (!c.isInstanceTest() || !c.isPositiveInstanceTest() || !c.fromTrusted())
+                            continue;
+                        break;
+                    }
+                    case INS_POS_UNTRUSTED: {
+                        if (!c.isInstanceTest() || !c.isPositiveInstanceTest() || c.fromTrusted())
+                            continue;
+                        break;
+                    }
+                    case INS_NEG: {
+                        if (!c.isInstanceTest() || c.isPositiveInstanceTest())
+                        break;
+                    }
+                }
                 String command = c.toString();
                 Optional<Func> testFunc = DependencyScanner.getFuncByName(((ExprHasName)c.nameExpr).label, world.getAllFunc());
                 if (!testFunc.isPresent())
@@ -95,6 +120,8 @@ public class FileUtils {
             throw new Error("Error occurred while creating FileWriter for report", e);
         }
         switch (lastTestGenerationRes) {
+            case NO_INSTANCES_GENERATED:
+            case NO_RUN_TESTS_TO_RUN:
             case UNDEFINED:
             case NO_TESTS_TO_RUN:
             case NO_CHECK_TESTS_TO_RUN:
@@ -127,7 +154,7 @@ public class FileUtils {
         }
     }
 
-    public static File[] setUpTestGenerationFiles(String originalFilename) {
+    public static File[] setUpTestGenerationFiles(String originalFilename, boolean includeInstanceTests) {
         String outputFolderPath = (String) MutationConfiguration.getInstance().getConfigValue(MutationConfiguration.ConfigKey.TEST_GENERATION_OUTPUT_FOLDER).orElse("");
         File outFolder = new File(outputFolderPath);
         if (!outFolder.exists())
@@ -140,21 +167,31 @@ public class FileUtils {
         String modelName = modelFileAsPath.getFileName().toString().replace(".als", "");
         File testsFile = Paths.get(outputFolderPath, modelName + ".tests").toFile();
         File reportFile = Paths.get(outputFolderPath, modelName + ".report").toFile();
-        if (testsFile.exists())
-            throw new IllegalStateException("Tests file already exists ( " + testsFile.toString() + " )");
-        try {
-            testsFile.createNewFile();
-        } catch (IOException e) {
-            throw new Error("Couldn't create tests file ( " + testsFile.toString() + " )", e);
-        }
-        if (reportFile.exists())
-            throw new IllegalStateException("Report file already exists ( " + reportFile.toString() + " )");
-        try {
-            reportFile.createNewFile();
-        } catch (IOException e) {
-            throw new Error("Couldn't create report file ( " + reportFile.toString() + " )", e);
+        createNewFile(testsFile);
+        createNewFile(reportFile);
+        if (includeInstanceTests) {
+            File instancesPositiveTestsTrusted = Paths.get(outputFolderPath, modelName + "_positive_trusted.tests").toFile();
+            File instancesPositiveTestsUntrusted = Paths.get(outputFolderPath, modelName + "_positive_untrusted.tests").toFile();
+            File instancesNegativeTests = Paths.get(outputFolderPath, modelName + "_negative_untrusted.tests").toFile();
+            createNewFile(instancesPositiveTestsTrusted);
+            createNewFile(instancesPositiveTestsUntrusted);
+            createNewFile(instancesNegativeTests);
+            return new File[] {testsFile, reportFile, instancesPositiveTestsTrusted, instancesPositiveTestsUntrusted, instancesNegativeTests};
         }
         return new File[] {testsFile, reportFile};
+    }
+
+    private static void createNewFile(File f) {
+        try {
+            if (!f.createNewFile())
+                throw new IllegalStateException("File already exists ( " + f.toString() + " )");
+        } catch (IOException e) {
+            throw new Error("Couldn't create file ( " + f.toString() + " )", e);
+        }
+    }
+
+    public static File[] setUpTestGenerationFiles(String originalFilename) {
+        return setUpTestGenerationFiles(originalFilename, false);
     }
 
     public static void writeCheckReportToFile(String originalFileName, String result) {

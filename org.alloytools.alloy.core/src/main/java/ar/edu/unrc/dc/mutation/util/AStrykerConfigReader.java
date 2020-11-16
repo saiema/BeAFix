@@ -60,6 +60,18 @@ public class AStrykerConfigReader {
                 return "astryker.testgeneration.modeloverriding.overridingfolder";
             }
         },
+        TEST_GENERATION_INSTANCES_TESTS_GENERATION {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.testsfrominstances";
+            }
+        },
+        TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE {
+            @Override
+            public String getKey() {
+                return "astryker.testgeneration.testsfrominstances.buggyfuncsfile";
+            }
+        },
         VARIABILIZATION_SAME_TYPE {
             @Override
             public String getKey() {
@@ -274,6 +286,7 @@ public class AStrykerConfigReader {
             case TEST_GENERATION_OUTPUT_TO_FILES:
             case TEST_GENERATION_AREPAIR_INTEGRATION:
             case TEST_GENERATION_USE_MODEL_OVERRIDING:
+            case TEST_GENERATION_INSTANCES_TESTS_GENERATION:
             case MUTANTS_GENERATION_CHECK:
             case PARTIAL_REPAIR_PRUNING:
             case PARTIAL_REPAIR: return true;
@@ -298,6 +311,7 @@ public class AStrykerConfigReader {
             case MUTANTS_GENERATION_OUTPUT_FOLDER:
             case TEST_GENERATION_NAME:
             case TEST_GENERATION_MODEL_OVERRIDING_FOLDER:
+            case TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE:
             case TEST_GENERATION_OUTPUT_FOLDER: return true;
             default : return false;
         }
