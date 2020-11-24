@@ -69,13 +69,46 @@ public final class Func extends Browsable implements Clause {
     /** The declared return type; never null. */
     public final Expr            returnDecl;
 
+    private String commentPreviousLine;
+    private String commentNextLine;
     private boolean isGenerated = false;
     public void setGenerated() {
         isGenerated = true;
     }
+
     public boolean isGenerated() {
         return isGenerated;
     }
+
+    public String getCommentPreviousLine() {
+        return commentPreviousLine;
+    }
+
+    public void setCommentPreviousLine(String commentPreviousLine) {
+        this.commentPreviousLine = commentPreviousLine;
+    }
+
+    public boolean hasCommentPreviousLine() {
+        return commentPreviousLine != null && !commentPreviousLine.trim().isEmpty();
+    }
+
+    public String getCommentNextLine() {
+        return commentNextLine;
+    }
+
+    public void setCommentNextLine(String commentNextLine) {
+        this.commentNextLine = commentNextLine;
+    }
+
+    public boolean hasCommentNextLine() {
+        return commentNextLine != null && !commentNextLine.trim().isEmpty();
+    }
+
+    protected void copyCommentsFrom(Func other) {
+        this.commentPreviousLine = other.commentPreviousLine;
+        this.commentNextLine = other.commentNextLine;
+    }
+
 
     /** Return the number of parameters. */
     public int count() {
@@ -364,6 +397,7 @@ public final class Func extends Browsable implements Clause {
         clone.mutGenLimit(directMutGenLimit());
         clone.skipBlockMutation = skipBlockMutation;
         clone.setVariabilizationVariables(directVariabilizationVariables());
+        clone.copyCommentsFrom(this);
         return clone;
     }
 

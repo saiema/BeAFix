@@ -1220,6 +1220,8 @@ final class SimpleReporter extends A4Reporter {
                     break;
                 }
                 RepairReport.getInstance().incExaminedCandidates();
+                if (current.getCurrentMarkedExpression() > 0)
+                    RepairReport.getInstance().updateMaxReachedDepth(current.getCurrentMarkedExpression(), current.mutationsForCurrentIndex());
                 for (Triplet<String, String, String> em : current.getCurrentMutationsInfo()) {
                     cb(out, "RepairExprOrig->Mut", em.a, em.b, em.c + "  \n");
                 }

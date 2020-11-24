@@ -150,6 +150,13 @@ public class AStrykerConfigReader {
             public String getKey() {
                 return "astryker.mutantgeneration.limit";
             }
+        },
+
+        HACKS_CANDIDATE_HASHES {
+            @Override
+            public String getKey() {
+                return "astryker.hacks.candidatehashes";
+            }
         }
 
         ;
@@ -312,7 +319,8 @@ public class AStrykerConfigReader {
             case TEST_GENERATION_NAME:
             case TEST_GENERATION_MODEL_OVERRIDING_FOLDER:
             case TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE:
-            case TEST_GENERATION_OUTPUT_FOLDER: return true;
+            case TEST_GENERATION_OUTPUT_FOLDER:
+            case HACKS_CANDIDATE_HASHES: return true;
             default : return false;
         }
     }

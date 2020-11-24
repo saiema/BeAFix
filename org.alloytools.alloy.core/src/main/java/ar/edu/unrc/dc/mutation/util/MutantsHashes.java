@@ -1,11 +1,14 @@
 package ar.edu.unrc.dc.mutation.util;
 
+import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
 import ar.edu.unrc.dc.mutation.visitors.ExprToString;
 import edu.mit.csail.sdg.ast.Browsable;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.Func;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -34,6 +37,7 @@ public class MutantsHashes {
     }
 
     private final Set<byte[]> hashes;
+    private FileWriter writer;
 
     public MutantsHashes() {
         hashes = new TreeSet<>((left, right) -> {
@@ -46,6 +50,12 @@ public class MutantsHashes {
             }
             return left.length - right.length;
         });
+        File chashes = candidateHashesFile();
+        try {
+            this.writer = chashes ==null?null:new FileWriter(chashes);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public boolean add(Candidate c) {
@@ -71,11 +81,35 @@ public class MutantsHashes {
             boolean exists = !hashes.add(digest);
             if (logEnable)
                 logger.info("candidate : " + c.toString() + "\nhas hash : " + Arrays.toString(digest) + "\n" + (exists?"Already exists":"New candidate"));
+            if (!exists && writer != null) {
+                try {
+                    writer.write(Arrays.toString(digest) + "\n");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
             return !exists;
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private static File candidateHashesFile() {
+        String chashesRaw = (String) MutationConfiguration.getInstance().getConfigValueOrDefault(MutationConfiguration.ConfigKey.HACKS_CANDIDATE_HASHES);
+        if (!chashesRaw.trim().isEmpty()) {
+            File chashes = new File(chashesRaw);
+            if (!chashes.exists()) {
+                try {
+                    if (chashes.createNewFile()) {
+                        return chashes;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
     }
 
 }

@@ -38,7 +38,12 @@ public class RepairReport {
     private int variabilizationChecks;
     private int variabilizationChecksPassed;
     private int variabilizationChecksFailed;
-    private int[] variabilizationChecksFailedPerIndex;
+    private int[][] variabilizationChecksFailedPerIndexPerDepth;
+    private int partialPruningChecks;
+    private int partialPruningChecksPassed;
+    private int partialPruningChecksFailed;
+    private int[][] partialPruningChecksFailedPerIndexPerDepth;
+    private int[] maxReachedDepthPerIndex;
 
     private int markedExpressions;
     private int commands;
@@ -70,6 +75,9 @@ public class RepairReport {
         variabilizationChecks = 0;
         variabilizationChecksPassed = 0;
         variabilizationChecksFailed = 0;
+        partialPruningChecks = 0;
+        partialPruningChecksPassed = 0;
+        partialPruningChecksFailed = 0;
         markedExpressions = -1;
         commands = -1;
         variabilizationRelatedCommands = -1;
@@ -100,19 +108,46 @@ public class RepairReport {
 
     public void incIrrelevantMutationsSkipped() { irrelevantMutationsSkipped++; }
 
+    public void updateMaxReachedDepth(int index, int depth) {
+        if (index <= 0 || index > markedExpressions)
+            throw new IllegalArgumentException("index must be between 1 and " + (markedExpressions) + " (" + index + ")");
+        if (depth < 0 || depth > mutationDepth)
+            throw new IllegalArgumentException("depth must be a number between 0 and " + mutationDepth + " (" + depth + ")");
+        maxReachedDepthPerIndex[index] = Math.max(maxReachedDepthPerIndex[index], depth);
+    }
+
     public void incVariabilizationChecks() {
         variabilizationChecks++;
+    }
+
+    public void incPartialPruningChecks() {
+        partialPruningChecks++;
     }
 
     public void incVariabilizationChecksPassed() {
         variabilizationChecksPassed++;
     }
 
-    public void incVariabilizationChecksFailed(int index) {
-        if (index < 0 || index >= markedExpressions)
-            throw new IllegalArgumentException("index must be between 0 and " + (markedExpressions - 1) + " (" + index + ")");
-        variabilizationChecksFailedPerIndex[index]++;
+    public void incPartialPruningChecksPassed() {
+        partialPruningChecksPassed++;
+    }
+
+    public void incVariabilizationChecksFailed(int index, int depth) {
+        if (index < 0 || index > markedExpressions)
+            throw new IllegalArgumentException("index must be between 0 and " + (markedExpressions) + " (" + index + ")");
+        if (depth < 0 || depth > mutationDepth)
+            throw new IllegalArgumentException("depth must be a number between 0 and " + mutationDepth + " (" + depth + ")");
+        variabilizationChecksFailedPerIndexPerDepth[index][depth]++;
         variabilizationChecksFailed++;
+    }
+
+    public void incPartialPruningChecksFailed(int index, int depth) {
+        if (index < 0 || index > markedExpressions)
+            throw new IllegalArgumentException("index must be between 0 and " + (markedExpressions) + " (" + index + ")");
+        if (depth < 0 || depth > mutationDepth)
+            throw new IllegalArgumentException("depth must be a number between 0 and " + mutationDepth + " (" + depth + ")");
+        partialPruningChecksFailedPerIndexPerDepth[index][depth]++;
+        partialPruningChecksFailed++;
     }
 
     public void setMarkedExpressions(int markedExpressions) {
@@ -125,8 +160,16 @@ public class RepairReport {
         for (int i = 1; i <= markedExpressions; i++) {
             mutationsPerIndex.put(i, new int[] {0, 0});
         }
-        variabilizationChecksFailedPerIndex = new int[markedExpressions];
-        Arrays.fill(variabilizationChecksFailedPerIndex, 0);
+        variabilizationChecksFailedPerIndexPerDepth = new int[markedExpressions + 1][mutationDepth + 1];
+        for (int[] ints : variabilizationChecksFailedPerIndexPerDepth) {
+            Arrays.fill(ints, 0);
+        }
+        partialPruningChecksFailedPerIndexPerDepth = new int[markedExpressions + 1][mutationDepth + 1];
+        for (int[] ints : partialPruningChecksFailedPerIndexPerDepth) {
+            Arrays.fill(ints, 0);
+        }
+        maxReachedDepthPerIndex = new int[markedExpressions + 1];
+        Arrays.fill(maxReachedDepthPerIndex, 0);
     }
 
     public void setCommands(int commands) {
@@ -190,34 +233,6 @@ public class RepairReport {
                 throw new IllegalStateException("No average mutations information available for valid index (" + i + ")");
             averageMutationsPerIndex[i-1] = avgMuts[0] == 0? 0: avgMuts[1] / avgMuts[0];
         }
-    }
-
-    private int variabilizationEstimatedPrunedCandidates;
-    private int maxIndexForEstimation;
-    private void calculateMaxIndexForEstimation() {
-        for (int i = 1; i <= markedExpressions; i++) {
-            if (averageMutationsPerIndex[i-1] != 0)
-                maxIndexForEstimation = i;
-        }
-    }
-    private void calculateVariabilizationEstimatedPruning() {
-        calculateMaxIndexForEstimation();
-        int prunedCandidates = 0;
-        for (int v = 0; v < variabilizationChecksFailedPerIndex.length; v++) {
-            int variabilizationFails = variabilizationChecksFailedPerIndex[v];
-            int oneVarPrunedCandidates = 0;
-            if (variabilizationFails == 0)
-                continue;
-            for (int i = v + 1; i <= maxIndexForEstimation; i++) {
-                if (oneVarPrunedCandidates == 0) {
-                    oneVarPrunedCandidates = averageMutations * mutationDepth;
-                } else {
-                    oneVarPrunedCandidates *= averageMutations * mutationDepth;
-                }
-            }
-            prunedCandidates += oneVarPrunedCandidates * variabilizationFails;
-        }
-        variabilizationEstimatedPrunedCandidates = prunedCandidates;
     }
 
     public void clockStart() {
@@ -301,14 +316,6 @@ public class RepairReport {
         repairRepresentation = sb.toString();
     }
 
-    public String getRepairRepresentation() {
-        if (repair == null) {
-            throw new IllegalStateException("There was no repair found!");
-        }
-        generateRepairRepresentation();
-        return repairRepresentation;
-    }
-
     private void timesToMs() {
         time = TimeUnit.NANOSECONDS.toMillis(time);
         timeSpentInVariabilization = TimeUnit.NANOSECONDS.toMillis(timeSpentInVariabilization);
@@ -321,7 +328,6 @@ public class RepairReport {
     public String toString() {
         timesToMs();
         calculateAvgMutations();
-        calculateVariabilizationEstimatedPruning();
         boolean variabilizationEnabledAndSupported = Pruning.getInstance().useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
         StringBuilder sb = new StringBuilder("***AStryker report***\n");
         if (mutantGeneration) {
@@ -366,17 +372,47 @@ public class RepairReport {
         sb.append("Average mutations per generation:").append("\t").append(averageMutations).append("\n");
         sb.append("Average mutations per generation, per marked expression:").append("\t").append(Arrays.toString(averageMutationsPerIndex)).append("\n");
         sb.append("\n");
+        sb.append("---Pruning---").append("\n");
         sb.append("---Variabilization---").append("\n");
-        sb.append("Total checks:").append("\t").append(variabilizationChecks).append("\n");
-        sb.append("Checks passed:").append("\t").append(variabilizationChecksPassed).append("\n");
-        sb.append("Checks failed:").append("\t").append(variabilizationChecksFailed).append("\n");
-        sb.append("Estimated candidates pruned:").append("\t").append(variabilizationEstimatedPrunedCandidates).append("\n");
+        sb.append("\t\tTotal checks:").append("\t").append(variabilizationChecks).append("\n");
+        sb.append("\t\tChecks passed:").append("\t").append(variabilizationChecksPassed).append("\n");
+        sb.append("\t\tChecks failed:").append("\t").append(variabilizationChecksFailed).append("\n");
+        sb.append("\t\tChecks failed by index and depth:").append("\n");
+        sb.append("\t\t");
+        for (int i = 0; i <= markedExpressions; i++) {
+            sb.append(i).append("\t\t");
+        }
+        sb.append("\n");
+        for (int d = 0; d <= mutationDepth; d++) {
+            sb.append("\t").append(d).append("   ");
+            for (int i = 0; i <= markedExpressions; i++) {
+                sb.append(variabilizationChecksFailedPerIndexPerDepth[i][d]).append("\t\t");
+            }
+            sb.append("\n");
+        }
+        sb.append("---Partial Pruning---").append("\n");
+        sb.append("\t\tTotal checks:").append("\t").append(partialPruningChecks).append("\n");
+        sb.append("\t\tChecks passed:").append("\t").append(partialPruningChecksPassed).append("\n");
+        sb.append("\t\tChecks failed:").append("\t").append(partialPruningChecksFailed).append("\n");
+        sb.append("\t\tChecks failed by index and depth:").append("\n");
+        sb.append("\t\t");
+        for (int i = 0; i <= markedExpressions; i++) {
+            sb.append(i).append("\t\t");
+        }
+        sb.append("\n");
+        for (int d = 0; d <= mutationDepth; d++) {
+            sb.append("\t").append(d).append("   ");
+            for (int i = 0; i <= markedExpressions; i++) {
+                sb.append(partialPruningChecksFailedPerIndexPerDepth[i][d]).append("\t\t");
+            }
+            sb.append("\n");
+        }
         sb.append("---Times---").append("\n");
-        sb.append("Time spent in variabilization:").append("\t").append(timeSpentInVariabilization).append("ms");
+        sb.append("Time spent in pruning:        ").append("\t").append(timeSpentInVariabilization).append("ms");
         sb.append(" (").append(percentage(timeSpentInVariabilization, time)).append("%)").append("\n");
-        sb.append("Time spent in generation:").append("\t").append(timeSpentInGeneration).append("ms");
+        sb.append("Time spent in generation:     ").append("\t").append(timeSpentInGeneration).append("ms");
         sb.append(" (").append(percentage(timeSpentInGeneration, time)).append("%)").append("\n");
-        sb.append("Time spent in validation:").append("\t").append(timeSpentInValidation).append("ms");
+        sb.append("Time spent in validation:     ").append("\t").append(timeSpentInValidation).append("ms");
         sb.append(" (").append(percentage(timeSpentInValidation, time)).append("%)").append("\n");
         sb.append("Time spent in test generation:").append("\t").append(timeSpentInTestGeneration).append("ms");
         sb.append(" (").append(percentage(timeSpentInTestGeneration, time)).append("%)").append("\n");

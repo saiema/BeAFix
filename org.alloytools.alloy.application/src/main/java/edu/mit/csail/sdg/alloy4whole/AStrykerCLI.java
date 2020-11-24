@@ -57,6 +57,7 @@ public class AStrykerCLI {
             } else {
                 throw new IllegalArgumentException("The second argument must either be REPAIR, TESTS, or CHECK (got " + mode + " instead)");
             }
+            AStrykerConfigReader.getInstance().setStringArgument(HACKS_CANDIDATE_HASHES, "");
             if (mode.compareToIgnoreCase(TESTGEN) != 0) {
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_INSTANCES_TESTS_GENERATION, false);
                 AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE, "");
@@ -129,17 +130,22 @@ public class AStrykerCLI {
     private static final String VARIABILIZATION_TEST_GENERATION_KEY = "testgeneration";
     private static final String VARIABILIZATION_SAME_TYPE_KEY = "sametypes";
     private static final String PARTIALREPAIR_KEY = "partialrepair";
+    private static final String PARTIALREPAIR_PRUNING_KEY = "prpruning";
+    private static final String PARTIALREPAIR_PRIORITIZATION_KEY = "prprioritization";
     private static final String USEPOTOVALIDATE_KEY = "validatewithpo";
     private static final String TIMEOUT_KEY = "timeout";
     private static final String MAXDEPTH_KEY = "maxdepth";
     private static final String TEST_GENERATION_MAX_TEST_PER_COMMAND_KEY = "maxtestspercommand";
     private static final String TEST_GENERATION_TESTS_PER_STEP_KEY = "testspergeneration";
+    private static final String HACKS_CANDIDATE_HASHES_KEY = "hackschashes";
     private static void setConfig_repair(String key, String value) {
         switch (key.toLowerCase()) {
             case VARIABILIZATION_KEY:
             case VARIABILIZATION_TEST_GENERATION_KEY:
             case VARIABILIZATION_SAME_TYPE_KEY:
             case USEPOTOVALIDATE_KEY:
+            case PARTIALREPAIR_PRUNING_KEY:
+            case PARTIALREPAIR_PRIORITIZATION_KEY:
             case PARTIALREPAIR_KEY: {
                 Optional<Boolean> varValue = parseBooleanValue(value);
                 if (varValue.isPresent()) {
@@ -157,6 +163,24 @@ public class AStrykerCLI {
                             AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR, partialRepair);
                             AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_PRUNING, partialRepair);
                             if (partialRepair) {
+                                AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL, Boolean.FALSE);
+                                AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, Boolean.TRUE);
+                            }
+                            break;
+                        }
+                        case PARTIALREPAIR_PRUNING_KEY: {
+                            boolean partialRepairPruning = varValue.get();
+                            AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_PRUNING, partialRepairPruning);
+                            if (partialRepairPruning) {
+                                AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL, Boolean.FALSE);
+                                AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, Boolean.TRUE);
+                            }
+                            break;
+                        }
+                        case PARTIALREPAIR_PRIORITIZATION_KEY: {
+                            boolean partialRepairPrioritization = varValue.get();
+                            AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR, partialRepairPrioritization);
+                            if (partialRepairPrioritization) {
                                 AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL, Boolean.FALSE);
                                 AStrykerConfigReader.getInstance().setBooleanArgument(PARTIAL_REPAIR_FULLCGRAPH_VALIDATION, Boolean.TRUE);
                             }
@@ -194,6 +218,13 @@ public class AStrykerCLI {
             case MAXDEPTH_KEY: {
                 int maxDepth = getIntegerValue(MAXDEPTH_KEY, value);
                 AStrykerConfigReader.getInstance().setIntArgument(MAX_DEPTH, maxDepth);
+                break;
+            }
+            case HACKS_CANDIDATE_HASHES_KEY: {
+                File chashes = new File(value);
+                if (chashes.exists())
+                    throw new IllegalArgumentException("candidate hashes file already exists ( " + value + ")");
+                AStrykerConfigReader.getInstance().setStringArgument(HACKS_CANDIDATE_HASHES, value);
                 break;
             }
             default : throw new IllegalArgumentException("Invalid configuration key for automatic repair " + key);
@@ -395,23 +426,31 @@ public class AStrykerCLI {
                 "<path to model> REPAIR [options]" + "\n" +
                 "\n" +
                 "Options:" + "\n" +
-                "--maxdepth <int>            :     How many mutations are allowed per marked expressions (default is 2)." + "\n" +
-                "--timeout <int>             :     Time budget (in minutes) for the repair process (default is 0, unlimited)." + "\n" +
-                "--variabilization <boolean> :     Enables/disables variabilization pruning technique (default is false)." + "\n" +
-                "--sametypes <boolean>       :     If variabilization will use expressions exact types for constructed relation or more general ones (default and suggested is false)." + "\n" +
-                "--testgeneration <boolean>  :     When variabilization is enabled, specific commands can be set to be used only by the variabilization technique" + "\n" +
-                "                                  these commands must be prefixed by #t#. Any signature that is used only by this commands can also be marked by #t#" + "\n" +
-                "                                  which will make the mutation process ignore these. Variabilization commands must be run <pred> expect 1." + "\n" +
-                "                                  When test generation is enabled, commands and predicates will be automatically constructed from counterexamples." + "\n" +
-                "                                  Default is false, but the suggested is using true." + "\n" +
-                "--maxtestspercommand <int>  :     How many tests can be constructed from counterexamples from a particular command (default is 4)." + "\n" +
-                "--testspergeneration <int>  :     How many tests can be constructed each time a counterexample is found. This is an upper bound when there are several counterexamples." + "\n" +
-                "--partialrepair <boolean>   :     Enables/disables the partial repair pruning and partial repair prioritization." + "\n" +
-                "                                  This option only works when there is more than one bugged predicate, function, or assertion" + "\n" +
-                "                                  and no fact is bugged. And requires that at least one of bugged predicate, function or assertions has" + "\n" +
-                "                                  a related command which doesn't call (directly or indirectly) another of the bugged ones." + "\n" +
-                "--validatewithpo <boolean>  :     Enables/disables repair validation against commands prefixed by #po#, these commands will not be used" + "\n" +
-                "                                  during the repair process but only used after a repair is found to validate it." + "\n";
+                "--maxdepth <int>             :     How many mutations are allowed per marked expressions (default is 2)." + "\n" +
+                "--timeout <int>              :     Time budget (in minutes) for the repair process (default is 0, unlimited)." + "\n" +
+                "--variabilization <boolean>  :     Enables/disables variabilization pruning technique (default is false)." + "\n" +
+                "--sametypes <boolean>        :     If variabilization will use expressions exact types for constructed relation or more general ones (default and suggested is false)." + "\n" +
+                "--testgeneration <boolean>   :     When variabilization is enabled, specific commands can be set to be used only by the variabilization technique" + "\n" +
+                "                                   these commands must be prefixed by #t#. Any signature that is used only by this commands can also be marked by #t#" + "\n" +
+                "                                   which will make the mutation process ignore these. Variabilization commands must be run <pred> expect 1." + "\n" +
+                "                                   When test generation is enabled, commands and predicates will be automatically constructed from counterexamples." + "\n" +
+                "                                   Default is false, but the suggested is using true." + "\n" +
+                "--maxtestspercommand <int>   :     How many tests can be constructed from counterexamples from a particular command (default is 4)." + "\n" +
+                "--testspergeneration <int>   :     How many tests can be constructed each time a counterexample is found. This is an upper bound when there are several counterexamples." + "\n" +
+                "--partialrepair <boolean>    :     Enables/disables the partial repair pruning and partial repair prioritization." + "\n" +
+                "                                   This option only works when there is more than one bugged predicate, function, or assertion" + "\n" +
+                "                                   and no fact is bugged. And requires that at least one of bugged predicate, function or assertions has" + "\n" +
+                "                                   a related command which doesn't call (directly or indirectly) another of the bugged ones." + "\n" +
+                "--prpruning <boolean>        :     Enables/disables partial repair pruning." + "\n" +
+                "                                   This option only works when there is more than one bugged predicate, function, or assertion" + "\n" +
+                "                                   and no fact is bugged. And requires that at least one of bugged predicate, function or assertions has" + "\n" +
+                "                                   a related command which doesn't call (directly or indirectly) another of the bugged ones." + "\n" +
+                "--prprioritization <boolean> :     Enables/disables partial repair prioritization." + "\n" +
+                "                                   This option only works when there is more than one bugged predicate, function, or assertion" + "\n" +
+                "                                   and no fact is bugged. And requires that at least one of bugged predicate, function or assertions has" + "\n" +
+                "                                   a related command which doesn't call (directly or indirectly) another of the bugged ones." + "\n" +
+                "--validatewithpo <boolean>   :     Enables/disables repair validation against commands prefixed by #po#, these commands will not be used" + "\n" +
+                "                                   during the repair process but only used after a repair is found to validate it." + "\n";
         System.out.println(sb);
     }
 

@@ -570,6 +570,20 @@ public class MutationConfiguration {
                 return 0;
             }
 
+        },
+
+        HACKS_CANDIDATE_HASHES {
+
+            @Override
+            public Class<?> getValueType() {
+                return String.class;
+            }
+
+            @Override
+            public Object defaultValue() {
+                return "";
+            }
+
         }
 
         ;
@@ -669,6 +683,9 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE)) {
                 setConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.HACKS_CANDIDATE_HASHES)) {
+                setConfig(ConfigKey.HACKS_CANDIDATE_HASHES, aconfig.getStringArgument(AStrykerConfigReader.Config_key.HACKS_CANDIDATE_HASHES));
             }
         } catch (IOException e) {
             e.printStackTrace();

@@ -33,6 +33,8 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
             throw new IllegalArgumentException("Func f is null");
         if (!f.isPred)
             throw new IllegalArgumentException("Func " + f.label + " is not a predicate");
+        if (f.hasCommentPreviousLine())
+            sb.append("--").append(f.getCommentPreviousLine()).append("\n");
         sb.append("pred ").append(f.label.replace("this/","")).append(" [");
         Iterator<Decl> declIterator = f.decls.iterator();
         while (declIterator.hasNext()) {
@@ -57,6 +59,8 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
         checkBlockAndVisit(f.getBody());
         indent--;
         sb.append("\n}\n");
+        if (f.hasCommentNextLine())
+            sb.append("--").append(f.getCommentNextLine()).append("\n");
     }
 
     public void visitFunction(Func f) throws Err {

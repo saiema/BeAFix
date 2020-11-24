@@ -256,8 +256,6 @@ public class TestGeneratorHelper {
                             remove(eVar.label, sVars);
                             modified = true;
                         }
-//                        sVars.add(eVar);
-//                        sVarsNames.add(eVar.label);
                     }
                 }
                 if (sVars.isEmpty() && modified)

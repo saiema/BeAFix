@@ -60,7 +60,6 @@ public class Pruning {
         if (!MutantLab.getInstance().isPartialRepairSupported())
             return true;
         logger.info("independent commands variabilization check for:\n" + from.toString());
-        CompModule context = from.getContext();
         List<Browsable> relatedFullyModifiedPFAs = MutantLab.getInstance().fullyModifiedPFAs(from);
         StringBuilder sb = new StringBuilder();
         for (Browsable relatedFPA : relatedFullyModifiedPFAs) {
@@ -76,7 +75,7 @@ public class Pruning {
             List<Command> independentCommands = DependencyGraph.getInstance().getDirectIndependentCommandsFor(fullyModifiedFPA);
             if (!independentCommands.isEmpty()) {
                 if (!checkReported) {
-                    RepairReport.getInstance().incVariabilizationChecks();
+                    RepairReport.getInstance().incPartialPruningChecks();
                     checkReported = true;
                 }
                 logger.info("Checking independent commands for " + fullyModifiedFPA.toString() + "[" + independentCommands.stream().map(Command::toString).collect(Collectors.joining(",")) + "]");
@@ -84,7 +83,7 @@ public class Pruning {
                 //boolean solverResult = runSolver(context, independentCommands, from, logger);
                 if (!solverResult) {
                     logger.info("independent commands variabilization check failed");
-                    RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression());
+                    RepairReport.getInstance().incPartialPruningChecksFailed(from.getCurrentMarkedExpression(), from.mutationsForCurrentIndex());
                     return false;
                 }
             } else {
@@ -92,7 +91,7 @@ public class Pruning {
             }
         }
         if (checkReported)
-            RepairReport.getInstance().incVariabilizationChecksPassed();
+            RepairReport.getInstance().incPartialPruningChecksPassed();
         logger.info("independent commands variabilization check succeeded");
         return true;
     }
@@ -137,7 +136,7 @@ public class Pruning {
                 if (solverResult)
                     RepairReport.getInstance().incVariabilizationChecksPassed();
                 else
-                    RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression());
+                    RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression(), from.mutationsForCurrentIndex());
             }
         }
         restoreAst(from, magicSig, !astRestored, true);

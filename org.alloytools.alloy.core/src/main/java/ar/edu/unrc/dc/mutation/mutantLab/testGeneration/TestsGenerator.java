@@ -258,6 +258,8 @@ public class TestsGenerator {
         List<Expr> fieldOverrides = getFieldOverrides(solution, context, signatureValues);
         Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
         Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, signatureValues, command);
+        testPredicate.setCommentPreviousLine("TEST START");
+        testPredicate.setCommentNextLine("TEST FINISH");
         Command testCommand = generateTestCommand(testPredicate, request);
         logger.info("Test generated\n" +
                     testPredicate.toString() + "\n" +
@@ -302,10 +304,10 @@ public class TestsGenerator {
         List<Decl> skolemDecls = getVariablesDecls(skolemVariables);
         Expr body;
         if (!skolemDecls.isEmpty()) {
-            body = generateDisjSome(skolemDecls, sub);
-            body = generateDisjSome(signatureDecls, body);
+            body = generateSome(skolemDecls, sub);
+            body = generateSome(signatureDecls, body);
         } else {
-            body = generateDisjSome(signatureDecls, sub);
+            body = generateSome(signatureDecls, sub);
         }
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = getTestName(from);
@@ -346,6 +348,14 @@ public class TestsGenerator {
             decls.add(d);
         }
         return decls;
+    }
+
+    private boolean useDisj = false; //TODO: temporary fix
+    private Expr generateSome(List<Decl> decls, Expr sub) {
+        if (useDisj) {
+            return generateDisjSome(decls, sub);
+        }
+        return ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
     }
 
     private Expr generateDisjSome(List<Decl> decls, Expr sub) {
