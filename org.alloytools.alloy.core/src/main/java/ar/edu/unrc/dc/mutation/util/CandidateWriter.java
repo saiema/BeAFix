@@ -19,7 +19,7 @@ public class CandidateWriter {
         this.candidate = candidate;
     }
 
-    StringBuilder sb;
+    private StringBuilder sb;
     public String candidateStringRepresentation() {
         if (!MutantLab.getInstance().applyCandidateToAst(candidate)) {
             throw new IllegalStateException("Failed to apply repair to ast");

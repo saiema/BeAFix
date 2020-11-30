@@ -260,8 +260,21 @@ public class SearchAndReplace extends VisitReturn<Optional<Expr>> {
                 //replacement should be an argument of the call
                 ExprCall oParentAsCall = (ExprCall) originalParent;
                 modifiedParent = oParentAsCall.mutateArgument(original, replacement);
+            } else if (originalParent instanceof ExprITE) {
+                //replacement can be the condition, the then part, or the else part
+                ExprITE oParentAsITE = (ExprITE) originalParent;
+                if (oParentAsITE.cond.getID() == original.getID()) {
+                    //replacement should be the condition
+                    modifiedParent = oParentAsITE.replaceCondition(replacement);
+                } else if (oParentAsITE.left.getID() == original.getID()) {
+                    //replacement should be the then-clause
+                    modifiedParent = oParentAsITE.replaceThenClause(replacement);
+                } else if (oParentAsITE.right.getID() == original.getID()) {
+                    //replacement should be the else-clause
+                    modifiedParent = oParentAsITE.replaceElseClause(replacement);
+                }
             } else {
-                //for now we only have to deal with binary and unary expressions
+                //The current implementation does not manage this type of expressions
                 //TODO: update as this change
                 return Optional.empty();
             }

@@ -201,7 +201,7 @@ public class TestsGenerator {
         Command command = request.command();
         CompModule context = request.context();
         Map<Sig, List<ExprVar>> signatureValues = getSignaturesAtoms(solution, context);
-        mergeExtendingSignaturesValues(signatureValues);
+        Map<Sig, List<ExprVar>> declSignatureValues = mergeExtendingSignaturesValues(signatureValues);
         Map<Field, List<Expr>> fieldValues = getFieldsValues(solution, context, signatureValues);
         Map<ExprVar, List<Expr>> variablesValues = getVariablesValues(solution, signatureValues, command);
         List<ExprVar> skolemVariables = new LinkedList<>(variablesValues.keySet());
@@ -257,7 +257,7 @@ public class TestsGenerator {
         }
         List<Expr> fieldOverrides = getFieldOverrides(solution, context, signatureValues);
         Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
-        Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, signatureValues, command);
+        Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, declSignatureValues, command);
         testPredicate.setCommentPreviousLine("TEST START");
         testPredicate.setCommentNextLine("TEST FINISH");
         Command testCommand = generateTestCommand(testPredicate, request);
@@ -296,18 +296,14 @@ public class TestsGenerator {
 
     private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
         Expr sub = ExprBinary.Op.AND.make(null, null, initialization, testFormula);
-        List<ExprVar> varsToDeclare = new LinkedList<>();
-        for (Entry<Sig, List<ExprVar>> sValues : signatureValues.entrySet()) {
-            varsToDeclare.addAll(sValues.getValue());
-        }
-        List<Decl> signatureDecls = getVariablesDecls(varsToDeclare);
+        List<Decl> signatureDecls = getVariablesDecls(signatureValues);//getVariablesDecls(varsToDeclare);
         List<Decl> skolemDecls = getVariablesDecls(skolemVariables);
         Expr body;
         if (!skolemDecls.isEmpty()) {
-            body = generateSome(skolemDecls, sub);
-            body = generateSome(signatureDecls, body);
+            body = generateDisjSome(skolemDecls, sub);
+            body = generateDisjSome(signatureDecls, body);
         } else {
-            body = generateSome(signatureDecls, sub);
+            body = generateDisjSome(signatureDecls, sub);
         }
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = getTestName(from);
@@ -321,6 +317,18 @@ public class TestsGenerator {
             return "CE_" + from + "_" + generateRandomName(10);
         }
         return this.testName + this.testIndex++;
+    }
+
+    private List<Decl> getVariablesDecls(Map<Sig, List<ExprVar>> varsPerSignature) {
+        List<Decl> decls = new LinkedList<>();
+        for (Entry<Sig, List<ExprVar>> sigVars : varsPerSignature.entrySet()) {
+            Type t = sigVars.getKey().type();
+            List<ExprHasName> variables = new LinkedList<>(sigVars.getValue());
+            Expr bound = t.toExpr();
+            Decl d = new Decl(null, null, null, variables, bound);
+            decls.add(d);
+        }
+        return decls;
     }
 
     private List<Decl> getVariablesDecls(List<ExprVar> varsToDeclare) {
@@ -348,14 +356,6 @@ public class TestsGenerator {
             decls.add(d);
         }
         return decls;
-    }
-
-    private boolean useDisj = false; //TODO: temporary fix
-    private Expr generateSome(List<Decl> decls, Expr sub) {
-        if (useDisj) {
-            return generateDisjSome(decls, sub);
-        }
-        return ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
     }
 
     private Expr generateDisjSome(List<Decl> decls, Expr sub) {
@@ -434,6 +434,7 @@ public class TestsGenerator {
 
     private final Map<String, ExprVar> varsCache = new TreeMap<>();
     private void clearVarsCache() {varsCache.clear();}
+
     private Map<Sig, List<ExprVar>> getSignaturesAtoms(A4Solution solution, CompModule context) {
         Map<Relation, TupleSet> counterExampleSignatures = getCounterExampleSignatures(solution, context);
         Map<Sig, List<ExprVar>> signatureAtoms = new HashMap<>();

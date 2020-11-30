@@ -221,6 +221,10 @@ public class AStrykerCLI {
                 break;
             }
             case HACKS_CANDIDATE_HASHES_KEY: {
+                if (value.trim().isEmpty()) {
+                    AStrykerConfigReader.getInstance().setStringArgument(HACKS_CANDIDATE_HASHES, value);
+                    break;
+                }
                 File chashes = new File(value);
                 if (chashes.exists())
                     throw new IllegalArgumentException("candidate hashes file already exists ( " + value + ")");

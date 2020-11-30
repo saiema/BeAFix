@@ -211,6 +211,42 @@ public final class ExprITE extends Expr {
         this.right.setBrowsableParent(this);
     }
 
+    public ExprITE replaceCondition(Expr replacement) {
+        Expr leftClone = (Expr) this.left.clone();
+        Expr rightClone = (Expr) this.right.clone();
+        ExprITE mutant = new ExprITE(this.pos, (Expr) replacement.clone(), leftClone, rightClone, this.type, this.errors);
+        mutant.setID(getID());
+        mutant.setIDEnv(getIDEnv());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
+        return mutant;
+    }
+
+    public ExprITE replaceThenClause(Expr replacement) {
+        Expr condClone = (Expr) this.cond.clone();
+        Expr rightClone = (Expr) this.right.clone();
+        ExprITE mutant = new ExprITE(this.pos, condClone, (Expr) replacement.clone(), rightClone, this.type, this.errors);
+        mutant.setID(getID());
+        mutant.setIDEnv(getIDEnv());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
+        return mutant;
+    }
+
+    public ExprITE replaceElseClause(Expr replacement) {
+        Expr condClone = (Expr) this.cond.clone();
+        Expr leftClone = (Expr) this.left.clone();
+        ExprITE mutant = new ExprITE(this.pos, condClone, leftClone, (Expr) replacement.clone(), this.type, this.errors);
+        mutant.setID(getID());
+        mutant.setIDEnv(getIDEnv());
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
+        return mutant;
+    }
+
     @Override
     public Object clone() {
         Expr condClone = (Expr) this.cond.clone();

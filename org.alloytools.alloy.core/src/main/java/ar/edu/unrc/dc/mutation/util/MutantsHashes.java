@@ -52,7 +52,7 @@ public class MutantsHashes {
         });
         File chashes = candidateHashesFile();
         try {
-            this.writer = chashes ==null?null:new FileWriter(chashes);
+            this.writer = chashes == null?null:new FileWriter(chashes);
         } catch (IOException e) {
             e.printStackTrace();
         }

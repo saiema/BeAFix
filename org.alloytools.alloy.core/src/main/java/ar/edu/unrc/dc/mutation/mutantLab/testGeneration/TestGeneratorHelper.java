@@ -241,28 +241,50 @@ public class TestGeneratorHelper {
         return false;
     }
 
-    static void mergeExtendingSignaturesValues(Map<Sig, List<ExprVar>> signaturesValues) {
+    static Map<Sig, List<ExprVar>> mergeExtendingSignaturesValues(Map<Sig, List<ExprVar>> signaturesValues) {
+        Map<Sig, List<ExprVar>> mergedSignatures = new HashMap<>();
+        signaturesValues.forEach((sig, exprVars) -> mergedSignatures.put(sig, new LinkedList<>(exprVars)));
         boolean modified = true;
         while (modified) {
             modified = false;
-            List<Sig> sigs = new LinkedList<>(signaturesValues.keySet());
+            List<Sig> sigs = new LinkedList<>(mergedSignatures.keySet());
             for (Sig s : sigs) {
-                List<ExprVar> sVars = signaturesValues.get(s);
+                if (!mergedSignatures.containsKey(s))
+                    continue;
+                List<ExprVar> sVars = mergedSignatures.get(s);
                 Set<String> sVarsNames = sVars.stream().map(v -> v.label).collect(Collectors.toCollection(TreeSet::new));
+                Map<Sig, List<String>> toRemove = new HashMap<>();
                 for (Sig extendingSig : extendingSignatures(s, sigs)) {
-                    List<ExprVar> extendingSigVars = signaturesValues.getOrDefault(extendingSig, new LinkedList<>());
+                    List<ExprVar> extendingSigVars = mergedSignatures.getOrDefault(extendingSig, new LinkedList<>());
                     for (ExprVar eVar : extendingSigVars) {
                         if (sVarsNames.contains(eVar.label)) {
-                            remove(eVar.label, sVars);
+                            List<String> currentVarsToRemove = toRemove.getOrDefault(extendingSig, new LinkedList<>());
+                            currentVarsToRemove.add(eVar.label);
+                            toRemove.put(extendingSig, currentVarsToRemove);
+                            //remove(eVar.label, sVars);
                             modified = true;
                         }
                     }
                 }
-                if (sVars.isEmpty() && modified)
+                if (modified) {
+                    updateSignatureVariables(mergedSignatures, toRemove);
+                }
+                /*if (sVars.isEmpty() && modified)
                     signaturesValues.remove(s);
                 else
-                    signaturesValues.put(s, sVars);
+                    signaturesValues.put(s, sVars);*/
             }
+        }
+        return mergedSignatures;
+    }
+
+    private static void updateSignatureVariables(Map<Sig, List<ExprVar>> signaturesValues, Map<Sig, List<String>> toRemove) {
+        for (Sig s : toRemove.keySet()) {
+            for (String varToRemove : toRemove.get(s)) {
+                remove(varToRemove, signaturesValues.get(s));
+            }
+            if (signaturesValues.get(s).isEmpty())
+                signaturesValues.remove(s);
         }
     }
 

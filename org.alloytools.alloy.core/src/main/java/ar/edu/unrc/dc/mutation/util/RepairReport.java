@@ -378,13 +378,13 @@ public class RepairReport {
         sb.append("\t\tChecks passed:").append("\t").append(variabilizationChecksPassed).append("\n");
         sb.append("\t\tChecks failed:").append("\t").append(variabilizationChecksFailed).append("\n");
         sb.append("\t\tChecks failed by index and depth:").append("\n");
-        sb.append("\t\t");
+        sb.append("\t\t\t");
         for (int i = 0; i <= markedExpressions; i++) {
             sb.append(i).append("\t\t");
         }
         sb.append("\n");
         for (int d = 0; d <= mutationDepth; d++) {
-            sb.append("\t").append(d).append("   ");
+            sb.append("\t\t").append(d).append("\t");
             for (int i = 0; i <= markedExpressions; i++) {
                 sb.append(variabilizationChecksFailedPerIndexPerDepth[i][d]).append("\t\t");
             }
@@ -395,13 +395,13 @@ public class RepairReport {
         sb.append("\t\tChecks passed:").append("\t").append(partialPruningChecksPassed).append("\n");
         sb.append("\t\tChecks failed:").append("\t").append(partialPruningChecksFailed).append("\n");
         sb.append("\t\tChecks failed by index and depth:").append("\n");
-        sb.append("\t\t");
+        sb.append("\t\t\t");
         for (int i = 0; i <= markedExpressions; i++) {
             sb.append(i).append("\t\t");
         }
         sb.append("\n");
         for (int d = 0; d <= mutationDepth; d++) {
-            sb.append("\t").append(d).append("   ");
+            sb.append("\t\t").append(d).append("\t");
             for (int i = 0; i <= markedExpressions; i++) {
                 sb.append(partialPruningChecksFailedPerIndexPerDepth[i][d]).append("\t\t");
             }

@@ -1208,6 +1208,7 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "RepairSubTittle", "Repairing... ");
             RepairReport.getInstance().clockStart();
             RepairTimeOut.getInstance().start();
+            FileUtils.setLogger(logger);
             boolean timeoutReached = false;
             Candidate current;
             while ((current = mutantLab.advance()) != null) {

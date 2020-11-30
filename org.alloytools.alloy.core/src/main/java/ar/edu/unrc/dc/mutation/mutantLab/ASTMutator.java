@@ -204,6 +204,17 @@ public class ASTMutator {
                 if (!targetFound) {
                     return Optional.empty();
                 }
+            } else if (initialExpressionParent instanceof ExprITE) {
+                ExprITE oParentAsITE = (ExprITE) initialExpressionParent;
+                if (oParentAsITE.cond.getID() == original.getID()) {
+                    Cheats.changeITECondition(oParentAsITE, newExpression);
+                } else if (oParentAsITE.left.getID() == original.getID()) {
+                    Cheats.changeITEThen(oParentAsITE, newExpression);
+                } else if (oParentAsITE.right.getID() == original.getID()) {
+                    Cheats.changeITETElse(oParentAsITE, newExpression);
+                } else {
+                    return Optional.empty();
+                }
             } else if (initialExpressionParent instanceof Expr){
                 //replacement should be either an assertion's o fact's body
                 boolean assertionFound = false;
