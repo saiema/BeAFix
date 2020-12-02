@@ -709,6 +709,10 @@ public class MutationConfiguration {
             this.config.put(configKey.toString(), value);
     }
 
+    public void removeConfig(ConfigKey configKey) {
+        this.config.remove(configKey.toString());
+    }
+
     public Optional<Object> getConfigValue(ConfigKey configKey) {
         if (this.config.containsKey(configKey.toString())) {
             return Optional.of(this.config.get(configKey.toString()));

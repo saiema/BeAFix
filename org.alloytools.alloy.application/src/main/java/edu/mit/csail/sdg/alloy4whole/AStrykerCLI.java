@@ -255,6 +255,10 @@ public class AStrykerCLI {
                 break;
             }
             case OUTPUT_FOLDER_KEY: {
+                if (value.trim().isEmpty()) {
+                    AStrykerConfigReader.getInstance().removeConfig(TEST_GENERATION_OUTPUT_FOLDER);
+                    break;
+                }
                 File outFolder = new File(value);
                 if (!outFolder.exists())
                     throw new IllegalArgumentException("tests output folder doesn't exists ( " + value + ")");
@@ -286,9 +290,16 @@ public class AStrykerCLI {
             case MODEL_OVERRIDING_KEY: {
                 boolean boolValue = getBooleanValue(MODEL_OVERRIDING_KEY, value);
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_USE_MODEL_OVERRIDING, boolValue);
+                if (!boolValue)
+                    AStrykerConfigReader.getInstance().removeConfig(TEST_GENERATION_MODEL_OVERRIDING_FOLDER);
                 break;
             }
             case MODEL_OVERRIDING_FOLDER_KEY: {
+                if (value.trim().isEmpty()) {
+                    AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_USE_MODEL_OVERRIDING, false);
+                    AStrykerConfigReader.getInstance().removeConfig(TEST_GENERATION_MODEL_OVERRIDING_FOLDER);
+                    break;
+                }
                 File overridesFolder = new File(value);
                 if (!overridesFolder.exists())
                     throw new IllegalArgumentException("model overriding folder doesn't exists ( " + value + ")");
@@ -305,6 +316,10 @@ public class AStrykerCLI {
                 break;
             }
             case BUGGY_FUNCS_FILE_KEY: {
+                if (value.trim().isEmpty()) {
+                    AStrykerConfigReader.getInstance().removeConfig(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE);
+                    break;
+                }
                 File buggyFuncs = new File(value);
                 if (!buggyFuncs.exists())
                     throw new IllegalArgumentException("buggy functions file doesn't exists ( " + value + ")");
