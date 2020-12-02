@@ -633,7 +633,7 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TIMEOUT)) {
                 int to = aconfig.getIntArgument(AStrykerConfigReader.Config_key.TIMEOUT);
-                Long toAsLong = to == 0?0L:(to * 1000) * 60;
+                Long toAsLong = to == 0?0L:(to * 1000L) * 60;
                 setConfig(ConfigKey.REPAIR_TIMEOUT, toAsLong);
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.MAX_DEPTH)) {
@@ -647,9 +647,17 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_FOLDER)) {
                 setConfig(ConfigKey.TEST_GENERATION_OUTPUT_FOLDER, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_FOLDER));
+            } else {
+                removeConfig(ConfigKey.TEST_GENERATION_OUTPUT_FOLDER);
+                setConfig(ConfigKey.TEST_GENERATION_OUTPUT_TO_FILES, false);
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES)) {
-                setConfig(ConfigKey.TEST_GENERATION_OUTPUT_TO_FILES, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES));
+                if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_FOLDER))
+                    setConfig(ConfigKey.TEST_GENERATION_OUTPUT_TO_FILES, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES));
+                else {
+                    setConfig(ConfigKey.TEST_GENERATION_OUTPUT_TO_FILES, false);
+                    removeConfig(ConfigKey.TEST_GENERATION_OUTPUT_FOLDER);
+                }
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_OUTPUT_FOLDER)) {
                 setConfig(ConfigKey.MUTANT_GENERATION_OUTPUT_FOLDER, aconfig.getStringArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_OUTPUT_FOLDER));
@@ -677,12 +685,17 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER)) {
                 setConfig(ConfigKey.TEST_GENERATION_MODEL_OVERRIDING_FOLDER, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MODEL_OVERRIDING_FOLDER));
+            } else {
+                removeConfig(ConfigKey.TEST_GENERATION_MODEL_OVERRIDING_FOLDER);
+                setConfig(ConfigKey.TEST_GENERATION_USE_MODEL_OVERRIDING, false);
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION)) {
                 setConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION));
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE)) {
                 setConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE));
+            } else {
+                removeConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE);
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.HACKS_CANDIDATE_HASHES)) {
                 setConfig(ConfigKey.HACKS_CANDIDATE_HASHES, aconfig.getStringArgument(AStrykerConfigReader.Config_key.HACKS_CANDIDATE_HASHES));

@@ -257,6 +257,7 @@ public class AStrykerCLI {
             case OUTPUT_FOLDER_KEY: {
                 if (value.trim().isEmpty()) {
                     AStrykerConfigReader.getInstance().removeConfig(TEST_GENERATION_OUTPUT_FOLDER);
+                    AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_OUTPUT_TO_FILES, false);
                     break;
                 }
                 File outFolder = new File(value);
