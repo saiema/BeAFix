@@ -100,6 +100,7 @@ public class FileUtils {
                     myWriter.write("\n\n");
                     myWriter.write(command);
                     myWriter.write("\n\n");
+                    myWriter.write("===TEST===\n");
                 } catch (IOException e) {
                     throw new Error("An error occurred while trying to write generated test", e);
                 }

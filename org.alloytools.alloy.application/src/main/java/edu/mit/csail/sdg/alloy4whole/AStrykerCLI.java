@@ -41,7 +41,7 @@ public class AStrykerCLI {
                 printHelp();
             return;
         }
-        String sourcefile = args[0];;
+        String sourcefile = args[0];
         if (args.length > 1) {
             String mode = args[1];
             if (mode.compareToIgnoreCase(REPAIR) == 0) {
@@ -103,9 +103,7 @@ public class AStrykerCLI {
         boolean configKeyRead = false;
         String configKey = null;
         for (String arg : args) {
-            if (arg.trim().isEmpty()) {
-                continue;
-            }
+            arg = arg.replaceAll("\"", "");
             if (arg.trim().startsWith("--")) {
                 if (configKeyRead)
                     throw new IllegalArgumentException("Expecting value for " + configKey + " got " + arg.trim() + " instead");
