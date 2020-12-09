@@ -170,7 +170,7 @@ public class TestsGenerator {
                 newTests.add(newTest);
             }
             testsGenerated++;
-            solution = solution.next();
+            request.updateSolution(solution.next());
             if (solution.getEvaluator() == null)
                 break;
         }

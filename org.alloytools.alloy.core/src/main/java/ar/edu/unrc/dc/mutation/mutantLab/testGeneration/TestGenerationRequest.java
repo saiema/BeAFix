@@ -11,7 +11,7 @@ public class TestGenerationRequest {
 
     private enum InstanceTestGeneration {NEGATIVE, POSITIVE, BOTH}
 
-    private final A4Solution solution;
+    private A4Solution solution;
     private final CompModule context;
     private final Command command;
     private final InstanceTestGeneration instanceTestGeneration;
@@ -79,6 +79,10 @@ public class TestGenerationRequest {
 
     public A4Solution solution() {
         return solution;
+    }
+
+    public void updateSolution(A4Solution solution) {
+        this.solution = solution;
     }
 
     public CompModule context() {
