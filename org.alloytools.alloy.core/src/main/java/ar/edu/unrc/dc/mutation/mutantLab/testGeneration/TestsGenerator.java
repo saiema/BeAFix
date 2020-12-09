@@ -132,8 +132,10 @@ public class TestsGenerator {
         return generateTestsFor(request);
     }
 
+    private final Set<String> observedInstances = new TreeSet<>();
+
     public List<Command> generateTestsFor(TestGenerationRequest request) throws Err {
-        A4Solution solution = request.solution();
+        observedInstances.clear();
         Command command = request.command();
         logger.info("generate tests for\n" + command.toString());
         List<Command> newTests = new LinkedList<>();
@@ -158,7 +160,7 @@ public class TestsGenerator {
                 msg = "Generating positive and negative test from untrusted command for instance\n";
                 positiveAndNegativeTestGeneration = true;
             }
-            logger.info(msg + solution.getEvaluator().instance().relationTuples().entrySet().toString());
+            logger.info(msg + request.solution().getEvaluator().instance().relationTuples().entrySet().toString());
             if (positiveAndNegativeTestGeneration) {
                 List<TestGenerationRequest> positiveAndNegativeRequests = request.splitABothRequestIntoPositiveAndNegative();
                 Command positiveTest = generateNewTest(positiveAndNegativeRequests.get(0));
@@ -170,12 +172,25 @@ public class TestsGenerator {
                 newTests.add(newTest);
             }
             testsGenerated++;
-            request.updateSolution(solution.next());
-            if (solution.getEvaluator() == null)
+            observedInstances.add(request.solution().toString());
+            Optional<A4Solution> next = advanceToNextInstance(request.solution());
+            if (next.isPresent()) {
+                request.updateSolution(next.get());
+            } else {
                 break;
+            }
         }
         testsPerProperty.put(property, currentTests + testsGenerated);
         return newTests;
+    }
+
+    private Optional<A4Solution> advanceToNextInstance(A4Solution current) {
+        if (current.getEvaluator() == null)
+            return Optional.empty();
+        A4Solution next = current.next();
+        if (observedInstances.add(next.toString()))
+            return Optional.of(next);
+        return advanceToNextInstance(next);
     }
 
     public Map<String, Integer> getTestAmountPerProperty() {
