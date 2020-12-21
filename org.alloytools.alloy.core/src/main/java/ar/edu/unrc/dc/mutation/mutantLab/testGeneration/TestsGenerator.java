@@ -3,7 +3,10 @@ package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Cheats;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import ar.edu.unrc.dc.mutation.util.ExpressionEvaluator;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
+import ar.edu.unrc.dc.mutation.visitors.FunctionsCollector;
+import ar.edu.unrc.dc.mutation.visitors.SearchCall;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pos;
@@ -138,7 +141,7 @@ public class TestsGenerator {
         observedInstances.clear();
         Command command = request.command();
         logger.info("generate tests for\n" + command.toString());
-        List<Command> newTests = new LinkedList<>();
+        List<Command> generatedTests = new LinkedList<>();
         String property;
         if (command.nameExpr instanceof ExprVar)
             property = ((ExprVar) command.nameExpr).label;
@@ -163,15 +166,16 @@ public class TestsGenerator {
             logger.info(msg + request.solution().getEvaluator().instance().relationTuples().entrySet().toString());
             if (positiveAndNegativeTestGeneration) {
                 List<TestGenerationRequest> positiveAndNegativeRequests = request.splitABothRequestIntoPositiveAndNegative();
-                Command positiveTest = generateNewTest(positiveAndNegativeRequests.get(0));
-                newTests.add(positiveTest);
-                Command negativeTest = generateNewTest(positiveAndNegativeRequests.get(1));
-                newTests.add(negativeTest);
+                Set<Command> positiveTests = generateNewTest(positiveAndNegativeRequests.get(0));
+                generatedTests.addAll(positiveTests);
+                Set<Command> negativeTests = generateNewTest(positiveAndNegativeRequests.get(1));
+                generatedTests.addAll(negativeTests);
+                testsGenerated += positiveTests.size() + negativeTests.size();
             } else {
-                Command newTest = generateNewTest(request);
-                newTests.add(newTest);
+                Set<Command> newTests = generateNewTest(request);
+                generatedTests.addAll(newTests);
+                testsGenerated += newTests.size();
             }
-            testsGenerated++;
             observedInstances.add(request.solution().toString());
             Optional<A4Solution> next = advanceToNextInstance(request.solution());
             if (next.isPresent()) {
@@ -181,7 +185,7 @@ public class TestsGenerator {
             }
         }
         testsPerProperty.put(property, currentTests + testsGenerated);
-        return newTests;
+        return generatedTests;
     }
 
     private Optional<A4Solution> advanceToNextInstance(A4Solution current) {
@@ -197,8 +201,8 @@ public class TestsGenerator {
         return testsPerProperty;
     }
 
-    private Command generateNewTest(TestGenerationRequest request) {
-        Command cmd;
+    private Set<Command> generateNewTest(TestGenerationRequest request) {
+        Set<Command> cmd;
         RepairReport.getInstance().testGenerationClockStart();
         try {
             cmd = generateNewTest_impl(request);
@@ -210,7 +214,7 @@ public class TestsGenerator {
         return cmd;
     }
 
-    private Command generateNewTest_impl(TestGenerationRequest request) {
+    private Set<Command> generateNewTest_impl(TestGenerationRequest request) {
         clearVarsCache();
         A4Solution solution = request.solution();
         Command command = request.command();
@@ -236,6 +240,19 @@ public class TestsGenerator {
         Expr cleanedFormula = propertyCleaner.cleanExpression(extractedProperty.getProperty());
         if (cleanedFormula == null)
             throw new IllegalStateException("Cleaned formula is null");
+        if (arepairIntegration()) { //We will check that at most one predicate/function is present
+            FunctionsCollector functionsCollector = new FunctionsCollector();
+            Set<Func> functions = functionsCollector.visitThis(cleanedFormula);
+            if (functions.size() > 1) {
+                String message = "ARepair integration mode can only support at most one predicate, we found " + functions.size() + " for current expression " + cleanedFormula.toString();
+                logger.severe(message);
+                throw new IllegalStateException(message);
+            } else if (functions.size() == 1 && !functions.stream().findFirst().get().isPred) {
+                String message = "ARepair integration mode can only support predicates, we found function " + functions.stream().findFirst().get().toString() + " in current expression " + cleanedFormula.toString();
+                logger.severe(message);
+                throw new IllegalStateException(message);
+            }
+        }
         VariableExchanger variableExchanger = new VariableExchanger(variableMapping);
         Expr testFormula = variableExchanger.replaceVariables((Expr)cleanedFormula.clone());
         testFormula.setCommentBefore("testFormula");
@@ -272,13 +289,68 @@ public class TestsGenerator {
         }
         List<Expr> fieldOverrides = getFieldOverrides(solution, context, signatureValues);
         Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
-        Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, declSignatureValues, command);
+        if (arepairIntegration()) {
+            Set<Command> testCommands = new HashSet<>();
+            if (!request.isInstanceTestRequest() || request.isInstanceNegativeTestRequest()) {
+                List<TestBody> testBodies = getBodyForARepairIntegrationCounterExample(testFormula, context, solution);
+                for (TestBody testBody : testBodies) {
+                    testBody.fromInstance(true); //is a bad fix, but we don't want counterexample tests while in arepair integration mode
+                    if (request.isInstanceTestRequest() && !request.fromTrustedCommand())
+                        testBody.trusted = false;
+                    Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
+                    testCommands.add(testCommand);
+                }
+                return testCommands;
+            } else if (request.isInstancePositiveTestRequest()) {
+                logger.info("positive instance tests not yet supported while on arepair integration mode");
+                return Collections.emptySet();
+            } else {
+                throw new IllegalStateException("Unexpected request: " + request.toString());
+            }
+        } else {
+            TestBody testBody;
+            if (!request.isInstanceTestRequest()) {
+                testBody = TestBody.trustedSatisfiablePredicate(testFormula);
+                testBody.fromInstance(false);
+            } else if (request.isInstancePositiveTestRequest()) {
+                testBody = request.fromTrustedCommand()?TestBody.trustedSatisfiablePredicate(testFormula):TestBody.untrustedSatisfiablePredicate(testFormula);
+            } else if (request.isInstanceNegativeTestRequest()) {
+                testBody = request.fromTrustedCommand()?TestBody.trustedUnsatisfiablePredicate(testFormula):TestBody.untrustedUnsatisfiablePredicate(testFormula);
+            } else {
+                throw new IllegalStateException("Unexpected request: " + request.toString());
+            }
+            Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
+            return Collections.singleton(testCommand);
+        }
+//        Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, declSignatureValues, command);
+//        testPredicate.setCommentPreviousLine("TEST START");
+//        testPredicate.setCommentNextLine("TEST FINISH");
+//        Command testCommand = generateTestCommand(testPredicate, request);
+//        logger.info("Test generated\n" +
+//                    testPredicate.toString() + "\n" +
+//                    testPredicate.getBody().toString()
+//        );
+//        try {
+//            Cheats.addFunctionToModule(context, testPredicate);
+//        } catch (CheatingIsBadMkay e) {
+//            throw new Error("An error occurred while adding counter example predicate to ast", e);
+//        }
+//        try {
+//            Cheats.addCommand(testCommand, context);
+//        } catch (CheatingIsBadMkay e) {
+//            throw new Error("An error occurred while adding counter example command to ast", e);
+//        }
+//        return testCommand;
+    }
+
+    private Command generateTest(Expr initialization, TestBody testBody, List<ExprVar> usedVariables, Map<Sig, List<ExprVar>> declSignatureValues, Command command, CompModule context) {
+        Func testPredicate = generateTestPredicate(initialization, testBody.body(), usedVariables, declSignatureValues, command);
         testPredicate.setCommentPreviousLine("TEST START");
         testPredicate.setCommentNextLine("TEST FINISH");
-        Command testCommand = generateTestCommand(testPredicate, request);
+        Command testCommand = generateTestCommand(testPredicate, !testBody.fromInstance(), testBody.isExpected(), testBody.isTrusted());
         logger.info("Test generated\n" +
-                    testPredicate.toString() + "\n" +
-                    testPredicate.getBody().toString()
+                testPredicate.toString() + "\n" +
+                testPredicate.getBody().toString()
         );
         try {
             Cheats.addFunctionToModule(context, testPredicate);
@@ -293,24 +365,27 @@ public class TestsGenerator {
         return testCommand;
     }
 
-    private Command generateTestCommand(Func testPredicate, TestGenerationRequest request) {
+    private Command generateTestCommand(Func testPredicate, boolean counterexample, boolean positiveTest, boolean trusted) {
         ExprVar predName = ExprVar.make(null, testPredicate.label);
         predName.setReferenced(testPredicate);
         Expr formula = testPredicate.getBody();
-        Command testCommand = new Command(null, predName, testPredicate.label, false, -1, -1, -1, 1, null, null, formula, null);
+        Command testCommand = new Command(null, predName, testPredicate.label, false, -1, -1, -1, positiveTest?1:0, null, null, formula, null);
         testCommand.setAsVariabilizationTest();
         testCommand.setAsGenerated();
-        if (request.isInstanceTestRequest() && request.isInstancePositiveTestRequest())
-            testCommand.setAsPositiveInstanceTest();
-        if (request.isInstanceTestRequest())
-            testCommand.setAsInstanceTest();
-        if (request.isInstanceTestRequest() && !request.fromTrustedCommand())
-            testCommand.setAsFromUntrusted();
+        if (counterexample)
+            testCommand.testType(Command.TestType.CE);
+        else if (positiveTest && trusted)
+            testCommand.testType(Command.TestType.POS_TRUSTED);
+        else if (positiveTest)
+            testCommand.testType(Command.TestType.POS_UNTRUSTED);
+        else if (trusted)
+            testCommand.testType(Command.TestType.NEG_TRUSTED);
+        else testCommand.testType(Command.TestType.NEG_UNTRUSTED);
         return testCommand;
     }
 
     private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
-        Expr sub = ExprBinary.Op.AND.make(null, null, initialization, testFormula);
+        Expr sub = testFormula!=null?ExprBinary.Op.AND.make(null, null, initialization, testFormula):initialization;
         List<Decl> signatureDecls = getVariablesDecls(signatureValues);//getVariablesDecls(varsToDeclare);
         List<Decl> skolemDecls = getVariablesDecls(skolemVariables);
         Expr body;
@@ -325,6 +400,380 @@ public class TestsGenerator {
         Func testPredicate = new Func(null, name, null, null, body);
         testPredicate.setGenerated();
         return testPredicate;
+    }
+
+
+    private static class TestBody {
+        private final Expr body;
+        private final boolean expect;
+        private boolean trusted;
+
+        private boolean fromInstance = false;
+
+        public static TestBody trustedUnexpectedInstance() {
+            return new TestBody(null, false, true);
+        }
+
+        public static TestBody untrustedUnexpectedInstance() {
+            return new TestBody(null, false, false);
+        }
+
+        public static TestBody trustedSatisfiablePredicate(Expr pred) {
+            return new TestBody(pred, true, true);
+        }
+
+        public static TestBody untrustedSatisfiablePredicate(Expr pred) {
+            return new TestBody(pred, true, false);
+        }
+
+        public static TestBody trustedUnsatisfiablePredicate(Expr pred) {
+            return new TestBody(pred, false, true);
+        }
+
+        public static TestBody untrustedUnsatisfiablePredicate(Expr pred) {
+            return new TestBody(pred, false, false);
+        }
+
+        private TestBody(Expr body, boolean expect, boolean trusted) {
+            this.body = body;
+            this.expect = expect;
+            this.trusted = trusted;
+        }
+
+        public void fromInstance(boolean fromInstance) {
+            this.fromInstance = fromInstance;
+        }
+
+        public boolean fromInstance() {
+            return fromInstance;
+        }
+
+        public Expr body() {
+            return body;
+        }
+
+        public boolean isExpected() {
+            return expect;
+        }
+
+        public boolean isTrusted() {
+            return trusted;
+        }
+
+    }
+    private List<TestBody> getBodyForARepairIntegrationCounterExample(Expr originalBody, CompModule context, A4Solution instance) {
+        FunctionsCollector functionsCollector = new FunctionsCollector();
+        Set<Func> functions = functionsCollector.visitThis(originalBody);
+        boolean hasFacts = hasFacts(context);
+        if (originalBody instanceof ExprUnary && ((ExprUnary)originalBody).op.equals(ExprUnary.Op.NOOP))
+            return getBodyForARepairIntegrationCounterExample(((ExprUnary)originalBody).sub, context, instance);
+        if (functions.isEmpty())
+            return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+        Func pred = functions.stream().findFirst().get();
+        Boolean expected = null;
+        boolean invert;
+        boolean lor; //false: left, true: right
+        Expr current = originalBody;
+        SearchCall searchExpr = new SearchCall(null);
+        while (true) {
+            invert = false;
+            if (current instanceof ExprBinary) {
+                ExprBinary currentAsBinaryExpr = (ExprBinary) current;
+                Expr formulaToEvaluate;
+                searchExpr.setTarget(pred);
+                if (searchExpr.visitThis(currentAsBinaryExpr.left)) {
+                    formulaToEvaluate = currentAsBinaryExpr.right;
+                    lor = false;
+                } else if (searchExpr.visitThis(currentAsBinaryExpr.right)) {
+                    formulaToEvaluate = currentAsBinaryExpr.left;
+                    lor = true;
+                } else {
+                    throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + pred.toString() + ") (expr: " + current.toString() + ")");
+                }
+                Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(context, instance, formulaToEvaluate);
+                if (!formulaEvaluation.isPresent())
+                    throw new IllegalStateException("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
+                Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
+                switch (currentAsBinaryExpr.op) {
+                    case NOT_EQUALS: invert = true;
+                    case IFF:
+                    case EQUALS: {
+                        if (expected == null)
+                            expected = Boolean.TRUE;
+                        if (invert)
+                            expected = !expected;
+                        boolean isFormulaSameAsExpected = expected == formulaEvaluation.get();
+                        if (needToIterate(predsFormula)) {
+                            current = predsFormula;
+                        } else {
+                            if (!isFormulaSameAsExpected) {
+                                return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                            } else {
+                                if (hasFacts) {
+                                    return Arrays.asList(
+                                            TestBody.untrustedSatisfiablePredicate(predsFormula),
+                                            TestBody.untrustedUnexpectedInstance()
+                                    );
+                                } else {
+                                    return Collections.singletonList(
+                                            TestBody.trustedSatisfiablePredicate(predsFormula)
+                                    );
+                                }
+                            }
+                        }
+                        //(F == pred) should be E {true, false}
+                            //si existen facts -> {instancia ^ pred expect (F = E?1:0)), instancia expect 0} (ambos no confiables)
+                            //sino existen facts -> instancia ^ pred expect (F = E?1:0) (confiable)
+                        //-------------------------------------------------------------------------
+                        //(F == pred) should be E {true, false}
+                            //F = E
+                                //si existen facts -> {instancia ^ pred expect 1, instancia expect 0} (ambos no confiables)
+                                //sino existen facts -> instancia ^ pred expect 1 (confiable)
+                            //F != E
+                                //si existen facts -> {instancia ^ pred expect 0, instancia expect 0} (ambos no confiables)
+                                //sino existen facts -> instancia ^ pred expect 0 (confiable)
+                        //-------------------------------------------------------------------------
+                        //(F == pred) == G
+                            //G = true
+                                //<por contraejemplo>
+                                //F == pred = false y deberían ser true
+                                    //F = true
+                                        //<por contraejemplo>
+                                        //pred = false y debería ser true
+                                        //sino existen facts -> instancia ^ pred expect 1
+                                        //si existen facts -> {instancia ^ pred expect 1, instancia expect 0} (ambos no confiables)
+                                    //F = false
+                                        //<por contraejemplo>
+                                        //pred = true y debería ser false
+                                        //sino existen facts -> instancia ^ pred expect 0
+                                        //si existen facts -> {instancia ^ pred expect 0, instancia expect 0} (ambos no confiables)
+                            //G = false
+                                //F == pred = true y deberían ser false
+                                    //F = true
+                                        //<por contraejemplo>
+                                        //pred = true y debería ser false
+                                        //sino existen facts -> instancia ^ pred expect 0
+                                        //si existen facts -> {instancia ^ pred expect 0, instancia expect 0} (ambos no confiables)
+                                    //F = false
+                                        //<por contraejemplo>
+                                        //pred = false y debería ser true
+                                        //sino existen facts -> instancia ^ pred expect 1
+                                        //si existen facts -> {instancia ^ pred expect 1, instancia expect 0} (ambos no confiables)
+
+                        break;
+                    }
+                    case IMPLIES: {
+                        if (expected == null)
+                            expected = Boolean.TRUE;
+                        boolean impliesLor = !lor;
+                        if ((expected && !impliesLor) || (!expected && impliesLor && !formulaEvaluation.get())) {
+                            if (needToIterate(predsFormula)) {
+                                expected = true;
+                                current = predsFormula;
+                                continue;
+                            }
+                            if (hasFacts) {
+                                return Arrays.asList(TestBody.untrustedSatisfiablePredicate(predsFormula), TestBody.untrustedUnexpectedInstance());
+                            } else {
+                                return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
+                            }
+                        } else if (expected || !impliesLor && formulaEvaluation.get()) {
+                            if (needToIterate(predsFormula)) {
+                                expected = false;
+                                current = predsFormula;
+                                continue;
+                            }
+                            return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                        } else
+                          return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+                        //impliesLor = F is left or right
+                        //formulaToEvaluateEval = the value (true or false) of the formulate to evaluate
+                        //if ((expected && !impliesLor) || (!expected && impliesLor && !formulaToEvaluateEval))
+                        //  if (facts)
+                        //      {instance ^ pred expect 1, instance expect 0} (both untrusted)
+                        //  else
+                        //      {instance ^ pred expect 1} (trusted)
+                        //else if ((expected && impliesLor) || (!expected && !impliesLor && formulaToEvaluateEval))
+                        //  {instance ^ pred expect 0} (trusted)
+                        //else
+                        //  {instance expect 0} (trusted)
+                        //---------------------------------------------------------------
+                        //If expected is true
+                            //F implies pred
+                                //<by counterexample>
+                                //F must be true and pred must be false
+                                //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
+                                //no facts exist -> {instance ^ pred expect 1} (trusted)
+                            //pred implies F
+                                //<by counterexample>
+                                //F must be false and pred must be true
+                                //<by trusted formula F, pred should not be true or instance should not exist>
+                                //{instance ^ pred expect 0} (trusted)
+                        //If expected is false
+                            //F implies pred
+                                //F = false
+                                    //<by trusted formula F, pred has nothing to do with the issue>
+                                    //{instance expect 0} (trusted)
+                                //F = true
+                                    //<by counterexample>
+                                    //pred must be true, and should be false, or the facts should not let that instance exist
+                                    //{instance ^ pred expect 0} (trusted)
+                            //pred implies F
+                                //<by counterexample>
+                                //pred and F must be true, or pred must be false, if F is false then pred should be true
+                                    //F = false
+                                        //<by counterexample and trusted formula F, pred should be true or the instance should not exist>
+                                        //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
+                                        //no facts exist -> {instance ^ pred expect 1} (trusted)
+                                    //F = true
+                                        //<by counterexample and trusted formula F>
+                                        //{instance expect 0} (trusted)
+                    }
+                    case AND: {
+                        if (expected == null)
+                            expected = Boolean.TRUE;
+                        if (needToIterate(predsFormula)) {
+                            if (!formulaEvaluation.get() && expected)
+                                return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+                            else
+                                expected = formulaEvaluation.get() && expected;
+                            current = predsFormula;
+                            continue;
+                        }
+                        if (expected) {
+                            if (hasFacts) {
+                                return Arrays.asList(TestBody.untrustedSatisfiablePredicate(predsFormula), TestBody.untrustedUnexpectedInstance());
+                            } else {
+                                return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
+                            }
+                        } else {
+                            if (!formulaEvaluation.get())
+                                return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+                            else {
+                                return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                            }
+                        }
+                        //if expected
+                            //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
+                            //no facts exist -> {instance ^ pred expect 1} (trusted)
+                        //if not expected
+                            //F = false
+                                //{instance expect 0}
+                            //F = true
+                                //{instance ^ pred expect 0} (trusted)
+                    }
+                    case OR: {
+                        if (expected == null)
+                            expected = Boolean.TRUE;
+                        if (needToIterate(predsFormula)) { //expected value doesn't change
+                            current = predsFormula;
+                            continue;
+                        }
+                        if (expected) {
+                            return hasFacts?
+                                    Arrays.asList(
+                                            TestBody.untrustedSatisfiablePredicate(predsFormula),
+                                            TestBody.untrustedUnexpectedInstance()
+                                    ):
+                                    Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
+                        } else if (formulaEvaluation.get())
+                            return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+                        else {
+                            return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                        }
+                        //if expected
+                            //F || pred is false and should be true, both F and pred are false
+                            //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
+                            //no facts exist -> {instance ^ pred expect 1} (trusted)
+                        //if not expected
+                            //F || pred is true and should be false, either F, pred, or both are true
+                            //F is true
+                                //{instance expect 0}
+                            //F is false
+                                //{instance ^ pred expect 0} (trusted)
+                    }
+                    default: throw new IllegalStateException("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
+                }
+            } else if (current instanceof ExprUnary) {
+                ExprUnary currentAsExprUnary = (ExprUnary) current;
+                if (currentAsExprUnary.op.equals(ExprUnary.Op.NOOP))
+                    return getBodyForARepairIntegrationCounterExample(currentAsExprUnary.sub, context, instance);
+                if (currentAsExprUnary.op.equals(ExprUnary.Op.NOT)) {
+                    if (expected == null)
+                        expected = Boolean.TRUE;
+                    if (needToIterate(currentAsExprUnary.sub)) {
+                        expected = !expected;
+                        current = currentAsExprUnary.sub;
+                        continue;
+                    }
+                    if (expected) {
+                        return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(currentAsExprUnary.sub));
+                    } else {
+                        return hasFacts?
+                                Arrays.asList(
+                                        TestBody.untrustedSatisfiablePredicate(currentAsExprUnary.sub),
+                                        TestBody.untrustedUnexpectedInstance()
+                                ):
+                                Collections.singletonList(TestBody.trustedSatisfiablePredicate(currentAsExprUnary.sub));
+                    }
+                    //!F
+                        //instance should not exist (this is treated at the start of the method)
+                    //!pred
+                        //if expected
+                            //either pred is true and should be false, or instance should not exist
+                            //{instance ^ pred expect 0} (trusted)
+                        //if not expected
+                            //either pred is false and should be true, or instance should not exist
+                            //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
+                            //no facts exist -> {instance ^ pred expect 1} (trusted)
+                } else {
+                    throw new IllegalStateException("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
+                }
+            } else if (current instanceof ExprCall) {
+                if (expected == null)
+                    expected = Boolean.TRUE;
+                if (expected && hasFacts) {
+                    return Arrays.asList(TestBody.untrustedSatisfiablePredicate(current), TestBody.untrustedUnexpectedInstance());
+                }
+                if (expected) {
+                    return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+                }
+                if (hasFacts) {
+                    return Arrays.asList(TestBody.untrustedUnsatisfiablePredicate(current), TestBody.untrustedUnexpectedInstance());
+                }
+                return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+            } else if (current instanceof ExprConstant) {
+                return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+            } else if (current instanceof ExprList) {
+                //NOT YET
+                throw new IllegalStateException("ExprList not yet supported (" + current.toString() + ")");
+            } else if (current instanceof ExprQt) {
+                //NOT YET
+                throw new IllegalStateException("ExprQT not yet supported (" + current.toString() + ")");
+            } else if (current instanceof ExprLet) {
+                //NOT YET
+                throw new IllegalStateException("ExprLet not yet supported (" + current.toString() + ")");
+            } else {
+                //??? SOMETHING
+                throw new IllegalStateException("Expr not yet supported (" + current.toString() + ")");
+            }
+        }
+    }
+
+    private boolean needToIterate(Expr x) {
+        if (x instanceof ExprCall)
+            return false;
+        if (x instanceof ExprUnary) {
+            ExprUnary exprUnary = (ExprUnary) x;
+            if (exprUnary.op.equals(ExprUnary.Op.NOOP))
+                return needToIterate(exprUnary.sub);
+            return !(exprUnary.sub instanceof ExprCall);
+        } else if (x instanceof ExprBinary) {
+            ExprBinary exprBinary = (ExprBinary) x;
+            return !(exprBinary.left instanceof ExprCall) && !(exprBinary.right instanceof ExprCall);
+        } else {
+            throw new IllegalStateException("Other classes of expressions are currently not supported");
+        }
     }
 
     private String getTestName(String from) {
@@ -406,6 +855,10 @@ public class TestsGenerator {
             }
         }
         return facts;
+    }
+
+    private boolean hasFacts(CompModule context) {
+        return !(getFacts(context) instanceof ExprConstant);
     }
 
     private Expr generateInitialization(Map<Sig, List<ExprVar>> signaturesValues, Map<Field, List<Expr>> fieldsValues, Map<ExprVar, List<Expr>> variablesValues, List<Expr> fieldOverridesInitialization) {

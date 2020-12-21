@@ -40,12 +40,12 @@ import java.util.Set;
 
 public final class Command extends Browsable {
 
+    public enum TestType {FROM_MODEL, CE, POS_TRUSTED, POS_UNTRUSTED, NEG_TRUSTED, NEG_UNTRUSTED}
+
     private boolean isVariabilizationTest = false;
     private boolean isPerfectOracleTest = false;
     private boolean isGenerated = false;
-    private boolean isInstanceTest = false;
-    private boolean isPositiveInstanceTest = false;
-    private boolean fromTrusted = true;
+    private TestType testType = TestType.FROM_MODEL;
     public boolean isVariabilizationTest() {
         return isVariabilizationTest;
     }
@@ -56,25 +56,15 @@ public final class Command extends Browsable {
     public void setAsPerfectOracleTest() { isPerfectOracleTest = true; }
     public boolean isGenerated() {return isGenerated;}
     public void setAsGenerated() {isGenerated = true;}
-    public boolean isInstanceTest() {
-        return isInstanceTest;
+    public TestType testType() {
+        return testType;
     }
-    public void setAsInstanceTest() {
-        isInstanceTest = true;
+    public void testType(TestType testType) {
+        if (testType == null)
+            throw new IllegalArgumentException("testType can't be null");
+        this.testType = testType;
     }
-    public boolean isPositiveInstanceTest() {
-        return isInstanceTest && isPositiveInstanceTest;
-    }
-    public void setAsPositiveInstanceTest() {
-        isInstanceTest = true;
-        isPositiveInstanceTest = true;
-    }
-    public boolean fromTrusted() {
-        return fromTrusted;
-    }
-    public void setAsFromUntrusted() {
-        fromTrusted = false;
-    }
+
 
 
     /**

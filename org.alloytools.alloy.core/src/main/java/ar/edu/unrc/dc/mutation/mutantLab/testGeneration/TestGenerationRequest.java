@@ -113,4 +113,11 @@ public class TestGenerationRequest {
         return fromTrustedCommand;
     }
 
+    @Override
+    public String toString() {
+        String rep = "{" + (instanceTestGeneration==null?"COUNTEREXAMPLE":instanceTestGeneration.toString());
+        rep += ", trusted: " + fromTrustedCommand;
+        rep += ", command: " + command.toString() + "}";
+        return rep;
+    }
 }

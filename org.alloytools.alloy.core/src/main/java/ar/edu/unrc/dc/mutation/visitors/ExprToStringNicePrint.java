@@ -13,6 +13,8 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
     private int indent;
     private final Candidate candidate;
 
+    public ExprToStringNicePrint() {this(null, 0);}
+
     public ExprToStringNicePrint(Candidate candidate) {
         this(candidate, 0);
     }

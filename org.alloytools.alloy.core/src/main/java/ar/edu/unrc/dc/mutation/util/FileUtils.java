@@ -7,6 +7,7 @@ import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestsGenerator;
 import ar.edu.unrc.dc.mutation.visitors.ExprToStringNicePrint;
 import edu.mit.csail.sdg.alloy4.Triplet;
 import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.Command.TestType;
 import edu.mit.csail.sdg.ast.ExprHasName;
 import edu.mit.csail.sdg.ast.Func;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -54,10 +55,6 @@ public class FileUtils {
         }
     }
 
-    public enum TestType {CE, INS_POS_TRUSTED, INS_POS_UNTRUSTED, INS_NEG}
-    public static void writeTests(File testsFile, CompModule world) {
-        writeTests(testsFile, world, TestType.CE);
-    }
     public static void writeTests(File testsFile, CompModule world, TestType testType) {
         FileWriter myWriter;
         try {
@@ -67,27 +64,8 @@ public class FileUtils {
         }
         for (Command c : world.getAllCommands()) {
             if (c.isGenerated()) {
-                switch (testType) {
-                    case CE: {
-                        if (c.isInstanceTest())
-                            continue;
-                        break;
-                    }
-                    case INS_POS_TRUSTED: {
-                        if (!c.isInstanceTest() || !c.isPositiveInstanceTest() || !c.fromTrusted())
-                            continue;
-                        break;
-                    }
-                    case INS_POS_UNTRUSTED: {
-                        if (!c.isInstanceTest() || !c.isPositiveInstanceTest() || c.fromTrusted())
-                            continue;
-                        break;
-                    }
-                    case INS_NEG: {
-                        if (!c.isInstanceTest() || c.isPositiveInstanceTest())
-                        break;
-                    }
-                }
+                if (!c.testType().equals(testType))
+                    continue;
                 String command = c.toString();
                 Optional<Func> testFunc = DependencyScanner.getFuncByName(((ExprHasName)c.nameExpr).label, world.getAllFunc());
                 if (!testFunc.isPresent())
@@ -155,7 +133,12 @@ public class FileUtils {
         }
     }
 
-    public static File[] setUpTestGenerationFiles(String originalFilename, boolean includeInstanceTests) {
+    private static final String CE_FILE_POSTFIX = "_counterexamples.tests";
+    private static final String POS_TRUSTED_POSTFIX = "_positive_trusted.tests";
+    private static final String POS_UNTRUSTED_POSTFIX = "_positive_untrusted.tests";
+    private static final String NEG_TRUSTED_POSTFIX = "_negative_trusted.tests";
+    private static final String NEG_UNTRUSTED_POSTFIX = "_negative_untrusted.tests";
+    public static File[] setUpTestGenerationFiles(String originalFilename, boolean includePosAndNegTests) {
         String outputFolderPath = (String) MutationConfiguration.getInstance().getConfigValue(MutationConfiguration.ConfigKey.TEST_GENERATION_OUTPUT_FOLDER).orElse("");
         File outFolder = new File(outputFolderPath);
         if (!outFolder.exists())
@@ -166,18 +149,20 @@ public class FileUtils {
             throw new IllegalStateException("Insufficient access to output folder ( " + outputFolderPath + ")");
         Path modelFileAsPath = Paths.get(originalFilename);
         String modelName = modelFileAsPath.getFileName().toString().replace(".als", "");
-        File testsFile = Paths.get(outputFolderPath, modelName + ".tests").toFile();
-        File reportFile = Paths.get(outputFolderPath, modelName + ".report").toFile();
+        File testsFile = Paths.get(outputFolderPath, modelName + CE_FILE_POSTFIX).toFile();
+        File reportFile = Paths.get(outputFolderPath, modelName + CE_FILE_POSTFIX + ".report").toFile();
         createNewFile(testsFile);
         createNewFile(reportFile);
-        if (includeInstanceTests) {
-            File instancesPositiveTestsTrusted = Paths.get(outputFolderPath, modelName + "_positive_trusted.tests").toFile();
-            File instancesPositiveTestsUntrusted = Paths.get(outputFolderPath, modelName + "_positive_untrusted.tests").toFile();
-            File instancesNegativeTests = Paths.get(outputFolderPath, modelName + "_negative_untrusted.tests").toFile();
-            createNewFile(instancesPositiveTestsTrusted);
-            createNewFile(instancesPositiveTestsUntrusted);
-            createNewFile(instancesNegativeTests);
-            return new File[] {testsFile, reportFile, instancesPositiveTestsTrusted, instancesPositiveTestsUntrusted, instancesNegativeTests};
+        if (includePosAndNegTests) {
+            File positiveTestsTrusted = Paths.get(outputFolderPath, modelName + POS_TRUSTED_POSTFIX).toFile();
+            File positiveTestsUntrusted = Paths.get(outputFolderPath, modelName + POS_UNTRUSTED_POSTFIX).toFile();
+            File negativeTrustedTests = Paths.get(outputFolderPath, modelName + NEG_TRUSTED_POSTFIX).toFile();
+            File negativeUntrustedTests = Paths.get(outputFolderPath, modelName + NEG_UNTRUSTED_POSTFIX).toFile();
+            createNewFile(positiveTestsTrusted);
+            createNewFile(positiveTestsUntrusted);
+            createNewFile(negativeTrustedTests);
+            createNewFile(negativeUntrustedTests);
+            return new File[] {testsFile, reportFile, positiveTestsTrusted, positiveTestsUntrusted, negativeTrustedTests, negativeUntrustedTests};
         }
         return new File[] {testsFile, reportFile};
     }
@@ -191,10 +176,6 @@ public class FileUtils {
         }
     }
 
-    public static File[] setUpTestGenerationFiles(String originalFilename) {
-        return setUpTestGenerationFiles(originalFilename, false);
-    }
-
     public static void writeCheckReportToFile(String originalFileName, String result) {
         try {
             File repairFile = new File(originalFileName.replace(".als", ".verification"));
@@ -204,7 +185,7 @@ public class FileUtils {
                     return;
                 }
             }
-            FileWriter myWriter = new FileWriter(repairFile);;
+            FileWriter myWriter = new FileWriter(repairFile);
             myWriter.write(result);
             myWriter.close();
         } catch (Exception e) {

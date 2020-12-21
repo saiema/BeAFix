@@ -1068,7 +1068,7 @@ final class SimpleReporter extends A4Reporter {
             cb(out, "RepairTittle", "Test generation started...\n\n");
             logger.info("Starting test generation for model: " + options.originalFilename);
             setupMutationConfiguration(out, false);
-            File[] outputFiles = writeTestsToFile()?FileUtils.setUpTestGenerationFiles(options.originalFilename, TestsGenerator.generateInstanceTests()):null;
+            File[] outputFiles = writeTestsToFile()?FileUtils.setUpTestGenerationFiles(options.originalFilename, TestsGenerator.generateInstanceTests() || TestsGenerator.arepairIntegration()):null;
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
             if (world.markedEprsToMutate.isEmpty()) {
@@ -1102,15 +1102,9 @@ final class SimpleReporter extends A4Reporter {
                     toString.visitPredicate(testFunc.get());
                     String predicate = toString.getStringRepresentation();
                     cb(out, "TestGeneration", command, predicate);
-                    String msg = "";
-                    msg += "Origin: " + (c.isInstanceTest()?"from instance":"from counterexample") + "\n";
-                    if (c.isInstanceTest()) {
-                        msg += "From " + (c.fromTrusted()?"trusted":"untrusted") + " functions/predicates" + "\n";
-                        msg += "Generated as " + (c.isPositiveInstanceTest()?"positive":"negative") + " test" + "\n";
-                    }
                     logger.info("Test Generation, new test generated\n" +
                                     "Command: " + command + "\n" +
-                                    msg +
+                                    "Test type: " + c.testType().toString() + "\n" +
                                     "Test predicate:\n" +
                                     predicate + "\n"
                             );
@@ -1128,11 +1122,12 @@ final class SimpleReporter extends A4Reporter {
                 logger.info(sb.toString());
             }
             if (writeTestsToFile() && outputFiles != null) {
-                FileUtils.writeTests(outputFiles[0], world, FileUtils.TestType.CE);
+                FileUtils.writeTests(outputFiles[0], world, Command.TestType.CE);
                 if (TestsGenerator.generateInstanceTests() && lastInstanceTestsGenerationRes.equals(TestGenerationResult.GENERATED)) {
-                    FileUtils.writeTests(outputFiles[2], world, FileUtils.TestType.INS_POS_TRUSTED);
-                    FileUtils.writeTests(outputFiles[3], world, FileUtils.TestType.INS_POS_UNTRUSTED);
-                    FileUtils.writeTests(outputFiles[4], world, FileUtils.TestType.INS_NEG);
+                    FileUtils.writeTests(outputFiles[2], world, Command.TestType.POS_TRUSTED);
+                    FileUtils.writeTests(outputFiles[3], world, Command.TestType.POS_UNTRUSTED);
+                    FileUtils.writeTests(outputFiles[4], world, Command.TestType.NEG_TRUSTED);
+                    FileUtils.writeTests(outputFiles[4], world, Command.TestType.NEG_UNTRUSTED);
                 }
             }
             if (writeTestsToFile() && outputFiles != null)
