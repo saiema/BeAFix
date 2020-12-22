@@ -176,30 +176,6 @@ public class AStryker {
     }
 
     /**
-     * Helper method for performing either computeTemporarySpaceUsed() or
-     * clearTemporarySpace()
-     */
-    private static long iterateTemp(String filename, boolean delete) {
-        long ans = 0;
-        if (filename == null)
-            filename = alloyHome() + File.separatorChar + "tmp";
-        File x = new File(filename);
-        if (x.isDirectory()) {
-            for (String subfile : Objects.requireNonNull(x.list())) {
-                long tmp = iterateTemp(filename + File.separatorChar + subfile, delete);
-                if (ans >= 0)
-                    ans = ans + tmp;
-            }
-        } else if (x.isFile()) {
-            long tmp = x.length();
-            ans = ans + tmp;
-        }
-        if (delete)
-            x.delete();
-        return ans;
-    }
-
-    /**
      * Copy the required files from the JAR into a temporary directory.
      */
     private void copyFromJAR() {
@@ -320,6 +296,7 @@ public class AStryker {
                     sb.append(array[3]).append("\n");
                 } else if (array[0].equals("RepairResults")) {
                     sb.append("Evaluation result: ");
+                    @SuppressWarnings("unchecked")
                     List<String> l = (List<String>) array[1];
                     int i=1;
                     for (String r:l){

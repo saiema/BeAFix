@@ -1123,11 +1123,11 @@ final class SimpleReporter extends A4Reporter {
             }
             if (writeTestsToFile() && outputFiles != null) {
                 FileUtils.writeTests(outputFiles[0], world, Command.TestType.CE);
-                if (TestsGenerator.generateInstanceTests() && lastInstanceTestsGenerationRes.equals(TestGenerationResult.GENERATED)) {
+                if ((TestsGenerator.generateInstanceTests() && lastInstanceTestsGenerationRes.equals(TestGenerationResult.GENERATED)) || TestsGenerator.arepairIntegration()) {
                     FileUtils.writeTests(outputFiles[2], world, Command.TestType.POS_TRUSTED);
                     FileUtils.writeTests(outputFiles[3], world, Command.TestType.POS_UNTRUSTED);
                     FileUtils.writeTests(outputFiles[4], world, Command.TestType.NEG_TRUSTED);
-                    FileUtils.writeTests(outputFiles[4], world, Command.TestType.NEG_UNTRUSTED);
+                    FileUtils.writeTests(outputFiles[5], world, Command.TestType.NEG_UNTRUSTED);
                 }
             }
             if (writeTestsToFile() && outputFiles != null)
