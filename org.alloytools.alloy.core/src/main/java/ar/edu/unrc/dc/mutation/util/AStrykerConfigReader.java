@@ -9,153 +9,153 @@ public class AStrykerConfigReader {
         VARIABILIZATION {
             @Override
             public String getKey() {
-                return "astryker.repair.variabilization";
+                return "beafix.repair.variabilization";
             }
         },
         VARIABILIZATION_TEST_GENERATION {
             @Override
             public String getKey() {
-                return "astryker.repair.variabilization.testgeneration";
+                return "beafix.repair.variabilization.testgeneration";
             }
         },
         TEST_GENERATION_MAX_TESTS_PER_COMMAND {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.maxtestspercommand";
+                return "beafix.testgeneration.maxtestspercommand";
             }
         },
         TEST_GENERATION_TESTS_PER_STEP {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.testsperstep";
+                return "beafix.testgeneration.testsperstep";
             }
         },
         TEST_GENERATION_AREPAIR_INTEGRATION {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.arepairintegration";
+                return "beafix.testgeneration.arepairintegration";
             }
         },
         TEST_GENERATION_NAME {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.testname";
+                return "beafix.testgeneration.testname";
             }
         },
         TEST_GENERATION_NAME_STARTING_INDEX {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.testname.startingindex";
+                return "beafix.testgeneration.testname.startingindex";
             }
         },
         TEST_GENERATION_USE_MODEL_OVERRIDING {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.modeloverriding";
+                return "beafix.testgeneration.modeloverriding";
             }
         },
         TEST_GENERATION_MODEL_OVERRIDING_FOLDER {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.modeloverriding.overridingfolder";
+                return "beafix.testgeneration.modeloverriding.overridingfolder";
             }
         },
         TEST_GENERATION_INSTANCES_TESTS_GENERATION {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.testsfrominstances";
+                return "beafix.testgeneration.testsfrominstances";
             }
         },
         TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.testsfrominstances.buggyfuncsfile";
+                return "beafix.testgeneration.testsfrominstances.buggyfuncsfile";
             }
         },
         VARIABILIZATION_SAME_TYPE {
             @Override
             public String getKey() {
-                return "astryker.repair.variabilization.sametype";
+                return "beafix.repair.variabilization.sametype";
             }
         },
         PARTIAL_REPAIR {
             @Override
             public String getKey() {
-                return "astryker.repair.partialrepair";
+                return "beafix.repair.partialrepair";
             }
         },
         PARTIAL_REPAIR_PRUNING {
             @Override
             public String getKey() {
-                return "astryker.repair.partialrepair.pruning";
+                return "beafix.repair.partialrepair.pruning";
             }
         },
         PARTIAL_REPAIR_FULLCGRAPH_VALIDATION {
             @Override
-            public String getKey() { return "astryker.repair.partialrepair.fullcgraphvalidation"; }
+            public String getKey() { return "beafix.repair.partialrepair.fullcgraphvalidation"; }
         },
         PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL {
             @Override
-            public String getKey() { return "astryker.repair.partialrepair.independenttestsforall"; }
+            public String getKey() { return "beafix.repair.partialrepair.independenttestsforall"; }
         },
         USE_PO_TO_VALIDATE {
             @Override
             public String getKey() {
-                return "astryker.repair.validatewithpo";
+                return "beafix.repair.validatewithpo";
             }
         },
         TIMEOUT {
             @Override
             public String getKey() {
-                return "astryker.repair.timeout";
+                return "beafix.repair.timeout";
             }
         },
         MAX_DEPTH {
             @Override
             public String getKey() {
-                return "astryker.repair.maxdepth";
+                return "beafix.repair.maxdepth";
             }
         },
 
         TEST_GENERATION_OUTPUT_FOLDER {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.outputfolder";
+                return "beafix.testgeneration.outputfolder";
             }
         },
 
         TEST_GENERATION_OUTPUT_TO_FILES {
             @Override
             public String getKey() {
-                return "astryker.testgeneration.outputtofiles";
+                return "beafix.testgeneration.outputtofiles";
             }
         },
 
         MUTANTS_GENERATION_OUTPUT_FOLDER {
             @Override
             public String getKey() {
-                return "astryker.mutantgeneration.outputfolder";
+                return "beafix.mutantgeneration.outputfolder";
             }
         },
 
         MUTANTS_GENERATION_CHECK {
             @Override
             public String getKey() {
-                return "astryker.mutantgeneration.check";
+                return "beafix.mutantgeneration.check";
             }
         },
 
         MUTANTS_GENERATION_LIMIT {
             @Override
             public String getKey() {
-                return "astryker.mutantgeneration.limit";
+                return "beafix.mutantgeneration.limit";
             }
         },
 
         HACKS_CANDIDATE_HASHES {
             @Override
             public String getKey() {
-                return "astryker.hacks.candidatehashes";
+                return "beafix.hacks.candidatehashes";
             }
         }
 
@@ -167,7 +167,7 @@ public class AStrykerConfigReader {
     /**
      * The path to a default .properties file
      */
-    private static final String DEFAULT_PROPERTIES = "astryker.properties";
+    private static final String DEFAULT_PROPERTIES = "beafix.properties";
 
     /**
      * The {@code StrykerConfig} instance that will be returned by {@link AStrykerConfigReader#getInstance()}
@@ -222,7 +222,7 @@ public class AStrykerConfigReader {
         String configFile = cwd + File.separator + DEFAULT_PROPERTIES;
         File propFile = createConfigFileIfMissing(configFile);
         OutputStream outputStream = new FileOutputStream(propFile);
-        prop.store(outputStream, "ASTRYKER AUTOGENERATED PROPERTIES - DO NOT MODIFY");
+        prop.store(outputStream, "BEAFIX AUTOGENERATED PROPERTIES - DO NOT MODIFY");
     }
 
     public void removeConfig(Config_key key) {

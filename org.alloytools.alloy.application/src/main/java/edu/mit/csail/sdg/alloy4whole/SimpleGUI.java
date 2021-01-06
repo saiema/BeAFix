@@ -1132,7 +1132,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         try {
             AStrykerConfigReader.getInstance().saveConfig();
         } catch (IOException e) {
-            throw new Error("An error occurred while saving AStryker config", e);
+            throw new Error("An error occurred while saving BeAFix config", e);
         }
         if (wrap)
             return wrapMe(index);
@@ -1588,10 +1588,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerTestGenerationARepairIntegration.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationModelOverrides.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationInstanceBasedTests.addChangeListener(astrykerChangeListener);
-                menuItem(optmenu, "AStryker (Test Generation) | base test name", doBaseTestName());
-                menuItem(optmenu, "AStryker (Test Generation) | base test name starting index", doBaseTestNameStartingIndex());
-                menuItem(optmenu, "AStryker (Test Generation) | model overrides folder", doOpenOverridingFolder());
-                menuItem(optmenu, "AStryker (Test Generation) | buggy funcs file", doOpenBuggyFuncsFile());
+                menuItem(optmenu, "BeAFix (Test Generation) | base test name", doBaseTestName());
+                menuItem(optmenu, "BeAFix (Test Generation) | base test name starting index", doBaseTestNameStartingIndex());
+                menuItem(optmenu, "BeAFix (Test Generation) | model overrides folder", doOpenOverridingFolder());
+                menuItem(optmenu, "BeAFix (Test Generation) | buggy funcs file", doOpenBuggyFuncsFile());
                 AStrykerMutantGenerationCheck.addChangeListener(astrykerChangeListener);
                 AStrykerRepairDepth.addChangeListener(astrykerChangeListener);
                 AStrykerMutantGenerationLimit.addChangeListener(astrykerChangeListener);

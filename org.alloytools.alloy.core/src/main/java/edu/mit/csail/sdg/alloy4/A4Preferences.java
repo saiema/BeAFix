@@ -669,23 +669,23 @@ public class A4Preferences {
     //=========================AStryker Options=========================
 
     /** Set Variabilization for the repair process */
-    public static final BooleanPref AStrykerVariabilization = new BooleanPref("AStrykerVariabilization", "AStryker | Use Variabilization");
-    public static final BooleanPref AStrykerVariabilizationUseSameType = new BooleanPref("AStrykerVariabilizationSameTypes", "AStryker | Use expression type");
-    public static final BooleanPref AStrykerVariabilizationTestGeneration = new BooleanPref("AStrykerVariabilizationTestGeneration", "AStryker | Variabilization Test Generation");
-    public static final BooleanPref AStrykerPartialRepair = new BooleanPref("AStrykerPartialRepair", "AStryker | Use Partial Repair (Guided Search)");
-    public static final BooleanPref AStrykerPartialRepairPruning = new BooleanPref("AStrykerPartialRepairPruning", "AStryker | Use Partial Repair (Pruning)");
-    public static final BooleanPref AStrykerPartialRepairFullCGraphValidation = new BooleanPref("AStrykerPartialRepairFullCGraphValidation", "AStryker | Full Call Graph Validation (Partial Repair)");
-    public static final BooleanPref AStrykerPartialRepairIndependentTestsForAll = new BooleanPref("AStrykerPartialRepairIndependentTestsForAll", "AStryker | Require independent tests for all (Partial Repair)");
-    public static final IntChoicePref AStrykerRepairTimeout = new IntChoicePref("AStrykerRepairTimeout", "AStryker | timeout (minutes)", Arrays.asList(0, 5, 10, 30, 60, 120, 180, 240, 360, 480, 720, 1440, 2880), 0);
-    public static final IntChoicePref AStrykerRepairDepth = new IntChoicePref("AStrykerRepairDepth", "AStryker | max mutations per expression", Arrays.asList(1, 2, 3, 4, 5), 2);
-    public static final BooleanPref AStrykerUseTestsOnly = new BooleanPref("AStrykerUseTestsOnly", "AStryker | Use Perfect oracle tests to validate repair");
-    public static final IntChoicePref AStrykerTestGenerationMaxTestsPerCommand = IntChoicePref.range("AStrykerTestGenerationMaxTestsPerCommand", "AStryker (Test Generation) | Max Tests Per Command", 2, 2, 30, 4);
-    public static final IntChoicePref AStrykerTestGenerationTestsPerStep = IntChoicePref.range("AStrykerTestGenerationTestsPerStep", "AStryker (Test Generation) | Tests Per Generation", 1, 1, 30, 1);
-    public static final BooleanPref AStrykerTestGenerationARepairIntegration = new BooleanPref("AStrykerTestGenerationARepairIntegration", "AStryker (Test Generation) | ARepair integration", false);
-    public static final BooleanPref AStrykerTestGenerationModelOverrides = new BooleanPref("AStrykerTestGenerationModelOverrides", "AStryker (Test Generation) | Use model overrides", false);
-    public static final BooleanPref AStrykerMutantGenerationCheck = new BooleanPref("AStrykerMutantGenerationCheck", "AStryker (Mutants Generation) | check mutants with existing commands (Mutant Generation)");
-    public static final IntChoicePref AStrykerMutantGenerationLimit = IntChoicePref.range("AStrykerMutantGenerationLimit", "AStryker (Mutants Generation) | mutations per candidate", 0, 1, 10, 0);
-    public static final BooleanPref AStrykerTestGenerationInstanceBasedTests = new BooleanPref("AStrykerTestGenerationInstanceBasedTests", "AStryker (Test Generation) | Instance based tests", false);
+    public static final BooleanPref AStrykerVariabilization = new BooleanPref("AStrykerVariabilization", "BeAFix | Use Variabilization");
+    public static final BooleanPref AStrykerVariabilizationUseSameType = new BooleanPref("AStrykerVariabilizationSameTypes", "BeAFix | Use expression type");
+    public static final BooleanPref AStrykerVariabilizationTestGeneration = new BooleanPref("AStrykerVariabilizationTestGeneration", "BeAFix | Variabilization Test Generation");
+    public static final BooleanPref AStrykerPartialRepair = new BooleanPref("AStrykerPartialRepair", "BeAFix | Use Partial Repair (Guided Search)");
+    public static final BooleanPref AStrykerPartialRepairPruning = new BooleanPref("AStrykerPartialRepairPruning", "BeAFix | Use Partial Repair (Pruning)");
+    public static final BooleanPref AStrykerPartialRepairFullCGraphValidation = new BooleanPref("AStrykerPartialRepairFullCGraphValidation", "BeAFix | Full Call Graph Validation (Partial Repair)");
+    public static final BooleanPref AStrykerPartialRepairIndependentTestsForAll = new BooleanPref("AStrykerPartialRepairIndependentTestsForAll", "BeAFix | Require independent tests for all (Partial Repair)");
+    public static final IntChoicePref AStrykerRepairTimeout = new IntChoicePref("AStrykerRepairTimeout", "BeAFix | timeout (minutes)", Arrays.asList(0, 5, 10, 30, 60, 120, 180, 240, 360, 480, 720, 1440, 2880), 0);
+    public static final IntChoicePref AStrykerRepairDepth = new IntChoicePref("AStrykerRepairDepth", "BeAFix | max mutations per expression", Arrays.asList(1, 2, 3, 4, 5), 2);
+    public static final BooleanPref AStrykerUseTestsOnly = new BooleanPref("AStrykerUseTestsOnly", "BeAFix | Use Perfect oracle tests to validate repair");
+    public static final IntChoicePref AStrykerTestGenerationMaxTestsPerCommand = IntChoicePref.range("AStrykerTestGenerationMaxTestsPerCommand", "BeAFix (Test Generation) | Max Tests Per Command", 2, 2, 30, 4);
+    public static final IntChoicePref AStrykerTestGenerationTestsPerStep = IntChoicePref.range("AStrykerTestGenerationTestsPerStep", "BeAFix (Test Generation) | Tests Per Generation", 1, 1, 30, 1);
+    public static final BooleanPref AStrykerTestGenerationARepairIntegration = new BooleanPref("AStrykerTestGenerationARepairIntegration", "BeAFix (Test Generation) | ARepair integration", false);
+    public static final BooleanPref AStrykerTestGenerationModelOverrides = new BooleanPref("AStrykerTestGenerationModelOverrides", "BeAFix (Test Generation) | Use model overrides", false);
+    public static final BooleanPref AStrykerMutantGenerationCheck = new BooleanPref("AStrykerMutantGenerationCheck", "BeAFix (Mutants Generation) | check mutants with existing commands (Mutant Generation)");
+    public static final IntChoicePref AStrykerMutantGenerationLimit = IntChoicePref.range("AStrykerMutantGenerationLimit", "BeAFix (Mutants Generation) | mutations per candidate", 0, 1, 10, 0);
+    public static final BooleanPref AStrykerTestGenerationInstanceBasedTests = new BooleanPref("AStrykerTestGenerationInstanceBasedTests", "BeAFix (Test Generation) | Instance based tests", false);
 
     //==================================================================
 

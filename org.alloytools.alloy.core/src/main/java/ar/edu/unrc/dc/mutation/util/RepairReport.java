@@ -329,7 +329,7 @@ public class RepairReport {
         timesToMs();
         calculateAvgMutations();
         boolean variabilizationEnabledAndSupported = Pruning.getInstance().useVariabilization() && MutantLab.getInstance().isVariabilizationSupported();
-        StringBuilder sb = new StringBuilder("***AStryker report***\n");
+        StringBuilder sb = new StringBuilder("***BeAFix report***\n");
         if (mutantGeneration) {
             sb.append("Mutants generation mode\n");
         } else {
