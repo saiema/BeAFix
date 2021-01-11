@@ -1027,6 +1027,7 @@ final class SimpleReporter extends A4Reporter {
             Pruning.destroyInstance();
             MutantLab.destroyInstance();
             RepairReport.destroyInstance();
+            RepairTimeOut.destroyInstance();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
         }
@@ -1317,6 +1318,12 @@ final class SimpleReporter extends A4Reporter {
             Pruning.destroyInstance();
             MutantLab.destroyInstance();
             RepairReport.destroyInstance();
+            RepairTimeOut.destroyInstance();
+            Browsable.unfreezeParents();
+            Browsable.resetIDs();
+            ExprVar.resetIDs();
+            Sig.Field.resetIDs();
+            Sig.enableFacts();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
         }

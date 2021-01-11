@@ -13,7 +13,7 @@ public class RepairTimeOut {
     }
     public static RepairTimeOut getInstance() {
         if (instance == null)
-            throw new IllegalStateException("Already instantiated");
+            throw new IllegalStateException("Run initialize first");
         return instance;
     }
     public static void destroyInstance() {

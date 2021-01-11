@@ -36,6 +36,10 @@ public final class ExprVar extends ExprHasName implements Clause {
     private static int NEXT_VAR_ID = 0;
     private int VAR_ID = NEXT_VAR_ID++;
 
+    public static void resetIDs() {
+        NEXT_VAR_ID = 0;
+    }
+
     @Override
     public boolean equals(Object other) {
         if (other == null)

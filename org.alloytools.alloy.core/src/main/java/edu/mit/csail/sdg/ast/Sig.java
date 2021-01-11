@@ -751,6 +751,10 @@ public abstract class Sig extends Expr implements Clause {
         private static int NEXT_FIELD_ID = 0;
         private int FIELD_ID = NEXT_FIELD_ID++;
 
+        public static void resetIDs() {
+            NEXT_FIELD_ID = 0;
+        }
+
         @Override
         public int hashCode() {
             return FIELD_ID;

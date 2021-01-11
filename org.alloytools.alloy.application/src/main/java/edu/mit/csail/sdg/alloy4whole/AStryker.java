@@ -104,7 +104,11 @@ public class AStryker {
         opt.inferPartialInstance = InferPartialInstance.get();
         opt.coreGranularity = CoreGranularity.get();
         opt.originalFilename = Util.canon(sourcefile);
-        opt.solver = Solver.get();
+        if (checkMiniSatLib()) {
+            opt.solver = A4Options.SatSolver.MiniSatJNI;
+        } else {
+            opt.solver = Solver.get();
+        }
         repair1.map = new HashMap<>();
         repair1.map.put(sourcefile, source);
         repair1.options = opt.dup();
@@ -119,6 +123,45 @@ public class AStryker {
         } catch (Throwable ex) {
             WorkerEngine.stop();
             logger.severe("Fatal Error: Solver failed due to unknown reason.\n" + "One possible cause is that, in the Options menu, your specified\n" + "memory size is larger than the amount allowed by your OS.\n" + "Also, please make sure \"java\" is in your program path.\n");
+        }
+    }
+
+    private static boolean checkMiniSatLib() {
+        boolean loaded = _loadLibrary("minisat");
+        String libName = System.mapLibraryName("minisat");
+        if (loaded)
+            System.out.println("Loaded: " + libName);
+        else
+            System.out.println("Failed to load: " + libName);
+        return loaded;
+    }
+
+    private static boolean _loadLibrary(String library) {
+        try {
+            System.loadLibrary(library);
+            return true;
+        } catch (UnsatisfiedLinkError ex) {}
+        try {
+            System.loadLibrary(library + "x1");
+            return true;
+        } catch (UnsatisfiedLinkError ex) {}
+        try {
+            System.loadLibrary(library + "x2");
+            return true;
+        } catch (UnsatisfiedLinkError ex) {}
+        try {
+            System.loadLibrary(library + "x3");
+            return true;
+        } catch (UnsatisfiedLinkError ex) {}
+        try {
+            System.loadLibrary(library + "x4");
+            return true;
+        } catch (UnsatisfiedLinkError ex) {}
+        try {
+            System.loadLibrary(library + "x5");
+            return true;
+        } catch (UnsatisfiedLinkError ex) {
+            return false;
         }
     }
 

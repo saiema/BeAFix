@@ -44,6 +44,11 @@ public abstract class Browsable {
     protected boolean skipBlockMutation = false;
     protected List<String> variabilizationVariables = null;
 
+    public static void resetIDs() {
+        NEXT_ID = 0;
+        NEXT_ID_Env = 0;
+    }
+
     public void mutGenLimit(int m) {
         if (m < 0)
             throw new IllegalArgumentException("Can't use a negative value with mutGenLimit");
