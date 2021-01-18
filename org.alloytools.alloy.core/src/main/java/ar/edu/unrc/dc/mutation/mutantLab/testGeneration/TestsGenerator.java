@@ -3,6 +3,7 @@ package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Cheats;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
+import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
 import ar.edu.unrc.dc.mutation.util.ExpressionEvaluator;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import ar.edu.unrc.dc.mutation.visitors.FunctionsCollector;
@@ -322,25 +323,6 @@ public class TestsGenerator {
             Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
             return Collections.singleton(testCommand);
         }
-//        Func testPredicate = generateTestPredicate(initialization, testFormula, usedVariables, declSignatureValues, command);
-//        testPredicate.setCommentPreviousLine("TEST START");
-//        testPredicate.setCommentNextLine("TEST FINISH");
-//        Command testCommand = generateTestCommand(testPredicate, request);
-//        logger.info("Test generated\n" +
-//                    testPredicate.toString() + "\n" +
-//                    testPredicate.getBody().toString()
-//        );
-//        try {
-//            Cheats.addFunctionToModule(context, testPredicate);
-//        } catch (CheatingIsBadMkay e) {
-//            throw new Error("An error occurred while adding counter example predicate to ast", e);
-//        }
-//        try {
-//            Cheats.addCommand(testCommand, context);
-//        } catch (CheatingIsBadMkay e) {
-//            throw new Error("An error occurred while adding counter example command to ast", e);
-//        }
-//        return testCommand;
     }
 
     private Command generateTest(Expr initialization, TestBody testBody, List<ExprVar> usedVariables, Map<Sig, List<ExprVar>> declSignatureValues, Command command, CompModule context) {
@@ -418,6 +400,10 @@ public class TestsGenerator {
             return new TestBody(null, false, false);
         }
 
+        public static TestBody trustedExpectedInstance() { return new TestBody(null, true, true); }
+
+        public static TestBody untrustedExpectedInstance() { return new TestBody(null, true, false); }
+
         public static TestBody trustedSatisfiablePredicate(Expr pred) {
             return new TestBody(pred, true, true);
         }
@@ -475,6 +461,7 @@ public class TestsGenerator {
         boolean lor; //false: left, true: right
         Expr current = originalBody;
         SearchCall searchExpr = new SearchCall(null);
+        boolean untrusted = (hasFacts && MutantLab.getInstance().isAnyFactAffected()) || !funcIsTrusted(pred);
         while (true) {
             invert = false;
             if (current instanceof ExprBinary) {
@@ -490,7 +477,7 @@ public class TestsGenerator {
                 } else {
                     throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + pred.toString() + ") (expr: " + current.toString() + ")");
                 }
-                Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(context, instance, formulaToEvaluate);
+                Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate);
                 if (!formulaEvaluation.isPresent())
                     throw new IllegalStateException("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
                 Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
@@ -521,45 +508,6 @@ public class TestsGenerator {
                                 }
                             }
                         }
-                        //(F == pred) should be E {true, false}
-                            //si existen facts -> {instancia ^ pred expect (F = E?1:0)), instancia expect 0} (ambos no confiables)
-                            //sino existen facts -> instancia ^ pred expect (F = E?1:0) (confiable)
-                        //-------------------------------------------------------------------------
-                        //(F == pred) should be E {true, false}
-                            //F = E
-                                //si existen facts -> {instancia ^ pred expect 1, instancia expect 0} (ambos no confiables)
-                                //sino existen facts -> instancia ^ pred expect 1 (confiable)
-                            //F != E
-                                //si existen facts -> {instancia ^ pred expect 0, instancia expect 0} (ambos no confiables)
-                                //sino existen facts -> instancia ^ pred expect 0 (confiable)
-                        //-------------------------------------------------------------------------
-                        //(F == pred) == G
-                            //G = true
-                                //<por contraejemplo>
-                                //F == pred = false y deberían ser true
-                                    //F = true
-                                        //<por contraejemplo>
-                                        //pred = false y debería ser true
-                                        //sino existen facts -> instancia ^ pred expect 1
-                                        //si existen facts -> {instancia ^ pred expect 1, instancia expect 0} (ambos no confiables)
-                                    //F = false
-                                        //<por contraejemplo>
-                                        //pred = true y debería ser false
-                                        //sino existen facts -> instancia ^ pred expect 0
-                                        //si existen facts -> {instancia ^ pred expect 0, instancia expect 0} (ambos no confiables)
-                            //G = false
-                                //F == pred = true y deberían ser false
-                                    //F = true
-                                        //<por contraejemplo>
-                                        //pred = true y debería ser false
-                                        //sino existen facts -> instancia ^ pred expect 0
-                                        //si existen facts -> {instancia ^ pred expect 0, instancia expect 0} (ambos no confiables)
-                                    //F = false
-                                        //<por contraejemplo>
-                                        //pred = false y debería ser true
-                                        //sino existen facts -> instancia ^ pred expect 1
-                                        //si existen facts -> {instancia ^ pred expect 1, instancia expect 0} (ambos no confiables)
-
                         break;
                     }
                     case IMPLIES: {
@@ -586,48 +534,6 @@ public class TestsGenerator {
                             return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
                         } else
                           return Collections.singletonList(TestBody.trustedUnexpectedInstance());
-                        //impliesLor = F is left or right
-                        //formulaToEvaluateEval = the value (true or false) of the formulate to evaluate
-                        //if ((expected && !impliesLor) || (!expected && impliesLor && !formulaToEvaluateEval))
-                        //  if (facts)
-                        //      {instance ^ pred expect 1, instance expect 0} (both untrusted)
-                        //  else
-                        //      {instance ^ pred expect 1} (trusted)
-                        //else if ((expected && impliesLor) || (!expected && !impliesLor && formulaToEvaluateEval))
-                        //  {instance ^ pred expect 0} (trusted)
-                        //else
-                        //  {instance expect 0} (trusted)
-                        //---------------------------------------------------------------
-                        //If expected is true
-                            //F implies pred
-                                //<by counterexample>
-                                //F must be true and pred must be false
-                                //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
-                                //no facts exist -> {instance ^ pred expect 1} (trusted)
-                            //pred implies F
-                                //<by counterexample>
-                                //F must be false and pred must be true
-                                //<by trusted formula F, pred should not be true or instance should not exist>
-                                //{instance ^ pred expect 0} (trusted)
-                        //If expected is false
-                            //F implies pred
-                                //F = false
-                                    //<by trusted formula F, pred has nothing to do with the issue>
-                                    //{instance expect 0} (trusted)
-                                //F = true
-                                    //<by counterexample>
-                                    //pred must be true, and should be false, or the facts should not let that instance exist
-                                    //{instance ^ pred expect 0} (trusted)
-                            //pred implies F
-                                //<by counterexample>
-                                //pred and F must be true, or pred must be false, if F is false then pred should be true
-                                    //F = false
-                                        //<by counterexample and trusted formula F, pred should be true or the instance should not exist>
-                                        //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
-                                        //no facts exist -> {instance ^ pred expect 1} (trusted)
-                                    //F = true
-                                        //<by counterexample and trusted formula F>
-                                        //{instance expect 0} (trusted)
                     }
                     case AND: {
                         if (expected == null)
@@ -653,14 +559,6 @@ public class TestsGenerator {
                                 return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
                             }
                         }
-                        //if expected
-                            //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
-                            //no facts exist -> {instance ^ pred expect 1} (trusted)
-                        //if not expected
-                            //F = false
-                                //{instance expect 0}
-                            //F = true
-                                //{instance ^ pred expect 0} (trusted)
                     }
                     case OR: {
                         if (expected == null)
@@ -681,16 +579,6 @@ public class TestsGenerator {
                         else {
                             return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
                         }
-                        //if expected
-                            //F || pred is false and should be true, both F and pred are false
-                            //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
-                            //no facts exist -> {instance ^ pred expect 1} (trusted)
-                        //if not expected
-                            //F || pred is true and should be false, either F, pred, or both are true
-                            //F is true
-                                //{instance expect 0}
-                            //F is false
-                                //{instance ^ pred expect 0} (trusted)
                     }
                     default: throw new IllegalStateException("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
                 }
@@ -707,25 +595,19 @@ public class TestsGenerator {
                         continue;
                     }
                     if (expected) {
-                        return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(currentAsExprUnary.sub));
+                        return Collections.singletonList(
+                                untrusted?
+                                        TestBody.untrustedUnsatisfiablePredicate(currentAsExprUnary.sub):
+                                        TestBody.trustedUnsatisfiablePredicate(currentAsExprUnary.sub)
+                        );
                     } else {
-                        return hasFacts?
+                        return untrusted?
                                 Arrays.asList(
                                         TestBody.untrustedSatisfiablePredicate(currentAsExprUnary.sub),
                                         TestBody.untrustedUnexpectedInstance()
                                 ):
                                 Collections.singletonList(TestBody.trustedSatisfiablePredicate(currentAsExprUnary.sub));
                     }
-                    //!F
-                        //instance should not exist (this is treated at the start of the method)
-                    //!pred
-                        //if expected
-                            //either pred is true and should be false, or instance should not exist
-                            //{instance ^ pred expect 0} (trusted)
-                        //if not expected
-                            //either pred is false and should be true, or instance should not exist
-                            //if facts exist -> {instance ^ pred expect 1, instance expect 0} (both untrusted)
-                            //no facts exist -> {instance ^ pred expect 1} (trusted)
                 } else {
                     throw new IllegalStateException("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
                 }
@@ -744,6 +626,245 @@ public class TestsGenerator {
                 return Collections.singletonList(TestBody.trustedUnexpectedInstance());
             } else if (current instanceof ExprConstant) {
                 return Collections.singletonList(TestBody.trustedUnexpectedInstance());
+            } else if (current instanceof ExprList) {
+                //NOT YET
+                throw new IllegalStateException("ExprList not yet supported (" + current.toString() + ")");
+            } else if (current instanceof ExprQt) {
+                //NOT YET
+                throw new IllegalStateException("ExprQT not yet supported (" + current.toString() + ")");
+            } else if (current instanceof ExprLet) {
+                //NOT YET
+                throw new IllegalStateException("ExprLet not yet supported (" + current.toString() + ")");
+            } else {
+                //??? SOMETHING
+                throw new IllegalStateException("Expr not yet supported (" + current.toString() + ")");
+            }
+        }
+    }
+
+    private List<TestBody> getBodyForARepairIntegrationInstance(Expr originalBody, CompModule context, A4Solution instance) {
+        FunctionsCollector functionsCollector = new FunctionsCollector();
+        Set<Func> functions = functionsCollector.visitThis(originalBody);
+        boolean hasFacts = hasFacts(context);
+        if (originalBody instanceof ExprUnary && ((ExprUnary)originalBody).op.equals(ExprUnary.Op.NOOP))
+            return getBodyForARepairIntegrationInstance(((ExprUnary)originalBody).sub, context, instance);
+        if (functions.isEmpty())
+            return Collections.singletonList(TestBody.trustedExpectedInstance());
+        Func pred = functions.stream().findFirst().get();
+        Boolean expected = null;
+        boolean invert;
+        boolean lor; //false: left, true: right
+        Expr current = originalBody;
+        SearchCall searchExpr = new SearchCall(null);
+        boolean untrusted = (hasFacts && MutantLab.getInstance().isAnyFactAffected()) || !funcIsTrusted(pred);
+        while (true) {
+            if (current instanceof ExprBinary) {
+                ExprBinary currentAsBinaryExpr = (ExprBinary) current;
+                Expr formulaToEvaluate;
+                searchExpr.setTarget(pred);
+                if (searchExpr.visitThis(currentAsBinaryExpr.left)) {
+                    formulaToEvaluate = currentAsBinaryExpr.right;
+                    lor = false;
+                } else if (searchExpr.visitThis(currentAsBinaryExpr.right)) {
+                    formulaToEvaluate = currentAsBinaryExpr.left;
+                    lor = true;
+                } else {
+                    throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + pred.toString() + ") (expr: " + current.toString() + ")");
+                }
+                Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate);
+                if (!formulaEvaluation.isPresent())
+                    throw new IllegalStateException("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
+                Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
+                switch (currentAsBinaryExpr.op) {
+                    case NOT_EQUALS: {
+                        expected = !formulaEvaluation.get();
+                    }
+                    case IFF:
+                    case EQUALS: {
+                        if (expected == null)
+                            expected = Boolean.TRUE;
+                        if (needToIterate(predsFormula)) {
+                            current = predsFormula;
+                            continue;
+                        } else {
+                            if (untrusted) {
+                                return Arrays.asList(
+                                        (expected?
+                                            TestBody.untrustedSatisfiablePredicate(predsFormula):
+                                            TestBody.untrustedUnsatisfiablePredicate(predsFormula)
+                                        ),
+                                        TestBody.untrustedUnexpectedInstance()
+                                );
+                            } else {
+                                return Collections.singletonList(
+                                        expected?
+                                                TestBody.trustedSatisfiablePredicate(predsFormula):
+                                                TestBody.trustedUnsatisfiablePredicate(predsFormula)
+                                );
+                            }
+                        }
+                    }
+                    case IMPLIES: {
+                        if (expected == null)
+                            expected = Boolean.TRUE;
+                        boolean precedentIsTrue;
+                        if (lor) {
+                            Optional<Boolean> predEvaluation = ExpressionEvaluator.evaluateFormula(instance, predsFormula);
+                            if (!predEvaluation.isPresent())
+                                throw new IllegalStateException("Failed to evaluate " + predsFormula.toString() + " to a boolean value");
+                            precedentIsTrue = predEvaluation.get();
+                        } else {
+                            precedentIsTrue = formulaEvaluation.get();
+                        }
+                        if (expected && !lor && !formulaEvaluation.get()) {
+                            return Collections.singletonList(TestBody.trustedExpectedInstance());
+                        }
+                        if (needToIterate(predsFormula)) {
+                            if (expected && lor) {
+                                expected = precedentIsTrue;
+                            } else if (!expected && !lor) {
+                                expected = false;
+                            }
+                            current = predsFormula;
+                            continue;
+                        }
+                        if (expected) {
+                            if (precedentIsTrue) {
+                                if (untrusted) {
+                                    return Arrays.asList(
+                                            TestBody.untrustedSatisfiablePredicate(predsFormula),
+                                            TestBody.untrustedUnexpectedInstance()
+                                    );
+                                } else {
+                                    return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
+                                }
+                            } else {
+                                if (untrusted) {
+                                    return Collections.singletonList(
+                                            TestBody.untrustedUnsatisfiablePredicate(predsFormula)
+                                    );
+                                } else {
+                                    return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
+                                }
+                            }
+                        } else {
+                            if (untrusted) {
+                                return Arrays.asList(
+                                        (lor?
+                                                TestBody.untrustedSatisfiablePredicate(predsFormula):
+                                                TestBody.untrustedUnsatisfiablePredicate(predsFormula)
+                                        ),
+                                        TestBody.untrustedUnexpectedInstance()
+                                );
+                            } else {
+                                return Collections.singletonList(
+                                        lor ?
+                                                TestBody.trustedSatisfiablePredicate(predsFormula) :
+                                                TestBody.trustedUnsatisfiablePredicate(predsFormula)
+                                );
+                            }
+                        }
+                    }
+                    case AND: {
+                        if (expected == null)
+                            expected = Boolean.TRUE;
+                        if (!expected && !formulaEvaluation.get())
+                            return Collections.singletonList(TestBody.trustedExpectedInstance());
+                        if (needToIterate(predsFormula)) {
+                            current = predsFormula;
+                            continue;
+                        }
+                        if (expected) {
+                            if (untrusted) {
+                                return Arrays.asList(
+                                        TestBody.untrustedSatisfiablePredicate(predsFormula),
+                                        TestBody.untrustedUnexpectedInstance()
+                                );
+                            } else {
+                                return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
+                            }
+                        } else if (untrusted) {
+                            return Arrays.asList(
+                                    TestBody.untrustedUnsatisfiablePredicate(predsFormula),
+                                    TestBody.untrustedUnexpectedInstance()
+                            );
+                        } else {
+                            return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                        }
+                    }
+                    case OR: {
+                        if (expected == null)
+                            expected = Boolean.TRUE;
+                        if (expected && formulaEvaluation.get()) {
+                            return Collections.singletonList(TestBody.trustedExpectedInstance());
+                        }
+                        if (needToIterate(predsFormula)) { //expected value doesn't change
+                            current = predsFormula;
+                            continue;
+                        }
+                        if (untrusted) {
+                            return Arrays.asList(
+                                    (expected?
+                                            TestBody.untrustedSatisfiablePredicate(predsFormula):
+                                            TestBody.untrustedUnsatisfiablePredicate(predsFormula)
+                                    ),
+                                    TestBody.untrustedUnexpectedInstance()
+                            );
+                        } else {
+                            return Collections.singletonList(
+                                    expected?
+                                            TestBody.trustedSatisfiablePredicate(predsFormula):
+                                            TestBody.trustedUnsatisfiablePredicate(predsFormula)
+                            );
+                        }
+                    }
+                    default: throw new IllegalStateException("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
+                }
+            } else if (current instanceof ExprUnary) {
+                ExprUnary currentAsExprUnary = (ExprUnary) current;
+                if (currentAsExprUnary.op.equals(ExprUnary.Op.NOOP))
+                    return getBodyForARepairIntegrationInstance(currentAsExprUnary.sub, context, instance);
+                if (currentAsExprUnary.op.equals(ExprUnary.Op.NOT)) {
+                    if (expected == null)
+                        expected = Boolean.TRUE;
+                    if (needToIterate(currentAsExprUnary.sub)) {
+                        expected = !expected;
+                        current = currentAsExprUnary.sub;
+                        continue;
+                    }
+                    if (expected) {
+                        return Collections.singletonList(
+                                untrusted?
+                                        TestBody.trustedUnsatisfiablePredicate(currentAsExprUnary.sub):
+                                        TestBody.untrustedUnsatisfiablePredicate(currentAsExprUnary.sub)
+                        );
+                    } else {
+                        return untrusted?
+                                Arrays.asList(
+                                        TestBody.untrustedSatisfiablePredicate(currentAsExprUnary.sub),
+                                        TestBody.untrustedUnexpectedInstance()
+                                ):
+                                Collections.singletonList(TestBody.trustedSatisfiablePredicate(currentAsExprUnary.sub));
+                    }
+                } else {
+                    throw new IllegalStateException("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
+                }
+            } else if (current instanceof ExprCall) {
+                if (expected == null)
+                    expected = Boolean.TRUE;
+                if (expected) {
+                    return untrusted?
+                            Arrays.asList(TestBody.untrustedSatisfiablePredicate(current), TestBody.untrustedUnexpectedInstance()):
+                            Collections.singletonList(TestBody.trustedSatisfiablePredicate(current));
+                } else {
+                    return Collections.singletonList(
+                            untrusted?
+                                    TestBody.untrustedUnsatisfiablePredicate(current):
+                                    TestBody.trustedUnsatisfiablePredicate(current)
+                    );
+                }
+            } else if (current instanceof ExprConstant) {
+                return Collections.singletonList(TestBody.trustedExpectedInstance());
             } else if (current instanceof ExprList) {
                 //NOT YET
                 throw new IllegalStateException("ExprList not yet supported (" + current.toString() + ")");

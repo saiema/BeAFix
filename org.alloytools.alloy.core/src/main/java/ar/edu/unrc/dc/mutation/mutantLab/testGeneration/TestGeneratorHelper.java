@@ -1,5 +1,6 @@
 package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 
+import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -363,6 +364,10 @@ public class TestGeneratorHelper {
             predicateOrAssertionCalled = command.nameExpr;
         }
         return predicateOrAssertionCalled == null?null: (Browsable) predicateOrAssertionCalled.clone();
+    }
+
+    public static boolean funcIsTrusted(Func f) {
+        return !MutantLab.getInstance().affectedFunctionsPredicatesAndAssertions().contains(f);
     }
 
     private static String removeAlias(String key) {

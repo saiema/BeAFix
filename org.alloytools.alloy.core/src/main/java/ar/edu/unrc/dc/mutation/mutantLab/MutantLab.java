@@ -67,6 +67,7 @@ public class MutantLab {
     private final List<Browsable> affectedFunctionsPredicatesAndAssertions;
     private final boolean partialRepairSupported;
     private Map<Browsable, Pair<Integer,Integer>> indexesPerFPAs;
+    private final boolean isAnyFactAffected;
 
 
     private MutantLab(CompModule context, int maxDepth, Ops...ops) {
@@ -97,6 +98,7 @@ public class MutantLab {
             independent = doesFunctionsPredicatesAndAssertionsInvolvedHaveIndependentTests(affectedFunctionsPredicatesAndAssertions);
         }
         partialRepairSupported = !factsAffected.get() && affectedFunctionsPredicatesAndAssertions.size() > 1 && independent;
+        isAnyFactAffected = factsAffected.get();
     }
 
     public boolean isOperatorEnabled(Ops op) {
@@ -110,6 +112,8 @@ public class MutantLab {
     public boolean isVariabilizationSupported() {
         return variabilizationSupported;
     }
+
+    public boolean isAnyFactAffected() { return isAnyFactAffected; }
 
     private boolean isAnyFactBugged(CompModule context, List<Expr> initialMarkedExpressions) {
         if (context == null)
