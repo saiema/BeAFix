@@ -10,6 +10,7 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.alloyNameToSkolem;
+import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.internalAtomNotationToAlloyName;
 
 public class VariableMapping {
 
@@ -75,7 +76,7 @@ public class VariableMapping {
 
     private ExprVar getSkolemVar(String label, List<ExprVar> skolemVars) {
         for (ExprVar sVar : skolemVars) {
-            if (sVar.label.compareTo(label) == 0)
+            if (internalAtomNotationToAlloyName(sVar.label).compareTo(label) == 0)
                 return sVar;
         }
         return null;

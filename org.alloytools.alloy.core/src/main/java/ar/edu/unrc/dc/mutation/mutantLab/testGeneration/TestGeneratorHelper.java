@@ -1,11 +1,10 @@
 package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 
-import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.ast.*;
+import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.translator.A4Solution;
-import edu.mit.csail.sdg.ast.Sig.Field;
 import kodkod.ast.Relation;
 import kodkod.instance.Tuple;
 
@@ -87,19 +86,8 @@ public class TestGeneratorHelper {
         return Optional.empty();
     }
 
-    static String internalAtomNotationToAlloyName(String internalNotation) {
+    public static String internalAtomNotationToAlloyName(String internalNotation) {
         return internalNotation.replaceAll("\\$", "");
-    }
-
-    static String skolemNameToAlloyName(String internalNotation, Command cmd) {
-        return internalAtomNotationToAlloyName(internalNotation);
-//        if (cmd.nameExpr instanceof ExprVar) {
-//            if (!internalNotation.contains("_"))
-//                throw new IllegalArgumentException("Skolem name should contain at least one _ (" + internalNotation + ")");
-//            return internalAtomNotationToAlloyName(internalNotation).replace(((ExprVar) cmd.nameExpr).label, "").substring(1);
-//        } else {
-//            return internalAtomNotationToAlloyName(internalNotation);
-//        }
     }
 
     static String alloyNameToSkolem(String alloyName, Command cmd) {
@@ -364,10 +352,6 @@ public class TestGeneratorHelper {
             predicateOrAssertionCalled = command.nameExpr;
         }
         return predicateOrAssertionCalled == null?null: (Browsable) predicateOrAssertionCalled.clone();
-    }
-
-    public static boolean funcIsTrusted(Func f) {
-        return !MutantLab.getInstance().affectedFunctionsPredicatesAndAssertions().contains(f);
     }
 
     private static String removeAlias(String key) {

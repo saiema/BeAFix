@@ -85,7 +85,7 @@ public class DependencyGraph {
     }
 
     private boolean onlyCallsTargetAndNonBuggyFunctions(Func target, Browsable from, List<Browsable> allBuggedFunctionsAndAssertions) {
-        FunctionsCollector functionsCollector = new FunctionsCollector();
+        FunctionsCollector functionsCollector = FunctionsCollector.allFunctionsCollector();
         Stack<Func> calledFuncs = new Stack<>();
         Expr bodyToScan;
         if (from instanceof Func) {
@@ -114,7 +114,7 @@ public class DependencyGraph {
             if (allBuggedFunctionsAndAssertions.contains(calledFunc) && !Browsable.equals(target, calledFunc)) {
                 return false;
             }
-            FunctionsCollector functionsCollector = new FunctionsCollector();
+            FunctionsCollector functionsCollector = FunctionsCollector.allFunctionsCollector();
             for (Func cFunc : functionsCollector.visitThis(calledFunc.getBody())) {
                 if (visitedFunctions.add(cFunc.label)) {
                     calledFunctions.push(cFunc);
@@ -175,7 +175,7 @@ public class DependencyGraph {
         if (predicateOrAssertionCalled instanceof Func) {
             calledFunctions.add((Func) predicateOrAssertionCalled);
         } else if (predicateOrAssertionCalled instanceof Expr) {
-            FunctionsCollector functionsCollector = new FunctionsCollector();
+            FunctionsCollector functionsCollector = FunctionsCollector.allFunctionsCollector();
             calledFunctions.addAll(functionsCollector.visitThis( (Expr) predicateOrAssertionCalled));
         } else {
             throw new IllegalStateException("Couldn't get a valid function or expression associated with command " + c.toString());
@@ -193,7 +193,7 @@ public class DependencyGraph {
                 return false;
             }
             visitedFunctions.add(calledFunc.label);
-            FunctionsCollector functionsCollector = new FunctionsCollector();
+            FunctionsCollector functionsCollector = FunctionsCollector.allFunctionsCollector();
             for (Func cFunc : functionsCollector.visitThis(calledFunc.getBody())) {
                 if (!visitedFunctions.contains(cFunc.label)) {
                     calledFunctions.push(cFunc);
@@ -223,6 +223,10 @@ public class DependencyGraph {
         if (defaultValue < 0)
             throw new IllegalArgumentException("default value must be positive or zero");
         return commandComplexity.getOrDefault(c, defaultValue);
+    }
+
+    public static boolean funcIsTrusted(Func f) {
+        return !MutantLab.getInstance().affectedFunctionsPredicatesAndAssertions().contains(f);
     }
 
     public static boolean partialRepairFullCallGraphValidation() {

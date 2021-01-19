@@ -287,10 +287,10 @@ public final class ExprBinary extends Expr {
          */
         public final Expr make(Pos pos, Pos closingBracket, Expr left, Expr right) {
             switch (this) {
-                case AND :
-                    return ExprList.makeAND(pos, closingBracket, left, right);
-                case OR :
-                    return ExprList.makeOR(pos, closingBracket, left, right);
+//                case AND :
+//                    return ExprList.makeAND(pos, closingBracket, left, right);
+//                case OR :
+//                    return ExprList.makeOR(pos, closingBracket, left, right);
                 case DOMAIN : {
                     // Special optimization
                     Expr f = right.deNOP();
@@ -316,6 +316,8 @@ public final class ExprBinary extends Expr {
                     right = right.typecheck_as_int();
                     break;
                 }
+                case AND:
+                case OR:
                 case IFF :
                 case IMPLIES : {
                     left = left.typecheck_as_formula();

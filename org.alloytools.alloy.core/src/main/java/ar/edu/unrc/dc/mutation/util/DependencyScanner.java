@@ -14,7 +14,7 @@ import java.util.*;
 
 public class DependencyScanner {
 
-    public static DependencyGraph scanDependencies(CompModule module) {
+    public static void scanDependencies(CompModule module) {
         TemporalGraph temporalGraph = new TemporalGraph(module.getAllCommands(), module);
         scanFunctions(module.getAllFunc(), module.getAllCommands(), temporalGraph);
         scanAsserts(module.getAllAssertions(), module.getAllCommands(), temporalGraph);
@@ -23,24 +23,17 @@ public class DependencyScanner {
         analyzeCommandComplexity(module.getAllFunc(), module.getAllAssertions(), module.getAllCommands(), temporalGraph);
         DependencyGraph.initialize(module.getAllCommands());
         DependencyGraph dependencyGraph = DependencyGraph.getInstance();
-        module.getAllFunc().forEach(f -> {
-            dependencyGraph.addDependencies(f, temporalGraph.getRelatedCommands(f));
-        });
-        module.getAllAssertions().forEach(a -> {
-            dependencyGraph.addDependencies(a.b, temporalGraph.getRelatedCommands(a.b));
-        });
-        module.getAllFacts().forEach(fact -> {
-            dependencyGraph.addDependencies(fact.b, temporalGraph.getRelatedCommands(fact.b));
-        });
+        module.getAllFunc().forEach(f -> dependencyGraph.addDependencies(f, temporalGraph.getRelatedCommands(f)));
+        module.getAllAssertions().forEach(a -> dependencyGraph.addDependencies(a.b, temporalGraph.getRelatedCommands(a.b)));
+        module.getAllFacts().forEach(fact -> dependencyGraph.addDependencies(fact.b, temporalGraph.getRelatedCommands(fact.b)));
         temporalGraph.directCommands.forEach(dependencyGraph::addDirectDependencies);
         for (Command c : temporalGraph.commands) {
             dependencyGraph.setCommandComplexity(c, temporalGraph.commandComplexity.getOrDefault(c, 1));
         }
-        return dependencyGraph;
     }
 
     private static void scanFunctions(SafeList<Func> functions, ConstList<Command> commands, TemporalGraph temporalGraph) {
-        FunctionsCollector functionsCollector = new FunctionsCollector();
+        FunctionsCollector functionsCollector = FunctionsCollector.allFunctionsCollector();
         functions.forEach(f -> {
             temporalGraph.funcDependencyGraph.put(f, new LinkedList<>());
             temporalGraph.funcRelatedCommands.put(f, new LinkedList<>());
@@ -50,48 +43,42 @@ public class DependencyScanner {
         });
         commands.stream().filter(c -> !c.check).forEach(c -> {
             String exprName = c.nameExpr.toString();
-            getFuncByName(exprName, functions).ifPresent(f -> {temporalGraph.addRelatedCommand(f, c);});
+            getFuncByName(exprName, functions).ifPresent(f -> temporalGraph.addRelatedCommand(f, c));
         });
     }
 
     private static void scanAsserts(ConstList<Pair<String, Expr>> assertions, ConstList<Command> commands, TemporalGraph temporalGraph) {
-        FunctionsCollector functionsCollector = new FunctionsCollector();
+        FunctionsCollector functionsCollector = FunctionsCollector.allFunctionsCollector();
         assertions.forEach(namedAssertion -> {
             temporalGraph.assertRelatedFunctions.put(namedAssertion.b, new LinkedList<>());
             temporalGraph.assertRelatedCommands.put(namedAssertion.b, new LinkedList<>());
             Expr assertion = namedAssertion.b;
-            functionsCollector.visitThis(assertion).forEach(rf -> {
-                temporalGraph.addAssertDependency(assertion, rf);
-            });
+            functionsCollector.visitThis(assertion).forEach(rf -> temporalGraph.addAssertDependency(assertion, rf));
         });
         commands.stream().filter(c -> c.check).forEach(c -> {
             String assertionsName = c.nameExpr.toString();
-            getAssertByName(assertionsName, assertions).ifPresent(a -> {temporalGraph.addRelatedCommand(a, c);});
+            getAssertByName(assertionsName, assertions).ifPresent(a -> temporalGraph.addRelatedCommand(a, c));
         });
     }
 
     private static void scanFacts(ConstList<Pair<String, Expr>> facts, ConstList<Command> commands, TemporalGraph temporalGraph) {
-        FunctionsCollector functionsCollector = new FunctionsCollector();
+        FunctionsCollector functionsCollector = FunctionsCollector.allFunctionsCollector();
         facts.forEach(namedFact -> {
             temporalGraph.assertRelatedFunctions.put(namedFact.b, new LinkedList<>());
             temporalGraph.assertRelatedCommands.put(namedFact.b, new LinkedList<>());
             Expr fact = namedFact.b;
-            functionsCollector.visitThis(fact).forEach(rf -> {
-                temporalGraph.addAssertDependency(fact, rf);
-            });
+            functionsCollector.visitThis(fact).forEach(rf -> temporalGraph.addAssertDependency(fact, rf));
         });
         commands.stream().filter(c -> c.check).forEach(c -> {
             String factName = c.nameExpr.toString();
-            getAssertByName(factName, facts).ifPresent(a -> {temporalGraph.addRelatedCommand(a, c);});
+            getAssertByName(factName, facts).ifPresent(a -> temporalGraph.addRelatedCommand(a, c));
         });
     }
 
     private static void analyzeCommandComplexity(SafeList<Func> functions, ConstList<Pair<String, Expr>> assertions, ConstList<Command> commands, TemporalGraph temporalGraph) {
         commands.stream().filter(c -> !c.check).forEach(c -> {
             String exprName = c.nameExpr.toString();
-            getFuncByName(exprName, functions).ifPresent(f -> {
-                temporalGraph.commandComplexity.put(c, temporalGraph.funcDependencyGraph.get(f).size() + 1);
-            });
+            getFuncByName(exprName, functions).ifPresent(f -> temporalGraph.commandComplexity.put(c, temporalGraph.funcDependencyGraph.get(f).size() + 1));
         });
         commands.stream().filter(c -> c.check).forEach(c -> {
             String assertionsName = c.nameExpr.toString();
@@ -134,14 +121,14 @@ public class DependencyScanner {
     }
 
     private static class TemporalGraph {
-        private Map<Expr, List<Func>> assertRelatedFunctions;
-        private Map<Expr, List<Command>> assertRelatedCommands;
-        private Map<Func, List<Func>> funcDependencyGraph;
-        private Map<Func, List<Command>> funcRelatedCommands;
-        private Map<Command, Integer> commandComplexity;
-        private List<Command> commands;
-        private CompModule context;
-        private Map<Browsable, List<Command>> directCommands;
+        private final Map<Expr, List<Func>> assertRelatedFunctions;
+        private final Map<Expr, List<Command>> assertRelatedCommands;
+        private final Map<Func, List<Func>> funcDependencyGraph;
+        private final Map<Func, List<Command>> funcRelatedCommands;
+        private final Map<Command, Integer> commandComplexity;
+        private final List<Command> commands;
+        private final CompModule context;
+        private final Map<Browsable, List<Command>> directCommands;
 
         public TemporalGraph(List<Command> commands, CompModule context) {
             funcDependencyGraph = new HashMap<>();
