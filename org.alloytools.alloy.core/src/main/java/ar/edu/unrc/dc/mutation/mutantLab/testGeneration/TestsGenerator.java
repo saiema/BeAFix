@@ -461,11 +461,20 @@ public class TestsGenerator {
     }
 
     private List<TestBody> getBodyForARepairIntegrationCounterExample(Expr originalBody, CompModule context, A4Solution instance, VariableMapping internalVariableMapping) {
+        if (originalBody == null)
+            throw new IllegalArgumentException("initial expression is null");
+        if (context == null)
+            throw new IllegalArgumentException("context is null");
+        if (instance == null)
+            throw new IllegalArgumentException("instance is null");
+        if (internalVariableMapping == null)
+            throw new IllegalArgumentException("variable mapping is null");
+        VariableMapping variableMapping = internalVariableMapping;
         FunctionsCollector functionsCollector = FunctionsCollector.buggedFunctionsCollector();
         Set<Func> functions = functionsCollector.visitThis(originalBody);
         boolean hasFacts = hasFacts(context);
         if (originalBody instanceof ExprUnary && ((ExprUnary)originalBody).op.equals(ExprUnary.Op.NOOP))
-            return getBodyForARepairIntegrationCounterExample(((ExprUnary)originalBody).sub, context, instance, internalVariableMapping);
+            return getBodyForARepairIntegrationCounterExample(((ExprUnary)originalBody).sub, context, instance, variableMapping);
         if (functions.isEmpty())
             return Collections.singletonList(TestBody.trustedUnexpectedInstance());
         Func pred = functions.stream().findFirst().get();
@@ -493,7 +502,7 @@ public class TestsGenerator {
                 } else {
                     throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + pred.toString() + ") (expr: " + current.toString() + ")");
                 }
-                Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, internalVariableMapping);
+                Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, variableMapping);
                 if (!formulaEvaluation.isPresent())
                     throw new IllegalStateException("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
                 Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
@@ -604,8 +613,10 @@ public class TestsGenerator {
                 }
             } else if (current instanceof ExprUnary) {
                 ExprUnary currentAsExprUnary = (ExprUnary) current;
-                if (currentAsExprUnary.op.equals(ExprUnary.Op.NOOP))
-                    return getBodyForARepairIntegrationCounterExample(currentAsExprUnary.sub, context, instance, internalVariableMapping);
+                if (currentAsExprUnary.op.equals(ExprUnary.Op.NOOP)) {
+                    current = currentAsExprUnary.sub;
+                    continue;
+                }
                 if (currentAsExprUnary.op.equals(ExprUnary.Op.NOT)) {
                     if (expected == null)
                         expected = Boolean.TRUE;
@@ -650,8 +661,17 @@ public class TestsGenerator {
                 //NOT YET
                 throw new IllegalStateException("ExprList not yet supported (" + current.toString() + ")");
             } else if (current instanceof ExprQt) {
-                //NOT YET
-                throw new IllegalStateException("ExprQT not yet supported (" + current.toString() + ")");
+                PropertyExtractor qtExtractor = new PropertyExtractor();
+                ExtractedProperty qtExtracted;
+                try {
+                    qtExtracted = qtExtractor.extractFromQt((ExprQt) current);
+                    VariableMapping extendedMapping = VariableMapping.extendPreviousMapping(variableMapping, qtExtracted.getVariables());
+                    current = qtExtracted.getProperty();
+                    variableMapping = extendedMapping;
+                    //continue; only add if anything is added to the following expression types
+                } catch (Exception e) {
+                    throw new IllegalStateException("Couldn't reduce quantifier expression", e);
+                }
             } else if (current instanceof ExprLet) {
                 //NOT YET
                 throw new IllegalStateException("ExprLet not yet supported (" + current.toString() + ")");
@@ -663,11 +683,20 @@ public class TestsGenerator {
     }
 
     private List<TestBody> getBodyForARepairIntegrationInstance(Expr originalBody, CompModule context, A4Solution instance, VariableMapping internalVariableMapping) {
+        if (originalBody == null)
+            throw new IllegalArgumentException("initial expression is null");
+        if (context == null)
+            throw new IllegalArgumentException("context is null");
+        if (instance == null)
+            throw new IllegalArgumentException("instance is null");
+        if (internalVariableMapping == null)
+            throw new IllegalArgumentException("variable mapping is null");
+        VariableMapping variableMapping = internalVariableMapping;
         FunctionsCollector functionsCollector = FunctionsCollector.buggedFunctionsCollector();
         Set<Func> functions = functionsCollector.visitThis(originalBody);
         boolean hasFacts = hasFacts(context);
         if (originalBody instanceof ExprUnary && ((ExprUnary)originalBody).op.equals(ExprUnary.Op.NOOP))
-            return getBodyForARepairIntegrationInstance(((ExprUnary)originalBody).sub, context, instance, internalVariableMapping);
+            return getBodyForARepairIntegrationInstance(((ExprUnary)originalBody).sub, context, instance, variableMapping);
         if (functions.isEmpty())
             return Collections.singletonList(TestBody.trustedExpectedInstance());
         Func pred = functions.stream().findFirst().get();
@@ -693,7 +722,7 @@ public class TestsGenerator {
                 } else {
                     throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + pred.toString() + ") (expr: " + current.toString() + ")");
                 }
-                Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, internalVariableMapping);
+                Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, variableMapping);
                 if (!formulaEvaluation.isPresent())
                     throw new IllegalStateException("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
                 Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
@@ -731,7 +760,7 @@ public class TestsGenerator {
                             expected = Boolean.TRUE;
                         boolean precedentIsTrue;
                         if (lor) {
-                            Optional<Boolean> predEvaluation = ExpressionEvaluator.evaluateFormula(instance, predsFormula, internalVariableMapping);
+                            Optional<Boolean> predEvaluation = ExpressionEvaluator.evaluateFormula(instance, predsFormula, variableMapping);
                             if (!predEvaluation.isPresent())
                                 throw new IllegalStateException("Failed to evaluate " + predsFormula.toString() + " to a boolean value");
                             precedentIsTrue = predEvaluation.get();
@@ -844,8 +873,10 @@ public class TestsGenerator {
                 }
             } else if (current instanceof ExprUnary) {
                 ExprUnary currentAsExprUnary = (ExprUnary) current;
-                if (currentAsExprUnary.op.equals(ExprUnary.Op.NOOP))
-                    return getBodyForARepairIntegrationInstance(currentAsExprUnary.sub, context, instance, internalVariableMapping);
+                if (currentAsExprUnary.op.equals(ExprUnary.Op.NOOP)) {
+                    current = currentAsExprUnary.sub;
+                    continue;
+                }
                 if (currentAsExprUnary.op.equals(ExprUnary.Op.NOT)) {
                     if (expected == null)
                         expected = Boolean.TRUE;
@@ -891,8 +922,17 @@ public class TestsGenerator {
                 //NOT YET
                 throw new IllegalStateException("ExprList not yet supported (" + current.toString() + ")");
             } else if (current instanceof ExprQt) {
-                //NOT YET
-                throw new IllegalStateException("ExprQT not yet supported (" + current.toString() + ")");
+                PropertyExtractor qtExtractor = new PropertyExtractor();
+                ExtractedProperty qtExtracted;
+                try {
+                    qtExtracted = qtExtractor.extractFromQt((ExprQt) current);
+                    VariableMapping extendedMapping = VariableMapping.extendPreviousMapping(variableMapping, qtExtracted.getVariables());
+                    current = qtExtracted.getProperty();
+                    variableMapping = extendedMapping;
+                    //continue; only add if anything is added to the following expression types
+                } catch (Exception e) {
+                    throw new IllegalStateException("Couldn't reduce quantifier expression", e);
+                }
             } else if (current instanceof ExprLet) {
                 //NOT YET
                 throw new IllegalStateException("ExprLet not yet supported (" + current.toString() + ")");

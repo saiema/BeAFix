@@ -3,11 +3,8 @@ package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.ExprVar;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.alloyNameToSkolem;
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.internalAtomNotationToAlloyName;
@@ -16,13 +13,30 @@ public class VariableMapping {
 
     private final Map<ExprVar, ExprVar> originalVarsToSkolemVars;
     private final Map<String, Integer> originalVarsLabelCount;
+    private final List<ExprVar> skolemVars;
     private final Command cmd;
 
     public VariableMapping(List<ExprVar> originalVars, List<ExprVar> skolemVars, Command cmd) {
         originalVarsToSkolemVars = new HashMap<>();
         originalVarsLabelCount = new TreeMap<>();
+        this.skolemVars = new LinkedList<>(skolemVars);
         this.cmd = cmd;
         createMapping(originalVars, skolemVars);
+    }
+
+    private VariableMapping(VariableMapping from) {
+        originalVarsToSkolemVars = new HashMap<>();
+        originalVarsLabelCount = new TreeMap<>();
+        originalVarsToSkolemVars.putAll(from.originalVarsToSkolemVars);
+        originalVarsLabelCount.putAll(from.originalVarsLabelCount);
+        cmd = from.cmd;
+        skolemVars = new LinkedList<>(from.skolemVars);
+    }
+
+    public static VariableMapping extendPreviousMapping(VariableMapping from, List<ExprVar> newVars) {
+        VariableMapping variableMapping = new VariableMapping(from);
+        variableMapping.createMapping(newVars, variableMapping.skolemVars);
+        return variableMapping;
     }
 
     public ExprVar skolemVar(ExprVar originalVar) {

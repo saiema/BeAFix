@@ -12,6 +12,7 @@ public class PropertyExtractor extends VisitReturn<ExtractedProperty> {
     private boolean firstVisit = true;
     private boolean visitingPred = false;
     private boolean visitingAssert = false;
+    private boolean extractQt = false;
 
     public ExtractedProperty extractFromPredicate(Func f) throws Err {
         if (f == null)
@@ -22,6 +23,7 @@ public class PropertyExtractor extends VisitReturn<ExtractedProperty> {
         firstVisit = true;
         visitingPred = true;
         visitingAssert = false;
+        extractQt = false;
         return visitThis(f.getBody());
     }
 
@@ -32,7 +34,19 @@ public class PropertyExtractor extends VisitReturn<ExtractedProperty> {
         firstVisit = true;
         visitingPred = false;
         visitingAssert = true;
+        extractQt = false;
         return visitThis(a);
+    }
+
+    public ExtractedProperty extractFromQt(ExprQt qt) throws Err {
+        if (qt == null)
+            throw new IllegalArgumentException("null argument");
+        validState = true;
+        firstVisit = true;
+        visitingPred = false;
+        visitingAssert = false;
+        extractQt = true;
+        return visitThis(qt);
     }
 
     @Override
@@ -105,9 +119,13 @@ public class PropertyExtractor extends VisitReturn<ExtractedProperty> {
     public ExtractedProperty visit(ExprQt x) throws Err {
         boolean wasFirstVisit = firstVisit;
         firstVisit = false;
-        if (visitingPred && wasFirstVisit && x.op.equals(ExprQt.Op.SOME))
+        boolean allQt = x.op.equals(ExprQt.Op.ALL);
+        boolean someQt = x.op.equals(ExprQt.Op.SOME);
+        if (extractQt && wasFirstVisit && (allQt || someQt)) {
             return visitThis(x.sub);
-        else if (visitingAssert && wasFirstVisit && x.op.equals(ExprQt.Op.ALL)) {
+        } else if (visitingPred && wasFirstVisit && someQt)
+            return visitThis(x.sub);
+        else if (visitingAssert && wasFirstVisit && allQt) {
             return visitThis(x.sub);
         } else {
             ExtractedProperty formulaProperty = visitThis(x.sub);
@@ -143,12 +161,17 @@ public class PropertyExtractor extends VisitReturn<ExtractedProperty> {
     }
 
     private void checkState() {
+        int visitTypes = 0;
+        if (visitingAssert)
+            visitTypes++;
+        if (visitingPred)
+            visitTypes++;
+        if (extractQt)
+            visitTypes++;
         if (!validState)
-            throw new IllegalStateException("visit didn't started from either #extractFromPredicate(Func) or #extractFromAssertion(Expr) methods");
-        if (visitingAssert && visitingPred)
-            throw new IllegalStateException("Can't be visiting both from an assertion and a predicate");
-        if (!visitingAssert && !visitingPred)
-            throw new IllegalStateException("Can't be visiting from neither an assertion or a predicate");
+            throw new IllegalStateException("visit didn't started from either #extractFromPredicate(Func), #extractFromAssertion(Expr), or #extractFromQt(ExprQt) methods");
+        if (visitTypes != 1)
+            throw new IllegalStateException("Can only be visiting from one type of expression (predicate: " + visitingPred + "; assert: " + visitingAssert + "; quantifier: " + extractQt + ")");
     }
 
 }
