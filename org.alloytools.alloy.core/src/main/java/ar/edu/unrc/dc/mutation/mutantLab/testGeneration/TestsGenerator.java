@@ -301,7 +301,8 @@ public class TestsGenerator {
                     getBodyForARepairIntegrationCounterExample(cleanedFormula, context, solution, internalVariableMapping):
                     getBodyForARepairIntegrationInstance(cleanedFormula, context, solution, internalVariableMapping);
             for (TestBody testBody : testBodies) {
-                testBody.fromInstance(true); //is a bad fix, but we don't want counterexample tests while in arepair integration mode
+                if (!testBody.trusted || request.isInstanceTestRequest() || !testBody.expect)
+                    testBody.fromInstance(true); //is a bad fix, but we don't want untrusted or expect 0 counterexample tests while in arepair integration mode
                 if (request.isInstanceTestRequest() && !request.fromTrustedCommand())
                     testBody.trusted = false;
                 if (testBody.body != null)
