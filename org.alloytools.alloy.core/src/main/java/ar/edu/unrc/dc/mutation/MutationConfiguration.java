@@ -450,6 +450,16 @@ public class MutationConfiguration {
 
         },
 
+        TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE {
+
+            @Override
+            public Class<?> getValueType() { return Boolean.class; }
+
+            @Override
+            public Object defaultValue() { return Boolean.FALSE; }
+
+        },
+
         TEST_GENERATION_NAME {
 
             @Override
@@ -673,6 +683,9 @@ public class MutationConfiguration {
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION)) {
                 setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE)) {
+                setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE));
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME)) {
                 setConfig(ConfigKey.TEST_GENERATION_NAME, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME));

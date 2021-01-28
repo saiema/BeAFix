@@ -47,6 +47,7 @@ public class AStrykerCLI {
             if (mode.compareToIgnoreCase(REPAIR) == 0) {
                 astryker_mode = ASTRYKER_MODE.REPAIR;
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION, false);
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, false);
             } else if (mode.compareToIgnoreCase(TESTGEN) == 0) {
                 astryker_mode = ASTRYKER_MODE.TESTGENERATION;
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_OUTPUT_TO_FILES, true);
@@ -236,6 +237,7 @@ public class AStrykerCLI {
     private static final String TESTS_TO_GENERATE_KEY = "generate";
     private static final String OUTPUT_FOLDER_KEY = "out";
     private static final String TESTS_AREPAIR_INTEGRATION_KEY = "arepair";
+    private static final String TESTS_AREPAIR_INTEGRATION_RELAXED_KEY = "arelaxed";
     private static final String TESTS_NAME_KEY = "tname";
     private static final String TESTS_NAME_STARTING_INDEX_KEY = "tindex";
     private static final String MODEL_OVERRIDING_KEY = "modeloverriding";
@@ -271,6 +273,11 @@ public class AStrykerCLI {
             case TESTS_AREPAIR_INTEGRATION_KEY: {
                 boolean arepairIntegration = getBooleanValue(TESTS_AREPAIR_INTEGRATION_KEY, value);
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION, arepairIntegration);
+                break;
+            }
+            case TESTS_AREPAIR_INTEGRATION_RELAXED_KEY: {
+                boolean arepairRelaxed = getBooleanValue(TESTS_AREPAIR_INTEGRATION_RELAXED_KEY, value);
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, arepairRelaxed);
                 break;
             }
             case TESTS_NAME_KEY: {
@@ -482,7 +489,8 @@ public class AStrykerCLI {
                 "Options:" + "\n" +
                 "--generate <int>                     :     How many tests to generate (default is 4)." + "\n" +
                 "--out <path to existing folder>      :     Where to store tests (default is the model's folder)." + "\n" +
-                "--arepair <boolean>                  :     Enables/disables arepair integration (default is false)." + "\n" +
+                "--arepair <boolean>                  :     Enables/disables ARepair integration (default is false)." + "\n" +
+                "--arelaxed <boolean>                 :     Enables/disabled relaxed mode for ARepair integration, this will widen the supported properties while increasing untrusted tests" + "\n" +
                 "--tname <name>                       :     Base name for generated tests, all tests will start with name and be followed by an index." + "\n" +
                 "                                           if name is empty (or a string with all blank space) the base name will be that of the command" + "\n" +
                 "                                           from which the counterexample came, in this case no index will be used." + "\n" +

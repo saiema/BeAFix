@@ -1515,6 +1515,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION, AStrykerTestGenerationARepairIntegration.get());
                                 break;
                             }
+                            case "AStrykerTestGenerationARepairIntegrationRelaxed" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, AStrykerTestGenerationARepairIntegrationRelaxed.get());
+                                break;
+                            }
                             case "AStrykerMutantGenerationCheck" : {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_CHECK, AStrykerMutantGenerationCheck.get());
                                 break;
@@ -1582,10 +1586,12 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerMutantGenerationLimit);
                 addToMenu(optmenu, AStrykerMutantGenerationCheck);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegration);
+                addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationRelaxed);
                 addToMenu(optmenu, AStrykerTestGenerationModelOverrides);
                 addToMenu(optmenu, AStrykerTestGenerationInstanceBasedTests);
                 AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegration.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationARepairIntegrationRelaxed.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationModelOverrides.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationInstanceBasedTests.addChangeListener(astrykerChangeListener);
                 menuItem(optmenu, "BeAFix (Test Generation) | base test name", doBaseTestName());

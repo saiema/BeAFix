@@ -36,6 +36,10 @@ public class AStrykerConfigReader {
                 return "beafix.testgeneration.arepairintegration";
             }
         },
+        TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE {
+            @Override
+            public String getKey() { return "beafix.testgeneration.arepairintegration.relaxed"; }
+        },
         TEST_GENERATION_NAME {
             @Override
             public String getKey() {
@@ -296,6 +300,7 @@ public class AStrykerConfigReader {
             case PARTIAL_REPAIR_INDEPENDENT_TESTS_FOR_ALL:
             case TEST_GENERATION_OUTPUT_TO_FILES:
             case TEST_GENERATION_AREPAIR_INTEGRATION:
+            case TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE:
             case TEST_GENERATION_USE_MODEL_OVERRIDING:
             case TEST_GENERATION_INSTANCES_TESTS_GENERATION:
             case MUTANTS_GENERATION_CHECK:

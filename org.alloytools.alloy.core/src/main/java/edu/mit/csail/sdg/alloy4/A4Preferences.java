@@ -682,6 +682,7 @@ public class A4Preferences {
     public static final IntChoicePref AStrykerTestGenerationMaxTestsPerCommand = IntChoicePref.range("AStrykerTestGenerationMaxTestsPerCommand", "BeAFix (Test Generation) | Max Tests Per Command", 2, 2, 30, 4);
     public static final IntChoicePref AStrykerTestGenerationTestsPerStep = IntChoicePref.range("AStrykerTestGenerationTestsPerStep", "BeAFix (Test Generation) | Tests Per Generation", 1, 1, 30, 1);
     public static final BooleanPref AStrykerTestGenerationARepairIntegration = new BooleanPref("AStrykerTestGenerationARepairIntegration", "BeAFix (Test Generation) | ARepair integration", false);
+    public static final BooleanPref AStrykerTestGenerationARepairIntegrationRelaxed = new BooleanPref("AStrykerTestGenerationARepairIntegrationRelaxed", "BeAFix (Test Generation) | ARepair integration relaxed", false);
     public static final BooleanPref AStrykerTestGenerationModelOverrides = new BooleanPref("AStrykerTestGenerationModelOverrides", "BeAFix (Test Generation) | Use model overrides", false);
     public static final BooleanPref AStrykerMutantGenerationCheck = new BooleanPref("AStrykerMutantGenerationCheck", "BeAFix (Mutants Generation) | check mutants with existing commands (Mutant Generation)");
     public static final IntChoicePref AStrykerMutantGenerationLimit = IntChoicePref.range("AStrykerMutantGenerationLimit", "BeAFix (Mutants Generation) | mutations per candidate", 0, 1, 10, 0);

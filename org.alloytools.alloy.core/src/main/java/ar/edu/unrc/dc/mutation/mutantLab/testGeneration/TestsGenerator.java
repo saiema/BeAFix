@@ -104,6 +104,10 @@ public class TestsGenerator {
         return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION).orElse(TEST_GENERATION_AREPAIR_INTEGRATION.defaultValue());
     }
 
+    public static boolean arepairRelaxed() {
+        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE.defaultValue());
+    }
+
     public static String testBaseName() {
         return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NAME).orElse(TEST_GENERATION_NAME.defaultValue());
     }
@@ -224,7 +228,7 @@ public class TestsGenerator {
         Map<Sig, List<ExprVar>> signatureValues = getSignaturesAtoms(solution, context);
         Map<Sig, List<ExprVar>> declSignatureValues = mergeExtendingSignaturesValues(signatureValues);
         Map<Field, List<Expr>> fieldValues = getFieldsValues(solution, context, signatureValues);
-        Map<ExprVar, List<Expr>> variablesValues = getVariablesValues(solution, signatureValues, command);
+        Map<ExprVar, List<Expr>> variablesValues = getVariablesValues(solution, signatureValues);
         List<ExprVar> skolemVariables = new LinkedList<>(variablesValues.keySet());
         Browsable predicateOrAssertionCalled = getPredicateOrAssertionCalled(command, context);
         if (predicateOrAssertionCalled == null)
@@ -245,15 +249,16 @@ public class TestsGenerator {
         Expr cleanedFormula = propertyCleaner.cleanExpression(extractedProperty.getProperty());
         if (cleanedFormula == null)
             throw new IllegalStateException("Cleaned formula is null");
-        if (arepairIntegration()) { //We will check that at most one predicate/function is present
+        if (arepairIntegration()) { //We will check that at most one predicate/function is present, unless in relaxed mode
             FunctionsCollector functionsCollector = FunctionsCollector.buggedFunctionsCollector();
-            Set<Func> functions = functionsCollector.visitThis(cleanedFormula);
-            if (functions.size() > 1) {
-                String message = "ARepair integration mode can only support at most one predicate, we found " + functions.size() + " for current expression " + cleanedFormula.toString();
+            Set<Func> buggyFunctions = functionsCollector.visitThis(cleanedFormula);
+            if (buggyFunctions.size() > 1 && !arepairRelaxed()) {
+                String message = "ARepair integration mode can only support at most one predicate without using relaxed mode, we found " + buggyFunctions.size() + " for current expression " + cleanedFormula.toString();
                 logger.severe(message);
                 throw new IllegalStateException(message);
-            } else if (functions.size() == 1 && !functions.stream().findFirst().get().isPred) {
-                String message = "ARepair integration mode can only support predicates, we found function " + functions.stream().findFirst().get().toString() + " in current expression " + cleanedFormula.toString();
+            }
+            if (buggyFunctions.stream().filter(f -> f.isPred).count() > 1) {
+                String message = "ARepair integration mode can only support predicates, we found a function (showing first) " + buggyFunctions.stream().filter(f -> f.isPred).findFirst().map(Func::toString).orElse("N/A") + " in current expression " + cleanedFormula.toString();
                 logger.severe(message);
                 throw new IllegalStateException(message);
             }
@@ -295,20 +300,27 @@ public class TestsGenerator {
         List<Expr> fieldOverrides = getFieldOverrides(solution, context, signatureValues);
         Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
         if (arepairIntegration()) {
+            FunctionsCollector functionsCollector = FunctionsCollector.buggedFunctionsCollector();
+            Set<Func> buggyFunctions = functionsCollector.visitThis(cleanedFormula);
             Set<Command> testCommands = new HashSet<>();
+            boolean allUntrusted = buggyFunctions.size() > 1;
             boolean fromCounterexample = !request.isInstanceTestRequest() || request.isInstanceNegativeTestRequest();
-            List<TestBody> testBodies = fromCounterexample?
-                    getBodyForARepairIntegrationCounterExample(cleanedFormula, context, solution, internalVariableMapping):
-                    getBodyForARepairIntegrationInstance(cleanedFormula, context, solution, internalVariableMapping);
-            for (TestBody testBody : testBodies) {
-                if (!testBody.trusted || request.isInstanceTestRequest() || !testBody.expect)
-                    testBody.fromInstance(true); //is a bad fix, but we don't want untrusted or expect 0 counterexample tests while in arepair integration mode
-                if (request.isInstanceTestRequest() && !request.fromTrustedCommand())
-                    testBody.trusted = false;
-                if (testBody.body != null)
-                    testBody.body = variableExchanger.replaceVariables((Expr)testBody.body.clone());
-                Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
-                testCommands.add(testCommand);
+            for (Func buggyFunc : buggyFunctions) {
+                List<TestBody> testBodies = fromCounterexample ?
+                        getBodyForARepairIntegrationCounterExample(cleanedFormula, context, solution, internalVariableMapping, buggyFunc) :
+                        getBodyForARepairIntegrationInstance(cleanedFormula, context, solution, internalVariableMapping, buggyFunc);
+                for (TestBody testBody : testBodies) {
+                    if (!testBody.trusted || request.isInstanceTestRequest() || !testBody.expect)
+                        testBody.fromInstance(true); //is a bad fix, but we don't want untrusted or expect 0 counterexample tests while in arepair integration mode
+                    if (request.isInstanceTestRequest() && !request.fromTrustedCommand())
+                        testBody.trusted = false;
+                    if (testBody.body != null)
+                        testBody.body = variableExchanger.replaceVariables((Expr) testBody.body.clone());
+                    if (allUntrusted)
+                        testBody.trusted = false;
+                    Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
+                    testCommands.add(testCommand);
+                }
             }
             return testCommands;
         } else {
@@ -461,7 +473,7 @@ public class TestsGenerator {
         return Optional.empty();
     }
 
-    private List<TestBody> getBodyForARepairIntegrationCounterExample(Expr originalBody, CompModule context, A4Solution instance, VariableMapping internalVariableMapping) {
+    private List<TestBody> getBodyForARepairIntegrationCounterExample(Expr originalBody, CompModule context, A4Solution instance, VariableMapping internalVariableMapping, Func buggyFunc) {
         if (originalBody == null)
             throw new IllegalArgumentException("initial expression is null");
         if (context == null)
@@ -471,14 +483,11 @@ public class TestsGenerator {
         if (internalVariableMapping == null)
             throw new IllegalArgumentException("variable mapping is null");
         VariableMapping variableMapping = internalVariableMapping;
-        FunctionsCollector functionsCollector = FunctionsCollector.buggedFunctionsCollector();
-        Set<Func> functions = functionsCollector.visitThis(originalBody);
         boolean hasFacts = hasFacts(context);
         if (originalBody instanceof ExprUnary && ((ExprUnary)originalBody).op.equals(ExprUnary.Op.NOOP))
-            return getBodyForARepairIntegrationCounterExample(((ExprUnary)originalBody).sub, context, instance, variableMapping);
-        if (functions.isEmpty())
+            return getBodyForARepairIntegrationCounterExample(((ExprUnary)originalBody).sub, context, instance, variableMapping, buggyFunc);
+        if (buggyFunc == null)
             return Collections.singletonList(TestBody.trustedUnexpectedInstance());
-        Func pred = functions.stream().findFirst().get();
         Boolean expected = null;
         boolean invert;
         boolean lor; //false: left, true: right
@@ -487,13 +496,13 @@ public class TestsGenerator {
             current = andOrListToBinaryExpression((ExprList) current).orElse(current);
         }
         SearchCall searchExpr = new SearchCall(null);
-        boolean untrusted = (hasFacts && MutantLab.getInstance().isAnyFactAffected()) || !funcIsTrusted(pred);
+        boolean untrusted = (hasFacts && MutantLab.getInstance().isAnyFactAffected()) || !funcIsTrusted(buggyFunc);
         while (true) {
             invert = false;
             if (current instanceof ExprBinary) {
                 ExprBinary currentAsBinaryExpr = (ExprBinary) current;
                 Expr formulaToEvaluate;
-                searchExpr.setTarget(pred);
+                searchExpr.setTarget(buggyFunc);
                 if (searchExpr.visitThis(currentAsBinaryExpr.left)) {
                     formulaToEvaluate = currentAsBinaryExpr.right;
                     lor = false;
@@ -501,7 +510,7 @@ public class TestsGenerator {
                     formulaToEvaluate = currentAsBinaryExpr.left;
                     lor = true;
                 } else {
-                    throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + pred.toString() + ") (expr: " + current.toString() + ")");
+                    throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + buggyFunc.toString() + ") (expr: " + current.toString() + ")");
                 }
                 Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, variableMapping);
                 if (!formulaEvaluation.isPresent())
@@ -683,7 +692,7 @@ public class TestsGenerator {
         }
     }
 
-    private List<TestBody> getBodyForARepairIntegrationInstance(Expr originalBody, CompModule context, A4Solution instance, VariableMapping internalVariableMapping) {
+    private List<TestBody> getBodyForARepairIntegrationInstance(Expr originalBody, CompModule context, A4Solution instance, VariableMapping internalVariableMapping, Func buggyFunc) {
         if (originalBody == null)
             throw new IllegalArgumentException("initial expression is null");
         if (context == null)
@@ -693,14 +702,11 @@ public class TestsGenerator {
         if (internalVariableMapping == null)
             throw new IllegalArgumentException("variable mapping is null");
         VariableMapping variableMapping = internalVariableMapping;
-        FunctionsCollector functionsCollector = FunctionsCollector.buggedFunctionsCollector();
-        Set<Func> functions = functionsCollector.visitThis(originalBody);
         boolean hasFacts = hasFacts(context);
         if (originalBody instanceof ExprUnary && ((ExprUnary)originalBody).op.equals(ExprUnary.Op.NOOP))
-            return getBodyForARepairIntegrationInstance(((ExprUnary)originalBody).sub, context, instance, variableMapping);
-        if (functions.isEmpty())
+            return getBodyForARepairIntegrationInstance(((ExprUnary)originalBody).sub, context, instance, variableMapping, buggyFunc);
+        if (buggyFunc == null)
             return Collections.singletonList(TestBody.trustedExpectedInstance());
-        Func pred = functions.stream().findFirst().get();
         Boolean expected = null;
         boolean lor; //false: left, true: right
         Expr current = originalBody;
@@ -708,12 +714,12 @@ public class TestsGenerator {
             current = andOrListToBinaryExpression((ExprList) current).orElse(current);
         }
         SearchCall searchExpr = new SearchCall(null);
-        boolean untrusted = (hasFacts && MutantLab.getInstance().isAnyFactAffected()) || !funcIsTrusted(pred);
+        boolean untrusted = (hasFacts && MutantLab.getInstance().isAnyFactAffected());
         while (true) {
             if (current instanceof ExprBinary) {
                 ExprBinary currentAsBinaryExpr = (ExprBinary) current;
                 Expr formulaToEvaluate;
-                searchExpr.setTarget(pred);
+                searchExpr.setTarget(buggyFunc);
                 if (searchExpr.visitThis(currentAsBinaryExpr.left)) {
                     formulaToEvaluate = currentAsBinaryExpr.right;
                     lor = false;
@@ -721,7 +727,7 @@ public class TestsGenerator {
                     formulaToEvaluate = currentAsBinaryExpr.left;
                     lor = true;
                 } else {
-                    throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + pred.toString() + ") (expr: " + current.toString() + ")");
+                    throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + buggyFunc.toString() + ") (expr: " + current.toString() + ")");
                 }
                 Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, variableMapping);
                 if (!formulaEvaluation.isPresent())
@@ -1177,7 +1183,7 @@ public class TestsGenerator {
         return fieldOverrides;
     }
 
-    private Map<ExprVar, List<Expr>> getVariablesValues(A4Solution solution, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
+    private Map<ExprVar, List<Expr>> getVariablesValues(A4Solution solution, Map<Sig, List<ExprVar>> signatureValues) {
         Map<ExprVar, List<Expr>> variablesValues = new HashMap<>();
         Map<ExprVar, TupleSet> counterExampleVariables = getCounterExampleVariables(solution);
         for (Map.Entry<ExprVar, TupleSet> ceVariable : counterExampleVariables.entrySet()) {

@@ -7,12 +7,10 @@ import java.util.*;
 public class CandidateChannel {
 
     private final List<Candidate> internalCollection;
-    //private final List<Candidate> priorityCollection;
     private final Map<Integer, List<Candidate>> priorityCollections;
 
     public CandidateChannel() {
         internalCollection = new LinkedList<>();
-        //priorityCollection = new LinkedList<>();
         priorityCollections = new HashMap<>();
     }
 
@@ -49,7 +47,7 @@ public class CandidateChannel {
         if (isEmpty()) {
             res = Optional.empty();
         } else if (!priorityCollections.isEmpty()) {
-            res = Optional.of(nextFromPriority());//Optional.of(priorityCollection.remove(0));
+            res = Optional.of(nextFromPriority());
         } else {
             res = Optional.of(internalCollection.remove(0));
         }
