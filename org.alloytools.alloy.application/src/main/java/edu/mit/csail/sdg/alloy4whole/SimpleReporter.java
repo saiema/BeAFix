@@ -1078,6 +1078,8 @@ final class SimpleReporter extends A4Reporter {
                 if (!buggyFuncsFileRaw.trim().isEmpty()) {
                     File buggyFuncsFile = new File(buggyFuncsFileRaw);
                     BuggyPredsMarker.markBuggyFunctionsAndFacts(world, buggyFuncsFile);
+                } else {
+                    BuggyPredsMarker.markAllAsBuggy(world);
                 }
             }
             ASTMutator.startInstance(world);

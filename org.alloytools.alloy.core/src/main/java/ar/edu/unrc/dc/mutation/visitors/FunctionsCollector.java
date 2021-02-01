@@ -140,7 +140,7 @@ public class FunctionsCollector extends VisitReturn<Set<Func>> {
     private boolean acceptedFunction(Func f) {
         if (bugged && nonBugged)
             return true;
-        boolean isFuncBugged = funcIsTrusted(f);
+        boolean isFuncBugged = !funcIsTrusted(f);
         return (bugged && isFuncBugged) || (nonBugged && !isFuncBugged);
     }
 

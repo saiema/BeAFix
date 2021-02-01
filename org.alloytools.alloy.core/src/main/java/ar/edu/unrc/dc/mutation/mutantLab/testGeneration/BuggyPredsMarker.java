@@ -9,7 +9,6 @@ import edu.mit.csail.sdg.parser.CompModule;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,6 +29,21 @@ public final class BuggyPredsMarker {
     private static final String FUNC_PREFIX = "func:";
     private static final String FACT_PREFIX = "fact:";
     private static final String SIG_PREFIX = "sig:";
+
+    public static void markAllAsBuggy(CompModule module) {
+        if (module == null)
+            throw new IllegalArgumentException("null module");
+        if (!module.markedEprsToMutate.isEmpty())
+            throw new IllegalStateException("Can't mark buggy functions/predicates/facts when there are marked expressions in the model");
+        module.getAllFunc().forEach(f -> {
+            f.getBody().mutGenLimit(1);
+            module.addMarkedExprToMutate(f.getBody());
+        });
+        module.getAllFacts().forEach(f -> {
+            f.b.mutGenLimit(1);
+            module.addMarkedExprToMutate(f.b);
+        });
+    }
 
     public static void markBuggyFunctions(CompModule module, Collection<String> funcs) {
         if (module == null)
@@ -98,12 +112,6 @@ public final class BuggyPredsMarker {
         markBuggyFunctions(module, funcs);
         markBuggyNamedFacts(module, facts);
         markBuggySignatureFacts(module, signatures);
-    }
-
-    public static void markBuggyFunctionsAndFacts(CompModule module, Path funcsFilePath) throws IOException {
-        if (funcsFilePath == null)
-            throw new IllegalArgumentException("null funcs file path");
-        markBuggyFunctionsAndFacts(module, funcsFilePath.toFile());
     }
 
     private static void markFunction(CompModule module, String func) {

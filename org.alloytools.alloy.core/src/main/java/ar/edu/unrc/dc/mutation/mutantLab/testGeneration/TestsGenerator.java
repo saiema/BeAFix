@@ -257,7 +257,7 @@ public class TestsGenerator {
                 logger.severe(message);
                 throw new IllegalStateException(message);
             }
-            if (buggyFunctions.stream().filter(f -> f.isPred).count() > 1) {
+            if (buggyFunctions.stream().filter(f -> !f.isPred).count() > 1) {
                 String message = "ARepair integration mode can only support predicates, we found a function (showing first) " + buggyFunctions.stream().filter(f -> f.isPred).findFirst().map(Func::toString).orElse("N/A") + " in current expression " + cleanedFormula.toString();
                 logger.severe(message);
                 throw new IllegalStateException(message);
