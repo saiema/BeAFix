@@ -30,6 +30,8 @@ public final class BuggyPredsMarker {
     private static final String FACT_PREFIX = "fact:";
     private static final String SIG_PREFIX = "sig:";
 
+    private static boolean marking = false;
+
     public static void markAllAsBuggy(CompModule module) {
         if (module == null)
             throw new IllegalArgumentException("null module");
@@ -50,7 +52,7 @@ public final class BuggyPredsMarker {
             throw new IllegalArgumentException("null module");
         if (funcs == null)
             throw new IllegalArgumentException("null funcs");
-        if (!module.markedEprsToMutate.isEmpty())
+        if (!module.markedEprsToMutate.isEmpty() && !marking)
             throw new IllegalStateException("Can't mark buggy predicate when there are marked expressions in the model");
         for (String func : funcs) {
             markFunction(module, func);
@@ -62,7 +64,7 @@ public final class BuggyPredsMarker {
             throw new IllegalArgumentException("null module");
         if (facts == null)
             throw new IllegalArgumentException("null facts");
-        if (!module.markedEprsToMutate.isEmpty())
+        if (!module.markedEprsToMutate.isEmpty() && !marking)
             throw new IllegalStateException("Can't mark buggy named facts when there are marked expressions in the model");
         for (String fact : facts) {
             markFact(module, fact);
@@ -74,7 +76,7 @@ public final class BuggyPredsMarker {
             throw new IllegalArgumentException("null module");
         if (signatures == null)
             throw new IllegalArgumentException("null signatures");
-        if (!module.markedEprsToMutate.isEmpty())
+        if (!module.markedEprsToMutate.isEmpty() && !marking)
             throw new IllegalStateException("Can't mark signature facts when there are marked expressions in the model");
         for (String sig : signatures) {
             markSignatureFact(module, sig);
@@ -109,9 +111,11 @@ public final class BuggyPredsMarker {
                 }
             }
         }
+        marking = true;
         markBuggyFunctions(module, funcs);
         markBuggyNamedFacts(module, facts);
         markBuggySignatureFacts(module, signatures);
+        marking = false;
     }
 
     private static void markFunction(CompModule module, String func) {
