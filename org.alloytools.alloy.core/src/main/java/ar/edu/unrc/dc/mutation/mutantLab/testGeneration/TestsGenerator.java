@@ -64,6 +64,12 @@ public class TestsGenerator {
         return instance;
     }
 
+    public static void destroyInstance() {
+        if (instance == null)
+            throw new IllegalStateException("No TestsGenerator instance to destroy");
+        instance = null;
+    }
+
     private TestsGenerator() {
         testsPerProperty = new TreeMap<>();
         String testBaseName = testBaseName();
@@ -951,19 +957,20 @@ public class TestsGenerator {
     }
 
     private boolean needToIterate(Expr x) {
-        if (x instanceof ExprCall)
-            return false;
-        if (x instanceof ExprUnary) {
-            ExprUnary exprUnary = (ExprUnary) x;
-            if (exprUnary.op.equals(ExprUnary.Op.NOOP))
-                return needToIterate(exprUnary.sub);
-            return !(exprUnary.sub instanceof ExprCall);
-        } else if (x instanceof ExprBinary) {
-            ExprBinary exprBinary = (ExprBinary) x;
-            return !(exprBinary.left instanceof ExprCall) && !(exprBinary.right instanceof ExprCall);
-        } else {
-            throw new IllegalStateException("Other classes of expressions are currently not supported");
-        }
+        return !(x instanceof ExprCall);
+//        if (x instanceof ExprCall)
+//            return false;
+//        if (x instanceof ExprUnary) {
+//            ExprUnary exprUnary = (ExprUnary) x;
+//            if (exprUnary.op.equals(ExprUnary.Op.NOOP))
+//                return needToIterate(exprUnary.sub);
+//            return !(exprUnary.sub instanceof ExprCall);
+//        } else if (x instanceof ExprBinary) {
+//            ExprBinary exprBinary = (ExprBinary) x;
+//            return !(exprBinary.left instanceof ExprCall) && !(exprBinary.right instanceof ExprCall);
+//        } else {
+//            throw new IllegalStateException("Other classes of expressions are currently not supported");
+//        }
     }
 
     private String getTestName(String from) {
