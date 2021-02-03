@@ -1058,7 +1058,9 @@ final class SimpleReporter extends A4Reporter {
                 String exceptionAsString = sw.toString();
                 FileUtils.writeCheckReportToFile(options.originalFilename, "EXCEPTION\n"+exceptionAsString);
             } else {
-                FileUtils.writeCheckReportToFile(options.originalFilename, "INVALID");
+                int commands = world.getAllCommands().size();
+                int repaired = (int) result.getCommandResults().entrySet().stream().filter(Entry::getValue).count();
+                FileUtils.writeCheckReportToFile(options.originalFilename, "INVALID (" + repaired + "/" + commands + ")");
             }
             //--------------------------
             ASTMutator.destroyInstance();
@@ -1568,7 +1570,7 @@ final class SimpleReporter extends A4Reporter {
                 }
                 if (partialRepair)
                     testsResults.put(cmd, repaired);
-                if (!repaired)
+                if (!repaired && !partialRepair) //TODO: test this (I added `&& !partialRepair`)
                     break;
             }
             if (partialRepair)
