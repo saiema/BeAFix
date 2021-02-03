@@ -1031,6 +1031,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 mutantGenerationMenu.addActionListener(doAStryker(AStrykerMUTANTGENERATION));
                 runmenu.add(new JSeparator(), runmenu.getItemCount());
                 runmenu.add(mutantGenerationMenu, runmenu.getItemCount());
+                JMenuItem checkModelMenu = new JMenuItem("Check model", null);
+                checkModelMenu.addActionListener(doAStryker(AStrykerCHECK));
+                runmenu.add(new JSeparator(), runmenu.getItemCount());
+                runmenu.add(checkModelMenu, runmenu.getItemCount());
             }
             //@Mutants
             if (CompUtil.hasMutableExpressions(text.get().getText())){
@@ -1127,6 +1131,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
     private final int AStrykerREPAIR = 1;
     private final int AStrykerTESTGENERATION = 2;
     private final int AStrykerMUTANTGENERATION = 3;
+    private final int AStrykerCHECK = 4;
     private Runner doAStryker(int index) {
         AStrykerConfigReader.getInstance().setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_OUTPUT_TO_FILES, false);
         try {
@@ -1155,6 +1160,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
             }
             case AStrykerMUTANTGENERATION : {
                 mode = ASTRYKER_MODE.MUTANTGENERATION;
+                break;
+            }
+            case AStrykerCHECK: {
+                mode = ASTRYKER_MODE.CHECK;
                 break;
             }
             default: {
@@ -1215,10 +1224,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
             if (newmem != subMemoryNow || newstack != subStackNow)
                 WorkerEngine.stop();
             //TODO: repair run
-            if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
+            //if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
                 WorkerEngine.runLocally(repair1, cb);
-            else
-                WorkerEngine.run(repair1, newmem, newstack, alloyHome() + fs + "binary", "", cb);
+            //else
+            //    WorkerEngine.run(repair1, newmem, newstack, alloyHome() + fs + "binary", "", cb);
             subMemoryNow = newmem;
             subStackNow = newstack;
         } catch (Throwable ex) {

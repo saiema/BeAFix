@@ -1034,6 +1034,8 @@ final class SimpleReporter extends A4Reporter {
         }
 
         private void runCheck(WorkerCallback out) throws Exception {
+            MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_VARIABILIZATION_TEST_GENERATION, Boolean.FALSE);
+            MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_INSTANCES_TESTS_GENERATION, Boolean.FALSE);
             cb(out, "RepairTittle", "Model verification started...\n\n");
             logger.info("Starting verification for model: " + options.originalFilename);
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
@@ -1049,18 +1051,21 @@ final class SimpleReporter extends A4Reporter {
             MutantLab.initialize(world, maxDepthForRepair());
             //verify
             Candidate original = Candidate.original(world);
-            EvaluationResults result = evaluateCandidateNormalEvaluation(original, rep);
+            EvaluationResults result = evaluateCandidate(original, world.getAllCommands(), rep, true);
             if (result.isRepaired()) {
                 FileUtils.writeCheckReportToFile(options.originalFilename, "VALID");
+                cb(out, "RepairSubTittle", "VALID model\n");
             } else if (result.isDiscarded()) {
                 StringWriter sw = new StringWriter();
                 result.getException().printStackTrace(new PrintWriter(sw));
                 String exceptionAsString = sw.toString();
                 FileUtils.writeCheckReportToFile(options.originalFilename, "EXCEPTION\n"+exceptionAsString);
+                cb(out, "RepairError", "EXCEPTION\n" + exceptionAsString + "\n");
             } else {
                 int commands = world.getAllCommands().size();
                 int repaired = (int) result.getCommandResults().entrySet().stream().filter(Entry::getValue).count();
                 FileUtils.writeCheckReportToFile(options.originalFilename, "INVALID (" + repaired + "/" + commands + ")");
+                cb(out, "RepairSubTittle", "INVALID model (" + repaired + "/" + commands + ")\n");
             }
             //--------------------------
             ASTMutator.destroyInstance();
