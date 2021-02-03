@@ -1224,10 +1224,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
             if (newmem != subMemoryNow || newstack != subStackNow)
                 WorkerEngine.stop();
             //TODO: repair run
-            //if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
+            if (AlloyCore.isDebug() && VerbosityPref.get() == Verbosity.FULLDEBUG)
                 WorkerEngine.runLocally(repair1, cb);
-            //else
-            //    WorkerEngine.run(repair1, newmem, newstack, alloyHome() + fs + "binary", "", cb);
+            else
+                WorkerEngine.run(repair1, newmem, newstack, alloyHome() + fs + "binary", "", cb);
             subMemoryNow = newmem;
             subStackNow = newstack;
         } catch (Throwable ex) {
