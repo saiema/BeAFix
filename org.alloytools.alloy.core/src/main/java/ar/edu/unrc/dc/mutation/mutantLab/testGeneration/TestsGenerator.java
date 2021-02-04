@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 
 import static ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey.*;
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.*;
-import static ar.edu.unrc.dc.mutation.util.DependencyGraph.funcIsTrusted;
 
 public class TestsGenerator {
 
@@ -502,7 +501,7 @@ public class TestsGenerator {
             current = andOrListToBinaryExpression((ExprList) current).orElse(current);
         }
         SearchCall searchExpr = new SearchCall(null);
-        boolean untrusted = (hasFacts && MutantLab.getInstance().isAnyFactAffected()) || !funcIsTrusted(buggyFunc);
+        boolean untrustedFacts = (hasFacts && MutantLab.getInstance().isAnyFactAffected());
         while (true) {
             invert = false;
             if (current instanceof ExprBinary) {
@@ -536,12 +535,12 @@ public class TestsGenerator {
                         } else {
                             if (!isFormulaSameAsExpected) {
                                 return Collections.singletonList(
-                                        untrusted?
+                                        untrustedFacts?
                                                 TestBody.untrustedUnsatisfiablePredicate(predsFormula):
                                                 TestBody.trustedUnsatisfiablePredicate(predsFormula)
                                 );
                             } else {
-                                if (hasFacts) {
+                                if (untrustedFacts) {
                                     return Arrays.asList(
                                             TestBody.untrustedSatisfiablePredicate(predsFormula),
                                             TestBody.untrustedUnexpectedInstance()
@@ -565,7 +564,7 @@ public class TestsGenerator {
                                 current = predsFormula;
                                 continue;
                             }
-                            if (hasFacts) {
+                            if (untrustedFacts) {
                                 return Arrays.asList(TestBody.untrustedSatisfiablePredicate(predsFormula), TestBody.untrustedUnexpectedInstance());
                             } else {
                                 return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
@@ -592,7 +591,7 @@ public class TestsGenerator {
                             continue;
                         }
                         if (expected) {
-                            if (hasFacts) {
+                            if (untrustedFacts) {
                                 return Arrays.asList(TestBody.untrustedSatisfiablePredicate(predsFormula), TestBody.untrustedUnexpectedInstance());
                             } else {
                                 return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
@@ -613,7 +612,7 @@ public class TestsGenerator {
                             continue;
                         }
                         if (expected) {
-                            return hasFacts?
+                            return untrustedFacts?
                                     Arrays.asList(
                                             TestBody.untrustedSatisfiablePredicate(predsFormula),
                                             TestBody.untrustedUnexpectedInstance()
@@ -643,12 +642,12 @@ public class TestsGenerator {
                     }
                     if (expected) {
                         return Collections.singletonList(
-                                untrusted?
+                                untrustedFacts?
                                         TestBody.untrustedUnsatisfiablePredicate(currentAsExprUnary.sub):
                                         TestBody.trustedUnsatisfiablePredicate(currentAsExprUnary.sub)
                         );
                     } else {
-                        return untrusted?
+                        return untrustedFacts?
                                 Arrays.asList(
                                         TestBody.untrustedSatisfiablePredicate(currentAsExprUnary.sub),
                                         TestBody.untrustedUnexpectedInstance()
@@ -667,7 +666,7 @@ public class TestsGenerator {
                 if (expected) {
                     return Collections.singletonList(TestBody.trustedUnexpectedInstance());
                 }
-                if (hasFacts) {
+                if (untrustedFacts) {
                     return Arrays.asList(TestBody.untrustedUnsatisfiablePredicate(current), TestBody.untrustedUnexpectedInstance());
                 }
                 return Collections.singletonList(TestBody.trustedUnexpectedInstance());
@@ -720,7 +719,7 @@ public class TestsGenerator {
             current = andOrListToBinaryExpression((ExprList) current).orElse(current);
         }
         SearchCall searchExpr = new SearchCall(null);
-        boolean untrusted = (hasFacts && MutantLab.getInstance().isAnyFactAffected());
+        boolean untrustedFacts = (hasFacts && MutantLab.getInstance().isAnyFactAffected());
         while (true) {
             if (current instanceof ExprBinary) {
                 ExprBinary currentAsBinaryExpr = (ExprBinary) current;
@@ -751,7 +750,7 @@ public class TestsGenerator {
                             current = predsFormula;
                             continue;
                         } else {
-                            if (untrusted) {
+                            if (untrustedFacts) {
                                 return Arrays.asList(
                                         (expected?
                                             TestBody.untrustedSatisfiablePredicate(predsFormula):
@@ -794,7 +793,7 @@ public class TestsGenerator {
                         }
                         if (expected) {
                             if (precedentIsTrue) {
-                                if (untrusted) {
+                                if (untrustedFacts) {
                                     return Arrays.asList(
                                             TestBody.untrustedSatisfiablePredicate(predsFormula),
                                             TestBody.untrustedUnexpectedInstance()
@@ -803,7 +802,7 @@ public class TestsGenerator {
                                     return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
                                 }
                             } else {
-                                if (untrusted) {
+                                if (untrustedFacts) {
                                     return Collections.singletonList(
                                             TestBody.untrustedUnsatisfiablePredicate(predsFormula)
                                     );
@@ -812,7 +811,7 @@ public class TestsGenerator {
                                 }
                             }
                         } else {
-                            if (untrusted) {
+                            if (untrustedFacts) {
                                 return Arrays.asList(
                                         (lor?
                                                 TestBody.untrustedSatisfiablePredicate(predsFormula):
@@ -839,7 +838,7 @@ public class TestsGenerator {
                             continue;
                         }
                         if (expected) {
-                            if (untrusted) {
+                            if (untrustedFacts) {
                                 return Arrays.asList(
                                         TestBody.untrustedSatisfiablePredicate(predsFormula),
                                         TestBody.untrustedUnexpectedInstance()
@@ -847,7 +846,7 @@ public class TestsGenerator {
                             } else {
                                 return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
                             }
-                        } else if (untrusted) {
+                        } else if (untrustedFacts) {
                             return Arrays.asList(
                                     TestBody.untrustedUnsatisfiablePredicate(predsFormula),
                                     TestBody.untrustedUnexpectedInstance()
@@ -866,7 +865,7 @@ public class TestsGenerator {
                             current = predsFormula;
                             continue;
                         }
-                        if (untrusted) {
+                        if (untrustedFacts) {
                             return Arrays.asList(
                                     (expected?
                                             TestBody.untrustedSatisfiablePredicate(predsFormula):
@@ -900,12 +899,12 @@ public class TestsGenerator {
                     }
                     if (expected) {
                         return Collections.singletonList(
-                                untrusted?
+                                untrustedFacts?
                                         TestBody.trustedUnsatisfiablePredicate(currentAsExprUnary.sub):
                                         TestBody.untrustedUnsatisfiablePredicate(currentAsExprUnary.sub)
                         );
                     } else {
-                        return untrusted?
+                        return untrustedFacts?
                                 Arrays.asList(
                                         TestBody.untrustedSatisfiablePredicate(currentAsExprUnary.sub),
                                         TestBody.untrustedUnexpectedInstance()
@@ -919,12 +918,12 @@ public class TestsGenerator {
                 if (expected == null)
                     expected = Boolean.TRUE;
                 if (expected) {
-                    return untrusted?
+                    return untrustedFacts?
                             Arrays.asList(TestBody.untrustedSatisfiablePredicate(current), TestBody.untrustedUnexpectedInstance()):
                             Collections.singletonList(TestBody.trustedSatisfiablePredicate(current));
                 } else {
                     return Collections.singletonList(
-                            untrusted?
+                            untrustedFacts?
                                     TestBody.untrustedUnsatisfiablePredicate(current):
                                     TestBody.trustedUnsatisfiablePredicate(current)
                     );
