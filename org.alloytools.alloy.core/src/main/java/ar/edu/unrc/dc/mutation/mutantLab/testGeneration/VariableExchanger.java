@@ -63,6 +63,9 @@ public class VariableExchanger extends VisitReturn<Void> {
 
     @Override
     public Void visit(ExprQt x) throws Err {
+        for (Decl d : x.decls) {
+            visitThis(d.expr);
+        }
         visitThis(x.sub);
         return null;
     }
