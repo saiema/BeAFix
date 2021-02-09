@@ -1080,6 +1080,10 @@ final class SimpleReporter extends A4Reporter {
             File[] outputFiles = writeTestsToFile()?FileUtils.setUpTestGenerationFiles(options.originalFilename, TestsGenerator.generateInstanceTests() || TestsGenerator.arepairIntegration()):null;
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
+            if (TestsGenerator.arepairNoFacts())
+                CompModule.disableFacts();
+            else
+                CompModule.enableFacts();
             if (world.markedEprsToMutate.isEmpty()) {
                 String buggyFuncsFileRaw = TestsGenerator.buggyFuncsFile();
                 if (!buggyFuncsFileRaw.trim().isEmpty()) {
@@ -1152,7 +1156,7 @@ final class SimpleReporter extends A4Reporter {
             Browsable.resetIDs();
             ExprVar.resetIDs();
             Sig.Field.resetIDs();
-            Sig.enableFacts();
+            CompModule.enableFacts();
         }
 
 
@@ -1340,7 +1344,7 @@ final class SimpleReporter extends A4Reporter {
             Browsable.resetIDs();
             ExprVar.resetIDs();
             Sig.Field.resetIDs();
-            Sig.enableFacts();
+            CompModule.enableFacts();
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
         }
@@ -1354,10 +1358,16 @@ final class SimpleReporter extends A4Reporter {
                 boolean atLeastOneTestGenerated = false;
                 boolean atLeastOneCheckTest = false;
                 Candidate original = Candidate.original(world);
-                for (Command cmd : world.getAllCommands()) {
-                    if (cmd.check || cmd.expects == 0) {
+                for (Command c : world.getAllCommands()) {
+                    if (c.check || c.expects == 0) {
                         atLeastOneCheckTest = true;
                         try {
+                            Command cmd;
+                            if (TestsGenerator.arepairNoFacts() && c.hasFacts()) {
+                                cmd = c.getCommandWithoutFacts();
+                            } else {
+                                cmd = c;
+                            }
                             A4Solution result = evaluateCandidateWithCommand(original, cmd, rep);
                             if (result != null && result.satisfiable()) {
                                 try {
@@ -1406,13 +1416,19 @@ final class SimpleReporter extends A4Reporter {
             Candidate original = Candidate.original(world);
             boolean atLeastOneTestGenerated = false;
             boolean atLeastOneRunCommand = false;
-            for (Command c : world.getAllCommands()) {
-                if (c.check || c.expects == 0)
+            for (Command cmd : world.getAllCommands()) {
+                if (cmd.check || cmd.expects == 0)
                     continue;
-                if (c.isGenerated())
+                if (cmd.isGenerated())
                     continue;
                 atLeastOneRunCommand = true;
                 try {
+                    Command c;
+                    if (TestsGenerator.arepairNoFacts() && cmd.hasFacts()) {
+                        c = cmd.getCommandWithoutFacts();
+                    } else {
+                        c = cmd;
+                    }
                     A4Solution result = evaluateCandidateWithCommand(original, c, rep);
                     if (result != null && result.satisfiable()) {
                         try {
@@ -1526,7 +1542,7 @@ final class SimpleReporter extends A4Reporter {
             for (int i = 0; i < cmds.size(); i++) {
                 logger.info("Running cmd " + cmds.get(i).toString() + " with complexity " + DependencyGraph.getInstance().getCommandComplexity(cmds.get(i)));
                 current.clearMutatedStatus();
-                final Command cmd = cmds.get(i);
+                Command cmd = cmds.get(i);
                 if (cmd.isGenerated())
                     continue;
                 try {
@@ -1537,6 +1553,9 @@ final class SimpleReporter extends A4Reporter {
                     rep.tempfile = tempdir + File.separatorChar + i + ".cnf";
                     //cb(out, "bold", "Executing \"" + cmd + "\"\n");
                     //@mutation ==>> pass the mutation lab to the translator for mutation
+                    if (TestsGenerator.arepairNoFacts() && cmd.hasFacts()) {
+                        cmd = cmd.getCommandWithoutFacts();
+                    }
                     A4Solution ai = evaluateCandidateWithCommand(current, cmd, rep);
                     //if the solution is as expected then continue, else break this mutation checks and continue with other mutation
                     if (ai != null) {

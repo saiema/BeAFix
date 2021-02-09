@@ -113,6 +113,10 @@ public class TestsGenerator {
         return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE.defaultValue());
     }
 
+    public static boolean arepairNoFacts() {
+        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS.defaultValue());
+    }
+
     public static String testBaseName() {
         return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NAME).orElse(TEST_GENERATION_NAME.defaultValue());
     }
@@ -310,22 +314,32 @@ public class TestsGenerator {
             Set<Command> testCommands = new HashSet<>();
             boolean allUntrusted = buggyFunctions.size() > 1;
             boolean fromCounterexample = !request.isInstanceTestRequest() || request.isInstanceNegativeTestRequest();
+            List<TestBody> testBodies = new LinkedList<>();
             for (Func buggyFunc : buggyFunctions) {
-                List<TestBody> testBodies = fromCounterexample ?
+                testBodies.addAll(fromCounterexample ?
                         getBodyForARepairIntegrationCounterExample(cleanedFormula, context, solution, internalVariableMapping, buggyFunc) :
-                        getBodyForARepairIntegrationInstance(cleanedFormula, context, solution, internalVariableMapping, buggyFunc);
-                for (TestBody testBody : testBodies) {
-                    if (!testBody.trusted || request.isInstanceTestRequest() || !testBody.expect)
-                        testBody.fromInstance(true); //is a bad fix, but we don't want untrusted or expect 0 counterexample tests while in arepair integration mode
-                    if (request.isInstanceTestRequest() && !request.fromTrustedCommand())
-                        testBody.trusted = false;
-                    if (testBody.body != null)
-                        testBody.body = variableExchanger.replaceVariables((Expr) testBody.body.clone());
-                    if (allUntrusted)
-                        testBody.trusted = false;
-                    Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
-                    testCommands.add(testCommand);
-                }
+                        getBodyForARepairIntegrationInstance(cleanedFormula, context, solution, internalVariableMapping, buggyFunc)
+                );
+            }
+            if (buggyFunctions.isEmpty()) {
+                testBodies.addAll(fromCounterexample ?
+                        getBodyForARepairIntegrationCounterExample(cleanedFormula, context, solution, internalVariableMapping, null) :
+                        getBodyForARepairIntegrationInstance(cleanedFormula, context, solution, internalVariableMapping, null)
+                );
+            }
+            for (TestBody testBody : testBodies) {
+                if (arepairNoFacts())
+                    testBody.trusted = false;
+                if (!testBody.trusted || request.isInstanceTestRequest() || !testBody.expect)
+                    testBody.fromInstance(true); //is a bad fix, but we don't want untrusted or expect 0 counterexample tests while in arepair integration mode
+                if (request.isInstanceTestRequest() && !request.fromTrustedCommand())
+                    testBody.trusted = false;
+                if (testBody.body != null)
+                    testBody.body = variableExchanger.replaceVariables((Expr) testBody.body.clone());
+                if (allUntrusted)
+                    testBody.trusted = false;
+                Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
+                testCommands.add(testCommand);
             }
             return testCommands;
         } else {

@@ -171,7 +171,7 @@ public class Pruning {
         for (Command cmd : commands) {
             try {
                 if (cmd.isGenerated())
-                    Sig.disableFacts();
+                    CompModule.disableFacts();
                 Browsable.freezeParents();
                 A4Solution ai = TranslateAlloyToKodkod.execute_commandFromBookWithMutation(reporter, module.getAllReachableSigs(), cmd, options, variabilizationCandidate);
                 variabilizationCandidate.clearMutatedStatus();
@@ -196,7 +196,7 @@ public class Pruning {
             }
             logger.info("Command " + cmd.toString() + (repaired?" SUCCEED":" FAILED"));
             if (cmd.isGenerated())
-                Sig.enableFacts();
+                CompModule.enableFacts();
             if (!repaired) break;
             else {
                 commandsPassed++;

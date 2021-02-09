@@ -128,6 +128,8 @@ public final class BuggyPredsMarker {
     }
 
     private static void markFact(CompModule module, String fact) {
+        if (!CompModule.enableFacts)
+            return;
         for (Pair<String, Expr> namedFact : module.getAllFacts()) {
             if (namedFact.a.equals("sig$fact"))
                 continue;
@@ -139,6 +141,8 @@ public final class BuggyPredsMarker {
     }
 
     private static void markSignatureFact(CompModule module, String sig) {
+        if (!CompModule.enableFacts)
+            return;
         for (Sig s : module.getAllSigs()) {
             if (removeAlias(s.label).compareTo(sig) == 0) {
                 for (Expr sfact : s.getFacts()) {

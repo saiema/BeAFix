@@ -20,6 +20,7 @@ import ar.edu.unrc.dc.mutation.Cheats;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.ConstList.TempList;
 import edu.mit.csail.sdg.ast.Attr.AttrType;
+import edu.mit.csail.sdg.parser.CompModule;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,10 +66,6 @@ public abstract class Sig extends Expr implements Clause {
     public void isVariabilizationTestRelatedSig(boolean b) {
         isVariabilizationTestRelatedSig = b;
     }
-
-    private static boolean enableFacts = true;
-    public static void enableFacts() {enableFacts = true;}
-    public static void disableFacts() {enableFacts = false;}
 
     /**
      * Returns the name for this sig; this name need not be unique.
@@ -385,7 +382,7 @@ public abstract class Sig extends Expr implements Clause {
      * this.decl.get()
      */
     public SafeList<Expr> getFacts() {
-        if (!enableFacts)
+        if (!CompModule.enableFacts)
             return new SafeList<>();
         return facts.dup();
     }

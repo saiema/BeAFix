@@ -40,6 +40,10 @@ public class AStrykerConfigReader {
             @Override
             public String getKey() { return "beafix.testgeneration.arepairintegration.relaxed"; }
         },
+        TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS {
+            @Override
+            public String getKey() { return "beafix.testgeneration.arepairintegration.nofacts"; }
+        },
         TEST_GENERATION_NAME {
             @Override
             public String getKey() {
@@ -238,9 +242,9 @@ public class AStrykerConfigReader {
     }
 
     public boolean getBooleanArgument(Config_key key) {
-        if (!isBooleanKey(key))
+        if (isNotBooleanKey(key))
             throw new IllegalStateException("Config key is not boolean " + key.toString());
-        if (!isDefined(key))
+        if (isNotDefined(key))
             return false;
         String propValue = prop.getProperty(key.getKey());
         if (propValue == null)
@@ -249,9 +253,9 @@ public class AStrykerConfigReader {
     }
 
     public int getIntArgument(Config_key key) {
-        if (!isIntKey(key))
+        if (isNotIntKey(key))
             throw new IllegalStateException("Config key is not int " + key.toString());
-        if (!isDefined(key))
+        if (isNotDefined(key))
             return 0;
         String propValue = prop.getProperty(key.getKey());
         if (propValue == null)
@@ -260,37 +264,37 @@ public class AStrykerConfigReader {
     }
 
     public String getStringArgument(Config_key key) {
-        if (!isStringKey(key))
+        if (isNotStringKey(key))
             throw new IllegalStateException("Config key is not String " + key.toString());
-        if (!isDefined(key))
+        if (isNotDefined(key))
             return "";
         return prop.getProperty(key.getKey(), "");
     }
 
     public void setIntArgument(Config_key key, int value) {
-        if (!isIntKey(key))
+        if (isNotIntKey(key))
             throw new IllegalStateException("Config key is not int " + key.toString());
         prop.setProperty(key.getKey(), Integer.toString(value));
     }
 
     public void setBooleanArgument(Config_key key, boolean value) {
-        if (!isBooleanKey(key))
+        if (isNotBooleanKey(key))
             throw new IllegalStateException("Config key is not boolean " + key.toString());
         prop.setProperty(key.getKey(), Boolean.toString(value));
     }
 
     public void setStringArgument(Config_key key, String value) {
-        if (!isStringKey(key))
+        if (isNotStringKey(key))
             throw new IllegalStateException("Config key is not String " + key.toString());
         prop.setProperty(key.getKey(), value);
     }
 
-    private boolean isDefined(Config_key key) {
-        return prop.containsKey(key.getKey());
+    private boolean isNotDefined(Config_key key) {
+        return !prop.containsKey(key.getKey());
     }
 
 
-    private boolean isBooleanKey(Config_key key) {
+    private boolean isNotBooleanKey(Config_key key) {
         switch (key) {
             case VARIABILIZATION:
             case VARIABILIZATION_SAME_TYPE:
@@ -301,36 +305,37 @@ public class AStrykerConfigReader {
             case TEST_GENERATION_OUTPUT_TO_FILES:
             case TEST_GENERATION_AREPAIR_INTEGRATION:
             case TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE:
+            case TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS:
             case TEST_GENERATION_USE_MODEL_OVERRIDING:
             case TEST_GENERATION_INSTANCES_TESTS_GENERATION:
             case MUTANTS_GENERATION_CHECK:
             case PARTIAL_REPAIR_PRUNING:
-            case PARTIAL_REPAIR: return true;
-            default : return false;
+            case PARTIAL_REPAIR: return false;
+            default : return true;
         }
     }
 
-    private boolean isIntKey(Config_key key) {
+    private boolean isNotIntKey(Config_key key) {
         switch (key) {
             case TIMEOUT    :
             case TEST_GENERATION_MAX_TESTS_PER_COMMAND:
             case TEST_GENERATION_TESTS_PER_STEP:
             case TEST_GENERATION_NAME_STARTING_INDEX:
             case MUTANTS_GENERATION_LIMIT:
-            case MAX_DEPTH  :  return true;
-            default : return false;
+            case MAX_DEPTH  :  return false;
+            default : return true;
         }
     }
 
-    private boolean isStringKey(Config_key key) {
+    private boolean isNotStringKey(Config_key key) {
         switch (key) {
             case MUTANTS_GENERATION_OUTPUT_FOLDER:
             case TEST_GENERATION_NAME:
             case TEST_GENERATION_MODEL_OVERRIDING_FOLDER:
             case TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE:
             case TEST_GENERATION_OUTPUT_FOLDER:
-            case HACKS_CANDIDATE_HASHES: return true;
-            default : return false;
+            case HACKS_CANDIDATE_HASHES: return false;
+            default : return true;
         }
     }
 

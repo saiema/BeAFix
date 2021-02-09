@@ -67,11 +67,6 @@ import static edu.mit.csail.sdg.alloy4.OurUtil.menu;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menuItem;
 import static java.awt.event.KeyEvent.*;
 
-//import com.apple.eawt.Application;
-//import com.apple.eawt.ApplicationAdapter;
-//import com.apple.eawt.ApplicationEvent;
-//
-
 /**
  * Simple graphical interface for accessing various features of the analyzer.
  * <p>
@@ -86,12 +81,6 @@ import static java.awt.event.KeyEvent.*;
 public final class SimpleGUI implements ComponentListener, Listener {
 
     MacUtil macUtil;
-
-    /**
-     * The latest welcome screen; each time we update the welcome screen, we
-     * increment this number.
-     */
-    // private static final int welcomeLevel = 2;
 
     // Verify that the graphics environment is set up
     static {
@@ -1528,6 +1517,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, AStrykerTestGenerationARepairIntegrationRelaxed.get());
                                 break;
                             }
+                            case "AStrykerTestGenerationARepairIntegrationNoFacts" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS, AStrykerTestGenerationARepairIntegrationNoFacts.get());
+                                break;
+                            }
                             case "AStrykerMutantGenerationCheck" : {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.MUTANTS_GENERATION_CHECK, AStrykerMutantGenerationCheck.get());
                                 break;
@@ -1596,11 +1589,13 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerMutantGenerationCheck);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegration);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationRelaxed);
+                addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationNoFacts);
                 addToMenu(optmenu, AStrykerTestGenerationModelOverrides);
                 addToMenu(optmenu, AStrykerTestGenerationInstanceBasedTests);
                 AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegration.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegrationRelaxed.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationARepairIntegrationNoFacts.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationModelOverrides.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationInstanceBasedTests.addChangeListener(astrykerChangeListener);
                 menuItem(optmenu, "BeAFix (Test Generation) | base test name", doBaseTestName());

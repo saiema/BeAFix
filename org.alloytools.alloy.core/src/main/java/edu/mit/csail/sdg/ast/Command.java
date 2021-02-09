@@ -64,7 +64,13 @@ public final class Command extends Browsable {
             throw new IllegalArgumentException("testType can't be null");
         this.testType = testType;
     }
-
+    private boolean hasFacts = false;
+    public void factsAdded() {
+        hasFacts = true;
+    }
+    public boolean hasFacts() {
+        return hasFacts;
+    }
 
 
     /**
@@ -215,6 +221,20 @@ public final class Command extends Browsable {
         this.additionalExactScopes = ConstList.make(additionalExactSig);
         this.parent = parent;
         defineParentForComponents();
+    }
+
+    public Command getCommandWithoutFacts() {
+        if (!hasFacts)
+            throw new IllegalStateException("This command has no facts, use #hasFacts() to check before calling this method");
+        Expr commandFormula = formula;
+        while ((commandFormula instanceof ExprUnary) && ((ExprUnary)commandFormula).op.equals(ExprUnary.Op.NOOP)) {
+            commandFormula = ((ExprUnary)commandFormula).sub;
+        }
+        boolean isAnd = (commandFormula instanceof ExprBinary) && ((ExprBinary) commandFormula).op.equals(ExprBinary.Op.AND);
+        if (!isAnd)
+            throw new IllegalStateException("The command has facts but the main expression is not an AND expression");
+        commandFormula = ((ExprBinary)commandFormula).right;
+        return new Command(pos, nameExpr, label, check, overall, bitwidth, maxseq, expects, scope, additionalExactScopes, commandFormula, parent);
     }
 
     /**
