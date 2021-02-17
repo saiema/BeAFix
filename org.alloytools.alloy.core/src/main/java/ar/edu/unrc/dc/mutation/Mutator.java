@@ -134,8 +134,8 @@ public abstract class Mutator extends VisitReturn<Optional<List<Mutation>>> {
         return MULTIPLICITY_OPERATORS.contains(((ExprUnary) e).op);
     }
 
-    protected boolean isMemberOfBinaryExpression(ExprBinary binary, Expr expr) {
-        return (binary.left.getID() == expr.getID()) || (binary.right.getID() == expr.getID());
+    protected boolean isNotAMemberOfBinaryExpression(ExprBinary binary, Expr expr) {
+        return (binary.left.getID() != expr.getID()) && (binary.right.getID() != expr.getID());
     }
 
     //DEFAULT VISIT IMPLEMENTATION

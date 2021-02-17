@@ -99,12 +99,12 @@ public class FileUtils {
             throw new Error("Error occurred while creating FileWriter for report", e);
         }
         switch (lastTestGenerationRes) {
-            case NO_INSTANCES_GENERATED:
+            case NO_INSTANCE_TESTS_GENERATED:
             case NO_RUN_TESTS_TO_RUN:
             case UNDEFINED:
             case NO_TESTS_TO_RUN:
             case NO_CHECK_TESTS_TO_RUN:
-            case NO_FAILING_TEST: {
+            case NO_COUNTEREXAMPLE_TESTS_GENERATED: {
                 try {
                     myWriter.write(lastTestGenerationRes.toString());
                     myWriter.write("\n");

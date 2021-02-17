@@ -18,11 +18,7 @@ package edu.mit.csail.sdg.ast;
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.alloy4.ConstList.TempList;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Immutable; reresents a "run" or "check" command.
@@ -187,6 +183,24 @@ public final class Command extends Browsable {
     /**
      * Constructs a new Command object.
      *
+     * @param check - true if this is a "check"; false if this is a "run"
+     * @param overall - the overall scope (0 or higher) (-1 if no overall scope was
+     *            specified)
+     * @param bitwidth - the integer bitwidth (0 or higher) (-1 if it was not
+     *            specified)
+     * @param maxseq - the maximum sequence length (0 or higher) (-1 if it was not
+     *            specified)
+     * @param expects - the expected value (0 or 1) (-1 if no expectation was
+     *            specified)
+     * @param formula - the formula that must be satisfied by this command
+     */
+    public Command(boolean check, int overall, int bitwidth, int maxseq, int expects, Expr formula) throws ErrorSyntax {
+        this(null, ExprVar.make(null, "NO_NAME"), "NO_NAME", check, overall, bitwidth, maxseq, expects, null, null, formula, null);
+    }
+
+    /**
+     * Constructs a new Command object.
+     *
      * @param pos - the original position in the file (must not be null)
      * @param label - the label for this command (it is only for pretty-printing and
      *            does not have to be unique)
@@ -223,7 +237,33 @@ public final class Command extends Browsable {
         defineParentForComponents();
     }
 
-    public Command getCommandWithoutFacts() {
+    public Expr getFormulaWithoutFacts() {
+        if (!hasFacts)
+            throw new IllegalStateException("This command has no facts, use #hasFacts() to check before calling this method");
+        Expr commandFormula = formula;
+        while ((commandFormula instanceof ExprUnary) && ((ExprUnary)commandFormula).op.equals(ExprUnary.Op.NOOP)) {
+            commandFormula = ((ExprUnary) commandFormula).sub;
+        }
+        boolean isAnd = (commandFormula instanceof ExprBinary) && ((ExprBinary) commandFormula).op.equals(ExprBinary.Op.AND);
+        if (!isAnd)
+            throw new IllegalStateException("The command has facts but the main expression is not an AND expression");
+        return ((ExprBinary)commandFormula).right;
+    }
+
+    public Expr getFacts() {
+        if (!hasFacts)
+            throw new IllegalStateException("This command has no facts, use #hasFacts() to check before calling this method");
+        Expr commandFormula = formula;
+        while ((commandFormula instanceof ExprUnary) && ((ExprUnary)commandFormula).op.equals(ExprUnary.Op.NOOP)) {
+            commandFormula = ((ExprUnary) commandFormula).sub;
+        }
+        boolean isAnd = (commandFormula instanceof ExprBinary) && ((ExprBinary) commandFormula).op.equals(ExprBinary.Op.AND);
+        if (!isAnd)
+            throw new IllegalStateException("The command has facts but the main expression is not an AND expression");
+        return ((ExprBinary)commandFormula).left;
+    }
+
+    public List<Command> getFactRelaxedCommands() {
         if (!hasFacts)
             throw new IllegalStateException("This command has no facts, use #hasFacts() to check before calling this method");
         Expr commandFormula = formula;
@@ -233,8 +273,50 @@ public final class Command extends Browsable {
         boolean isAnd = (commandFormula instanceof ExprBinary) && ((ExprBinary) commandFormula).op.equals(ExprBinary.Op.AND);
         if (!isAnd)
             throw new IllegalStateException("The command has facts but the main expression is not an AND expression");
+        Expr facts = ((ExprBinary)commandFormula).left;
         commandFormula = ((ExprBinary)commandFormula).right;
-        return new Command(pos, nameExpr, label, check, overall, bitwidth, maxseq, expects, scope, additionalExactScopes, commandFormula, parent);
+        List<Command> relaxedCommands = new LinkedList<>();
+        if (facts instanceof ExprList) {
+            ExprList factsAsList = (ExprList) facts;
+            int factsCount = factsAsList.args.size();
+            for (Expr relaxedFact : combine(factsAsList.args, factsCount)) {
+                Expr relaxedFormula = ExprBinary.Op.AND.make(null, null, (Expr) relaxedFact.clone(), (Expr) commandFormula.clone());
+                Command relaxedCommand = new Command(pos, nameExpr, label, check, overall, bitwidth, maxseq, expects, scope, additionalExactScopes, relaxedFormula, parent);
+                relaxedCommands.add(relaxedCommand);
+            }
+        }
+        Command noFactsCommand = new Command(pos, nameExpr, label, check, overall, bitwidth, maxseq, expects, scope, additionalExactScopes, (Expr) commandFormula.clone(), parent);
+        relaxedCommands.add(noFactsCommand);
+        return relaxedCommands;
+    }
+
+    private List<Expr> combine(List<Expr> facts, int max) {
+        if (facts.isEmpty())
+            return Collections.emptyList();
+        List<Expr> allCombinations = new LinkedList<>();
+        Expr fact = facts.get(0);
+        List<Expr> rest = facts.size() > 1?facts.subList(1, facts.size()):Collections.emptyList();
+        if (!rest.isEmpty()) {
+            List<Expr> newCombined = new LinkedList<>();
+            List<Expr> combined = combine(rest, max - 1);
+            for (Expr combination : combined) {
+                ExprList combinedFact;
+                if (combination instanceof ExprList && ((ExprList)combination).op.equals(ExprList.Op.AND)) {
+                    ExprList combinationAsList = (ExprList) combination;
+                    if (combinationAsList.args.size() + 1 >= max)
+                        continue;
+                    combinedFact = ((ExprList) combinationAsList.clone());
+                    combinedFact.args.add((Expr) fact.clone());
+                } else {
+                    combinedFact = ExprList.makeAND(null, null, (Expr) fact.clone(), (Expr) combination.clone());
+                }
+                newCombined.add(combinedFact);
+            }
+            allCombinations.addAll(newCombined);
+            allCombinations.addAll(combined);
+        }
+        allCombinations.add(fact);
+        return allCombinations;
     }
 
     /**

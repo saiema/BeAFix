@@ -343,7 +343,6 @@ public final class Cheats {
     }
 
     public static void changeFact(String targetFactName, Expr replacement, CompModule inAst) throws CheatingIsBadMkay {
-        //private final List<Pair<String,Expr>>     facts       = new ArrayList<Pair<String,Expr>>();
         Field factsField = getField(CompModule.class, "facts");
         if (factsField == null)
             throw new CheatingIsBadMkay("Couldn't find facts field");
@@ -356,7 +355,7 @@ public final class Cheats {
                 if (fact.a.compareTo(targetFactName) == 0) {
                     targetFound = true;
                     replacement.setID(fact.b.getID());
-                    modifiedFacts.add(new Pair<String, Expr>(targetFactName, replacement));
+                    modifiedFacts.add(new Pair<>(targetFactName, replacement));
                 } else {
                     modifiedFacts.add(fact);
                 }

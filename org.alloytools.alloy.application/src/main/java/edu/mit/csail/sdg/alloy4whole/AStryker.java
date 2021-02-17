@@ -16,6 +16,8 @@ import static edu.mit.csail.sdg.alloy4.A4Preferences.*;
 
 public class AStryker {
 
+    public static final String BEAFIX_VERSION = "2.6";  
+
     private static final Logger logger = Logger.getLogger(AStryker.class.getName());
 
     /**

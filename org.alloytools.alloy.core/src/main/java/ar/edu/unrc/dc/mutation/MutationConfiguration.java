@@ -460,7 +460,17 @@ public class MutationConfiguration {
 
         },
 
-        TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS {
+        TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS {
+
+            @Override
+            public Class<?> getValueType() { return Boolean.class; }
+
+            @Override
+            public Object defaultValue() { return Boolean.FALSE; }
+
+        },
+
+        TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS {
 
             @Override
             public Class<?> getValueType() { return Boolean.class; }
@@ -697,8 +707,11 @@ public class MutationConfiguration {
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE)) {
                 setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE));
             }
-            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS)) {
-                setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS));
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS)) {
+                setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS));
+            }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS)) {
+                setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS));
             }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME)) {
                 setConfig(ConfigKey.TEST_GENERATION_NAME, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME));

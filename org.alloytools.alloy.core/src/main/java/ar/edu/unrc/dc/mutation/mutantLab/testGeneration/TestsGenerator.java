@@ -35,7 +35,6 @@ import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelp
 public class TestsGenerator {
 
     private static final Logger logger = Logger.getLogger(TestsGenerator.class.getName());
-    private static boolean GENERATE_DEBUG_TESTS = false;
 
     static {
         try {
@@ -113,8 +112,12 @@ public class TestsGenerator {
         return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE.defaultValue());
     }
 
-    public static boolean arepairNoFacts() {
-        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS.defaultValue());
+    public static boolean arepairRelaxedFacts() {
+        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS.defaultValue());
+    }
+
+    public static boolean arepairForceAssertionTests() {
+        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS.defaultValue());
     }
 
     public static String testBaseName() {
@@ -316,19 +319,21 @@ public class TestsGenerator {
             boolean fromCounterexample = !request.isInstanceTestRequest() || request.isInstanceNegativeTestRequest();
             List<TestBody> testBodies = new LinkedList<>();
             for (Func buggyFunc : buggyFunctions) {
-                testBodies.addAll(fromCounterexample ?
+                testBodies.addAll(fromCounterexample || (request.forcedExpect() == TestGenerationRequest.NEGATIVE_FORCE) ?
                         getBodyForARepairIntegrationCounterExample(cleanedFormula, context, solution, internalVariableMapping, buggyFunc) :
                         getBodyForARepairIntegrationInstance(cleanedFormula, context, solution, internalVariableMapping, buggyFunc)
                 );
             }
             if (buggyFunctions.isEmpty()) {
-                testBodies.addAll(fromCounterexample ?
+                testBodies.addAll(fromCounterexample || (request.forcedExpect() == TestGenerationRequest.NEGATIVE_FORCE)?
                         getBodyForARepairIntegrationCounterExample(cleanedFormula, context, solution, internalVariableMapping, null) :
                         getBodyForARepairIntegrationInstance(cleanedFormula, context, solution, internalVariableMapping, null)
                 );
             }
             for (TestBody testBody : testBodies) {
-                if (arepairNoFacts())
+                if (request.hasForcedExpect())
+                    testBody.trusted = false;
+                if (arepairRelaxedFacts())
                     testBody.trusted = false;
                 if (!testBody.trusted || request.isInstanceTestRequest() || !testBody.expect)
                     testBody.fromInstance(true); //is a bad fix, but we don't want untrusted or expect 0 counterexample tests while in arepair integration mode
@@ -360,7 +365,7 @@ public class TestsGenerator {
     }
 
     private Command generateTest(Expr initialization, TestBody testBody, List<ExprVar> usedVariables, Map<Sig, List<ExprVar>> declSignatureValues, Command command, CompModule context) {
-        Func testPredicate = generateTestPredicate(initialization, testBody.body(), usedVariables, declSignatureValues, command);
+        Func testPredicate = generateTestPredicate(initialization, testBody.body(), usedVariables, declSignatureValues, command, (testBody.isRelated()?testBody.relatedTo():null));
         testPredicate.setCommentPreviousLine("TEST START");
         testPredicate.setCommentNextLine("TEST FINISH");
         Command testCommand = generateTestCommand(testPredicate, !testBody.fromInstance(), testBody.isExpected(), testBody.isTrusted());
@@ -400,7 +405,7 @@ public class TestsGenerator {
         return testCommand;
     }
 
-    private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
+    private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Map<Sig, List<ExprVar>> signatureValues, Command cmd, String relatedTo) {
         Expr sub = testFormula!=null?ExprBinary.Op.AND.make(null, null, initialization, testFormula):initialization;
         List<Decl> signatureDecls = getVariablesDecls(signatureValues);//getVariablesDecls(varsToDeclare);
         List<Decl> skolemDecls = getVariablesDecls(skolemVariables);
@@ -413,6 +418,8 @@ public class TestsGenerator {
         }
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = getTestName(from);
+        if (relatedTo != null)
+             name += "relTo_" + relatedTo;
         Func testPredicate = new Func(null, name, null, null, body);
         testPredicate.setGenerated();
         return testPredicate;
@@ -423,6 +430,7 @@ public class TestsGenerator {
         private Expr body;
         private final boolean expect;
         private boolean trusted;
+        private String relatedTo;
 
         private boolean fromInstance = false;
 
@@ -478,6 +486,18 @@ public class TestsGenerator {
 
         public boolean isTrusted() {
             return trusted;
+        }
+
+        public void relatedTo(String relatedTo) {
+            this.relatedTo = relatedTo;
+        }
+
+        public String relatedTo() {
+            return this.relatedTo;
+        }
+
+        public boolean isRelated() {
+            return this.relatedTo != null && !this.relatedTo.isEmpty();
         }
 
     }
@@ -548,11 +568,7 @@ public class TestsGenerator {
                             current = predsFormula;
                         } else {
                             if (!isFormulaSameAsExpected) {
-                                return Collections.singletonList(
-                                        untrustedFacts?
-                                                TestBody.untrustedUnsatisfiablePredicate(predsFormula):
-                                                TestBody.trustedUnsatisfiablePredicate(predsFormula)
-                                );
+                                return generateUnsatPredicateTestBodies(predsFormula, !untrustedFacts);
                             } else {
                                 if (untrustedFacts) {
                                     return Arrays.asList(
@@ -589,7 +605,7 @@ public class TestsGenerator {
                                 current = predsFormula;
                                 continue;
                             }
-                            return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                            return generateUnsatPredicateTestBodies(predsFormula, true);
                         } else
                           return Collections.singletonList(TestBody.trustedUnexpectedInstance());
                     }
@@ -614,7 +630,7 @@ public class TestsGenerator {
                             if (!formulaEvaluation.get())
                                 return Collections.singletonList(TestBody.trustedUnexpectedInstance());
                             else {
-                                return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                                return generateUnsatPredicateTestBodies(predsFormula, true);
                             }
                         }
                     }
@@ -635,7 +651,7 @@ public class TestsGenerator {
                         } else if (formulaEvaluation.get())
                             return Collections.singletonList(TestBody.trustedUnexpectedInstance());
                         else {
-                            return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                            return generateUnsatPredicateTestBodies(predsFormula, true);
                         }
                     }
                     default: throw new IllegalStateException("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
@@ -655,11 +671,7 @@ public class TestsGenerator {
                         continue;
                     }
                     if (expected) {
-                        return Collections.singletonList(
-                                untrustedFacts?
-                                        TestBody.untrustedUnsatisfiablePredicate(currentAsExprUnary.sub):
-                                        TestBody.trustedUnsatisfiablePredicate(currentAsExprUnary.sub)
-                        );
+                        return generateUnsatPredicateTestBodies(currentAsExprUnary.sub, !untrustedFacts);
                     } else {
                         return untrustedFacts?
                                 Arrays.asList(
@@ -681,7 +693,9 @@ public class TestsGenerator {
                     return Collections.singletonList(TestBody.trustedUnexpectedInstance());
                 }
                 if (untrustedFacts) {
-                    return Arrays.asList(TestBody.untrustedUnsatisfiablePredicate(current), TestBody.untrustedUnexpectedInstance());
+                    List<TestBody> testBodies = generateUnsatPredicateTestBodies(current, false);
+                    testBodies.add(TestBody.untrustedUnexpectedInstance());
+                    return testBodies;
                 }
                 return Collections.singletonList(TestBody.trustedUnexpectedInstance());
             } else if (current instanceof ExprConstant) {
@@ -764,21 +778,22 @@ public class TestsGenerator {
                             current = predsFormula;
                             continue;
                         } else {
+                            List<TestBody> testBodies = new LinkedList<>();
                             if (untrustedFacts) {
-                                return Arrays.asList(
-                                        (expected?
-                                            TestBody.untrustedSatisfiablePredicate(predsFormula):
-                                            TestBody.untrustedUnsatisfiablePredicate(predsFormula)
-                                        ),
-                                        TestBody.untrustedUnexpectedInstance()
-                                );
+                                if (expected)
+                                    testBodies.add(TestBody.untrustedSatisfiablePredicate(predsFormula));
+                                else {
+                                    testBodies.addAll(generateUnsatPredicateTestBodies(predsFormula, false));
+                                }
+                                testBodies.add(TestBody.untrustedUnexpectedInstance());
                             } else {
-                                return Collections.singletonList(
-                                        expected?
-                                                TestBody.trustedSatisfiablePredicate(predsFormula):
-                                                TestBody.trustedUnsatisfiablePredicate(predsFormula)
-                                );
+                                if (expected) {
+                                    testBodies.add(TestBody.trustedSatisfiablePredicate(predsFormula));
+                                } else {
+                                    testBodies.addAll(generateUnsatPredicateTestBodies(predsFormula, true));
+                                }
                             }
+                            return testBodies;
                         }
                     }
                     case IMPLIES: {
@@ -817,29 +832,28 @@ public class TestsGenerator {
                                 }
                             } else {
                                 if (untrustedFacts) {
-                                    return Collections.singletonList(
-                                            TestBody.untrustedUnsatisfiablePredicate(predsFormula)
-                                    );
+                                    return generateUnsatPredicateTestBodies(predsFormula, false);
                                 } else {
                                     return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
                                 }
                             }
                         } else {
+                            List<TestBody> testBodies = new LinkedList<>();
                             if (untrustedFacts) {
-                                return Arrays.asList(
-                                        (lor?
-                                                TestBody.untrustedSatisfiablePredicate(predsFormula):
-                                                TestBody.untrustedUnsatisfiablePredicate(predsFormula)
-                                        ),
-                                        TestBody.untrustedUnexpectedInstance()
-                                );
+                                if (lor)
+                                    testBodies.add(TestBody.untrustedSatisfiablePredicate(predsFormula));
+                                else {
+                                    testBodies.addAll(generateUnsatPredicateTestBodies(predsFormula, false));
+                                }
+                                testBodies.add(TestBody.untrustedUnexpectedInstance());
                             } else {
-                                return Collections.singletonList(
-                                        lor ?
-                                                TestBody.trustedSatisfiablePredicate(predsFormula) :
-                                                TestBody.trustedUnsatisfiablePredicate(predsFormula)
-                                );
+                                if (lor)
+                                    return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
+                                else {
+                                    return generateUnsatPredicateTestBodies(predsFormula, true);
+                                }
                             }
+                            return testBodies;
                         }
                     }
                     case AND: {
@@ -861,12 +875,11 @@ public class TestsGenerator {
                                 return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula));
                             }
                         } else if (untrustedFacts) {
-                            return Arrays.asList(
-                                    TestBody.untrustedUnsatisfiablePredicate(predsFormula),
-                                    TestBody.untrustedUnexpectedInstance()
-                            );
+                            List<TestBody> testBodies = generateUnsatPredicateTestBodies(predsFormula, false);
+                            testBodies.add(TestBody.untrustedUnexpectedInstance());
+                            return testBodies;
                         } else {
-                            return Collections.singletonList(TestBody.trustedUnsatisfiablePredicate(predsFormula));
+                            return generateUnsatPredicateTestBodies(predsFormula, true);
                         }
                     }
                     case OR: {
@@ -879,21 +892,22 @@ public class TestsGenerator {
                             current = predsFormula;
                             continue;
                         }
+                        List<TestBody> testBodies = new LinkedList<>();
                         if (untrustedFacts) {
-                            return Arrays.asList(
-                                    (expected?
-                                            TestBody.untrustedSatisfiablePredicate(predsFormula):
-                                            TestBody.untrustedUnsatisfiablePredicate(predsFormula)
-                                    ),
-                                    TestBody.untrustedUnexpectedInstance()
-                            );
+                            if (expected)
+                                testBodies.add(TestBody.untrustedSatisfiablePredicate(predsFormula));
+                            else {
+                                testBodies.addAll(generateUnsatPredicateTestBodies(predsFormula, false));
+                            }
+                            testBodies.add(TestBody.untrustedUnexpectedInstance());
                         } else {
-                            return Collections.singletonList(
-                                    expected?
-                                            TestBody.trustedSatisfiablePredicate(predsFormula):
-                                            TestBody.trustedUnsatisfiablePredicate(predsFormula)
-                            );
+                            if (expected)
+                                testBodies.add(TestBody.trustedSatisfiablePredicate(predsFormula));
+                            else {
+                                testBodies.addAll(generateUnsatPredicateTestBodies(predsFormula, true));
+                            }
                         }
+                        return testBodies;
                     }
                     default: throw new IllegalStateException("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
                 }
@@ -912,11 +926,7 @@ public class TestsGenerator {
                         continue;
                     }
                     if (expected) {
-                        return Collections.singletonList(
-                                untrustedFacts?
-                                        TestBody.trustedUnsatisfiablePredicate(currentAsExprUnary.sub):
-                                        TestBody.untrustedUnsatisfiablePredicate(currentAsExprUnary.sub)
-                        );
+                        return generateUnsatPredicateTestBodies(currentAsExprUnary.sub, !untrustedFacts);
                     } else {
                         return untrustedFacts?
                                 Arrays.asList(
@@ -936,11 +946,7 @@ public class TestsGenerator {
                             Arrays.asList(TestBody.untrustedSatisfiablePredicate(current), TestBody.untrustedUnexpectedInstance()):
                             Collections.singletonList(TestBody.trustedSatisfiablePredicate(current));
                 } else {
-                    return Collections.singletonList(
-                            untrustedFacts?
-                                    TestBody.untrustedUnsatisfiablePredicate(current):
-                                    TestBody.trustedUnsatisfiablePredicate(current)
-                    );
+                    return generateUnsatPredicateTestBodies(current, !untrustedFacts);
                 }
             } else if (current instanceof ExprConstant) {
                 return Collections.singletonList(TestBody.trustedExpectedInstance());
@@ -969,21 +975,20 @@ public class TestsGenerator {
         }
     }
 
+    private List<TestBody> generateUnsatPredicateTestBodies(Expr predsFormula, boolean trusted) {
+        List<TestBody> testBodies = new LinkedList<>();
+        String relationName = generateRandomName(10);
+        TestBody unsatisfiablePredicate = trusted?TestBody.trustedUnsatisfiablePredicate(predsFormula):TestBody.untrustedUnsatisfiablePredicate(predsFormula);
+        TestBody expectedInstance = trusted?TestBody.trustedExpectedInstance():TestBody.untrustedExpectedInstance();
+        unsatisfiablePredicate.relatedTo(relationName);
+        expectedInstance.relatedTo(relationName);
+        testBodies.add(unsatisfiablePredicate);
+        testBodies.add(expectedInstance);
+        return testBodies;
+    }
+
     private boolean needToIterate(Expr x) {
         return !(x instanceof ExprCall);
-//        if (x instanceof ExprCall)
-//            return false;
-//        if (x instanceof ExprUnary) {
-//            ExprUnary exprUnary = (ExprUnary) x;
-//            if (exprUnary.op.equals(ExprUnary.Op.NOOP))
-//                return needToIterate(exprUnary.sub);
-//            return !(exprUnary.sub instanceof ExprCall);
-//        } else if (x instanceof ExprBinary) {
-//            ExprBinary exprBinary = (ExprBinary) x;
-//            return !(exprBinary.left instanceof ExprCall) && !(exprBinary.right instanceof ExprCall);
-//        } else {
-//            throw new IllegalStateException("Other classes of expressions are currently not supported");
-//        }
     }
 
     private String getTestName(String from) {

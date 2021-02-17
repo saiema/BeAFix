@@ -52,7 +52,7 @@ public class JER extends JEX {
             return Optional.empty();
         List<Mutation> mutations = new LinkedList<>();
         ExprBinary original = (ExprBinary) from;
-        if (!isMemberOfBinaryExpression(original, replace))
+        if (isNotAMemberOfBinaryExpression(original, replace))
             throw new IllegalArgumentException("replace expression must be either the left or right part of the from expression");
         Optional<List<Expr>> replacements;
         try {

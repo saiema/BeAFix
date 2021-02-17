@@ -46,7 +46,8 @@ public class AStrykerCLI {
             String mode = args[1];
             AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION, false);
             AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, false);
-            AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS, false);
+            AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS, false);
+            AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS, false);
             if (mode.compareToIgnoreCase(REPAIR) == 0) {
                 astryker_mode = ASTRYKER_MODE.REPAIR;
             } else if (mode.compareToIgnoreCase(TESTGEN) == 0) {
@@ -239,7 +240,8 @@ public class AStrykerCLI {
     private static final String OUTPUT_FOLDER_KEY = "out";
     private static final String TESTS_AREPAIR_INTEGRATION_KEY = "arepair";
     private static final String TESTS_AREPAIR_INTEGRATION_RELAXED_KEY = "arelaxed";
-    private static final String TESTS_AREPAIR_INTEGRATION_NO_FACTS_KEY = "nofacts";
+    private static final String TESTS_AREPAIR_INTEGRATION_RELAXED_FACTS_KEY = "relaxedfacts";
+    private static final String TESTS_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS_KEY = "fassertiontests";
     private static final String TESTS_NAME_KEY = "tname";
     private static final String TESTS_NAME_STARTING_INDEX_KEY = "tindex";
     private static final String MODEL_OVERRIDING_KEY = "modeloverriding";
@@ -282,9 +284,14 @@ public class AStrykerCLI {
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, arepairRelaxed);
                 break;
             }
-            case TESTS_AREPAIR_INTEGRATION_NO_FACTS_KEY: {
-                boolean arepairNoFacts = getBooleanValue(TESTS_AREPAIR_INTEGRATION_NO_FACTS_KEY, value);
-                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS, arepairNoFacts);
+            case TESTS_AREPAIR_INTEGRATION_RELAXED_FACTS_KEY: {
+                boolean arepairRelaxedFacts = getBooleanValue(TESTS_AREPAIR_INTEGRATION_RELAXED_FACTS_KEY, value);
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS, arepairRelaxedFacts);
+                break;
+            }
+            case TESTS_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS_KEY: {
+                boolean arepairForceAssertionTests = getBooleanValue(TESTS_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS_KEY, value);
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS, arepairForceAssertionTests);
                 break;
             }
             case TESTS_NAME_KEY: {
@@ -424,7 +431,7 @@ public class AStrykerCLI {
     }
 
     private static void printHelp() {
-        String sb = "BeAFix" + "\n" +
+        String sb = "BeAFix (" + AStryker.BEAFIX_VERSION + ")\n" +
                 "--help                               :   To print this help." + "\n" +
                 "--help (mode)                        :   To print mode specific help" + "\n" +
                 "<path to model> REPAIR [options]     :   To repair a model." + "\n" +
@@ -498,7 +505,14 @@ public class AStrykerCLI {
                 "--out <path to existing folder>      :     Where to store tests (default is the model's folder)." + "\n" +
                 "--arepair <boolean>                  :     Enables/disables ARepair integration (default is false)." + "\n" +
                 "--arelaxed <boolean>                 :     Enables/disables relaxed mode for ARepair integration, this will widen the supported properties while increasing untrusted tests" + "\n" +
-                "--nofacts <boolean>                  :     Enables/disables test generation without facts, this will generate all untrusted tests without considering model's facts during solver calls" + "\n" +
+                "--relaxfacts <boolean>               :     Enables/disables test generation where facts will be disabled one by one, this will generate all untrusted tests without considering model's facts during solver calls" + "\n" +
+                "--fassertiontests <boolean>          :     When enabled assertions that doesn't produce any counterexamples will be turn into preds, each with one of the following modifications (when applicable):" + "\n" +
+                "                                              * 'all x | P[x]' will be transformed to 'some x | P[x]' and 'some x | not P[x]'" + "\n" +
+                "                                              * 'P' will be transformed to 'not P'" + "\n" +
+                "                                              * 'no x | P[x]' will be transformed as if 'all x | not P[x]'" + "\n" +
+                "                                              * 'some x | P[x]' will be transformed to 'some x | not P[x]'" + "\n" +
+                "                                           Tests generated from the original expression will be used in 'run ... expect 1' commands and" + "\n" +
+                "                                           tests generated from the negation of the original expression will be used in 'run ... expect 0' commands." + "\n" +
                 "--tname <name>                       :     Base name for generated tests, all tests will start with name and be followed by an index." + "\n" +
                 "                                           if name is empty (or a string with all blank space) the base name will be that of the command" + "\n" +
                 "                                           from which the counterexample came, in this case no index will be used." + "\n" +

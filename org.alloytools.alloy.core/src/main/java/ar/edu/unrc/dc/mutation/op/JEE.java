@@ -107,7 +107,7 @@ public class JEE extends JEX {
         if (from instanceof ExprBinary) {
             //replace one subexpression of size 0 with one of size 1 (in terms of joins)
             ExprBinary original = (ExprBinary) from;
-            if (!isMemberOfBinaryExpression(original, replace))
+            if (isNotAMemberOfBinaryExpression(original, replace))
                 throw new IllegalArgumentException("The expression to replace does not belongs to the from expression");
             Optional<List<Expr>> replacements;
             try {

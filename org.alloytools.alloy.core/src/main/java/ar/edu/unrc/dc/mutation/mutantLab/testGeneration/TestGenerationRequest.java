@@ -16,6 +16,10 @@ public class TestGenerationRequest {
     private final Command command;
     private final InstanceTestGeneration instanceTestGeneration;
     private final boolean fromTrustedCommand;
+    public static final int NO_FORCE = -1;
+    public static final int NEGATIVE_FORCE = 0;
+    public static final int POSITIVE_FORCE = 1;
+    private int forceExpect = NO_FORCE;
 
     public static TestGenerationRequest createCETestRequest(A4Solution solution, CompModule context, Command command) {
         if (solution.getOriginalCommand().compareTo(command.toString()) != 0)
@@ -25,8 +29,10 @@ public class TestGenerationRequest {
         return new TestGenerationRequest(solution, context, command, null, false);
     }
 
-    public static TestGenerationRequest createInstancePositiveTestRequestFromUntrustedCommand(A4Solution solution, CompModule context, Command command) {
-        return createInstancePositiveTest(solution, context, command, false);
+    public static TestGenerationRequest createInstancePositiveTestRequestForcingExpect(A4Solution solution, CompModule context, Command command, boolean forcedExpect) {
+        TestGenerationRequest request = createInstancePositiveTest(solution, context, command, false);
+        request.forceExpect = forcedExpect?POSITIVE_FORCE:NEGATIVE_FORCE;
+        return request;
     }
 
     public static TestGenerationRequest createInstancePositiveTestRequestFromTrustedCommand(A4Solution solution, CompModule context, Command command) {
@@ -45,6 +51,8 @@ public class TestGenerationRequest {
         if (!instanceTestGeneration.equals(InstanceTestGeneration.BOTH)) {
             throw new IllegalStateException("This is not a request for both positive and negative tests creation");
         }
+        if (forceExpect != NO_FORCE)
+            throw new IllegalStateException("Forced expect requests can't be split (forced expect == " + forceExpect + ")");
         List<TestGenerationRequest> split = new LinkedList<>();
         TestGenerationRequest positive = TestGenerationRequest.createInstancePositiveTest(solution, context, command, false);
         TestGenerationRequest negative = TestGenerationRequest.createInstanceNegativeTestRequest(solution, context, command);
@@ -112,6 +120,10 @@ public class TestGenerationRequest {
     public boolean fromTrustedCommand() {
         return fromTrustedCommand;
     }
+
+    public boolean hasForcedExpect() { return forceExpect != NO_FORCE; }
+
+    public int forcedExpect() { return forceExpect; }
 
     @Override
     public String toString() {

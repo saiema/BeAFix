@@ -1517,8 +1517,12 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE, AStrykerTestGenerationARepairIntegrationRelaxed.get());
                                 break;
                             }
-                            case "AStrykerTestGenerationARepairIntegrationNoFacts" : {
-                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_NO_FACTS, AStrykerTestGenerationARepairIntegrationNoFacts.get());
+                            case "AStrykerTestGenerationARepairIntegrationRelaxedFacts" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS, AStrykerTestGenerationARepairIntegrationRelaxedFacts.get());
+                                break;
+                            }
+                            case "AStrykerTestGenerationARepairIntegrationForceAssertionTests" : {
+                                asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS, AStrykerTestGenerationARepairIntegrationForceAssertionTests.get());
                                 break;
                             }
                             case "AStrykerMutantGenerationCheck" : {
@@ -1550,6 +1554,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
             AStrykerTestGenerationMaxTestsPerCommand.set((Integer) mconfig.getConfigValue(TEST_GENERATION_MAX_TESTS_PER_COMMAND).orElse(TEST_GENERATION_MAX_TESTS_PER_COMMAND.defaultValue()));
             AStrykerTestGenerationTestsPerStep.set((Integer) mconfig.getConfigValue(TEST_GENERATION_TESTS_PER_STEP).orElse(TEST_GENERATION_TESTS_PER_STEP.defaultValue()));
             AStrykerTestGenerationInstanceBasedTests.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_INSTANCES_TESTS_GENERATION).orElse(TEST_GENERATION_INSTANCES_TESTS_GENERATION.defaultValue()));
+            AStrykerTestGenerationARepairIntegration.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION).orElse(TEST_GENERATION_AREPAIR_INTEGRATION.defaultValue()));
+            AStrykerTestGenerationARepairIntegrationRelaxed.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE.defaultValue()));
+            AStrykerTestGenerationARepairIntegrationRelaxedFacts.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS.defaultValue()));
+            AStrykerTestGenerationARepairIntegrationForceAssertionTests.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS.defaultValue()));
             if (CompUtil.hasMutableExpressions(text.get().getText())){
                 AStrykerVariabilization.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION).orElse(REPAIR_VARIABILIZATION.defaultValue()));
                 AStrykerVariabilizationTestGeneration.set((Boolean) mconfig.getConfigValue(REPAIR_VARIABILIZATION_TEST_GENERATION).orElse(REPAIR_VARIABILIZATION_TEST_GENERATION.defaultValue()));
@@ -1589,13 +1597,15 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerMutantGenerationCheck);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegration);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationRelaxed);
-                addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationNoFacts);
+                addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationRelaxedFacts);
+                addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationForceAssertionTests);
                 addToMenu(optmenu, AStrykerTestGenerationModelOverrides);
                 addToMenu(optmenu, AStrykerTestGenerationInstanceBasedTests);
                 AStrykerTestGenerationTestsPerStep.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegration.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegrationRelaxed.addChangeListener(astrykerChangeListener);
-                AStrykerTestGenerationARepairIntegrationNoFacts.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationARepairIntegrationRelaxedFacts.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationARepairIntegrationForceAssertionTests.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationModelOverrides.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationInstanceBasedTests.addChangeListener(astrykerChangeListener);
                 menuItem(optmenu, "BeAFix (Test Generation) | base test name", doBaseTestName());
