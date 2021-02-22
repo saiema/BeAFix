@@ -563,13 +563,16 @@ public class TestsGenerator {
                             expected = Boolean.TRUE;
                         if (invert)
                             expected = !expected;
-                        boolean isFormulaSameAsExpected = expected == formulaEvaluation.get();
+                        //expected is the same as saying if the operands must be equals or not
                         if (needToIterate(predsFormula)) {
                             current = predsFormula;
                         } else {
-                            if (!isFormulaSameAsExpected) {
-                                return generateUnsatPredicateTestBodies(predsFormula, !untrustedFacts);
-                            } else {
+                            if (expected && !formulaEvaluation.get()) { //must be equals, and formula is false, pred should be false or instance must not exist
+                                List<TestBody> testBodies = generateUnsatPredicateTestBodies(predsFormula, !untrustedFacts);
+                                if (untrustedFacts)
+                                    testBodies.add(TestBody.untrustedUnexpectedInstance());
+                                return testBodies;
+                            } else if (expected) { //must be equals, and formula is true, pred should be true, or instance must not exist
                                 if (untrustedFacts) {
                                     return Arrays.asList(
                                             TestBody.untrustedSatisfiablePredicate(predsFormula),
@@ -580,6 +583,22 @@ public class TestsGenerator {
                                             TestBody.trustedSatisfiablePredicate(predsFormula)
                                     );
                                 }
+                            } else if (!formulaEvaluation.get()) { //must be diferent, and formula is false, pred should be true or instance must not exist
+                                if (untrustedFacts) {
+                                    return Arrays.asList(
+                                            TestBody.untrustedSatisfiablePredicate(predsFormula),
+                                            TestBody.untrustedUnexpectedInstance()
+                                    );
+                                } else {
+                                    return Collections.singletonList(
+                                            TestBody.trustedSatisfiablePredicate(predsFormula)
+                                    );
+                                }
+                            } else { //must be different, and formula is true, pred should be false or instance must not exist
+                                List<TestBody> testBodies = generateUnsatPredicateTestBodies(predsFormula, !untrustedFacts);
+                                if (untrustedFacts)
+                                    testBodies.add(TestBody.untrustedUnexpectedInstance());
+                                return testBodies;
                             }
                         }
                         break;
@@ -773,7 +792,7 @@ public class TestsGenerator {
                     case IFF:
                     case EQUALS: {
                         if (expected == null)
-                            expected = Boolean.TRUE;
+                            expected = formulaEvaluation.get();
                         if (needToIterate(predsFormula)) {
                             current = predsFormula;
                             continue;
