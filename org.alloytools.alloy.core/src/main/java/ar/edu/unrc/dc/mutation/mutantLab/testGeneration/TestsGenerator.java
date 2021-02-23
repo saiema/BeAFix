@@ -22,6 +22,8 @@ import kodkod.instance.Tuple;
 import kodkod.instance.TupleSet;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.logging.FileHandler;
@@ -549,12 +551,47 @@ public class TestsGenerator {
                     formulaToEvaluate = currentAsBinaryExpr.left;
                     lor = true;
                 } else {
-                    throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + buggyFunc.toString() + ") (expr: " + current.toString() + ")");
+                    logger.warning("Predicate exists but can't be located in the expression (pred: " + buggyFunc.toString() + ") (expr: " + current.toString() + ")");
+                    return Collections.emptyList();
+                }
+                Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
+                if (formulaToEvaluate.type().is_int() || formulaToEvaluate.type().is_small_int()) {
+                    if (needToIterate(predsFormula)) {
+                        logger.warning("Can't support complex expressions for preds related formula when dealing with int expressions");
+                        return Collections.emptyList();
+                    }
+                    if (isArithmeticComparisonBinaryOp(currentAsBinaryExpr.op)) {
+                        Optional<ExprConstant> constantValue = ExpressionEvaluator.evaluateIntFormula(instance, formulaToEvaluate, variableMapping);
+                        if (constantValue.isPresent()) {
+                            Expr expressionToTest = currentAsBinaryExpr.op.make(null, null, (Expr) predsFormula.clone(), constantValue.get());
+                            if (expressionToTest.errors != null && !expressionToTest.errors.isEmpty()) {
+                                logger.warning("An error occurred while trying to generate the arithmetic expression to test:\n" + expressionToTest.errors.stream().map(Err::toString).collect(Collectors.joining("\n")));
+                                return Collections.emptyList();
+                            }
+                            List<TestBody> testBodies = new LinkedList<>();
+                            if (expected == null || expected) {
+                                testBodies.add(untrustedFacts?TestBody.untrustedSatisfiablePredicate(expressionToTest):TestBody.trustedSatisfiablePredicate(expressionToTest));
+                            } else  {
+                                testBodies.addAll(generateUnsatPredicateTestBodies(expressionToTest, !untrustedFacts));
+                            }
+                            if (untrustedFacts) {
+                                testBodies.add(TestBody.untrustedUnexpectedInstance());
+                            }
+                            return testBodies;
+                        } else {
+                            logger.warning("Evaluation of " + formulaToEvaluate.toString() + " didn't yield any integer constant value");
+                            return Collections.emptyList();
+                        }
+                    } else {
+                        logger.warning("Can't support other arithmetic operators, only equality ones; current operator is (" + currentAsBinaryExpr.op.toString() + ") in " + currentAsBinaryExpr.toString());
+                        return Collections.emptyList();
+                    }
                 }
                 Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, variableMapping);
-                if (!formulaEvaluation.isPresent())
-                    throw new IllegalStateException("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
-                Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
+                if (!formulaEvaluation.isPresent()) {
+                    logger.warning("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
+                    return Collections.emptyList();
+                }
                 switch (currentAsBinaryExpr.op) {
                     case NOT_EQUALS: invert = true;
                     case IFF:
@@ -673,7 +710,10 @@ public class TestsGenerator {
                             return generateUnsatPredicateTestBodies(predsFormula, true);
                         }
                     }
-                    default: throw new IllegalStateException("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
+                    default: {
+                        logger.warning("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
+                        return Collections.emptyList();
+                    }
                 }
             } else if (current instanceof ExprUnary) {
                 ExprUnary currentAsExprUnary = (ExprUnary) current;
@@ -700,7 +740,8 @@ public class TestsGenerator {
                                 Collections.singletonList(TestBody.trustedSatisfiablePredicate(currentAsExprUnary.sub));
                     }
                 } else {
-                    throw new IllegalStateException("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
+                    logger.warning("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
+                    return Collections.emptyList();
                 }
             } else if (current instanceof ExprCall) {
                 if (expected == null)
@@ -721,7 +762,8 @@ public class TestsGenerator {
                 return Collections.singletonList(TestBody.trustedUnexpectedInstance());
             } else if (current instanceof ExprList) {
                 //NOT YET
-                throw new IllegalStateException("ExprList not yet supported (" + current.toString() + ")");
+                logger.warning("ExprList not yet supported (" + current.toString() + ")");
+                return Collections.emptyList();
             } else if (current instanceof ExprQt) {
                 PropertyExtractor qtExtractor = new PropertyExtractor();
                 ExtractedProperty qtExtracted;
@@ -732,14 +774,20 @@ public class TestsGenerator {
                     variableMapping = extendedMapping;
                     //continue; only add if anything is added to the following expression types
                 } catch (Exception e) {
-                    throw new IllegalStateException("Couldn't reduce quantifier expression", e);
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    String exceptionAsString = sw.toString();
+                    logger.warning("Couldn't reduce quantifier expression\n" + exceptionAsString);
+                    return Collections.emptyList();
                 }
             } else if (current instanceof ExprLet) {
                 //NOT YET
-                throw new IllegalStateException("ExprLet not yet supported (" + current.toString() + ")");
+                logger.warning("ExprLet not yet supported (" + current.toString() + ")");
+                return Collections.emptyList();
             } else {
                 //??? SOMETHING
-                throw new IllegalStateException("Expr not yet supported (" + current.toString() + ")");
+                logger.warning("Expr not yet supported (" + current.toString() + ")");
+                return Collections.emptyList();
             }
         }
     }
@@ -779,12 +827,47 @@ public class TestsGenerator {
                     formulaToEvaluate = currentAsBinaryExpr.left;
                     lor = true;
                 } else {
-                    throw new IllegalStateException("Predicate exists but can't be located in the expression (pred: " + buggyFunc.toString() + ") (expr: " + current.toString() + ")");
+                    logger.warning("Predicate exists but can't be located in the expression (pred: " + buggyFunc.toString() + ") (expr: " + current.toString() + ")");
+                    return Collections.emptyList();
+                }
+                Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
+                if (formulaToEvaluate.type().is_int() || formulaToEvaluate.type().is_small_int()) {
+                    if (needToIterate(predsFormula)) {
+                        logger.warning("Can't support complex expressions for preds related formula when dealing with int expressions");
+                        return Collections.emptyList();
+                    }
+                    if (isArithmeticComparisonBinaryOp(currentAsBinaryExpr.op)) {
+                        Optional<ExprConstant> constantValue = ExpressionEvaluator.evaluateIntFormula(instance, formulaToEvaluate, variableMapping);
+                        if (constantValue.isPresent()) {
+                            Expr expressionToTest = currentAsBinaryExpr.op.make(null, null, (Expr) predsFormula.clone(), constantValue.get());
+                            if (expressionToTest.errors != null && !expressionToTest.errors.isEmpty()) {
+                                logger.warning("An error occurred while trying to generate the arithmetic expression to test:\n" + expressionToTest.errors.stream().map(Err::toString).collect(Collectors.joining("\n")));
+                                return Collections.emptyList();
+                            }
+                            List<TestBody> testBodies = new LinkedList<>();
+                            if (expected == null || expected) {
+                                testBodies.add(untrustedFacts?TestBody.untrustedSatisfiablePredicate(expressionToTest):TestBody.trustedSatisfiablePredicate(expressionToTest));
+                            } else  {
+                                testBodies.addAll(generateUnsatPredicateTestBodies(expressionToTest, !untrustedFacts));
+                            }
+                            if (untrustedFacts) {
+                                testBodies.add(TestBody.untrustedUnexpectedInstance());
+                            }
+                            return testBodies;
+                        } else {
+                            logger.warning("Evaluation of " + formulaToEvaluate.toString() + " didn't yield any integer constant value");
+                            return Collections.emptyList();
+                        }
+                    } else {
+                        logger.warning("Can't support other arithmetic operators, only equality ones; current operator is (" + currentAsBinaryExpr.op.toString() + ") in " + currentAsBinaryExpr.toString());
+                        return Collections.emptyList();
+                    }
                 }
                 Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, variableMapping);
-                if (!formulaEvaluation.isPresent())
-                    throw new IllegalStateException("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
-                Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
+                if (!formulaEvaluation.isPresent()) {
+                    logger.warning("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
+                    return Collections.emptyList();
+                }
                 switch (currentAsBinaryExpr.op) {
                     case NOT_EQUALS: {
                         expected = !formulaEvaluation.get();
@@ -821,8 +904,10 @@ public class TestsGenerator {
                         boolean precedentIsTrue;
                         if (lor) {
                             Optional<Boolean> predEvaluation = ExpressionEvaluator.evaluateFormula(instance, predsFormula, variableMapping);
-                            if (!predEvaluation.isPresent())
-                                throw new IllegalStateException("Failed to evaluate " + predsFormula.toString() + " to a boolean value");
+                            if (!predEvaluation.isPresent()) {
+                                logger.warning("Failed to evaluate " + predsFormula.toString() + " to a boolean value");
+                                return Collections.emptyList();
+                            }
                             precedentIsTrue = predEvaluation.get();
                         } else {
                             precedentIsTrue = formulaEvaluation.get();
@@ -928,7 +1013,10 @@ public class TestsGenerator {
                         }
                         return testBodies;
                     }
-                    default: throw new IllegalStateException("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
+                    default: {
+                        logger.warning("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
+                        return Collections.emptyList();
+                    }
                 }
             } else if (current instanceof ExprUnary) {
                 ExprUnary currentAsExprUnary = (ExprUnary) current;
@@ -955,7 +1043,8 @@ public class TestsGenerator {
                                 Collections.singletonList(TestBody.trustedSatisfiablePredicate(currentAsExprUnary.sub));
                     }
                 } else {
-                    throw new IllegalStateException("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
+                    logger.warning("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
+                    return Collections.emptyList();
                 }
             } else if (current instanceof ExprCall) {
                 if (expected == null)
@@ -971,7 +1060,8 @@ public class TestsGenerator {
                 return Collections.singletonList(TestBody.trustedExpectedInstance());
             } else if (current instanceof ExprList) {
                 //NOT YET
-                throw new IllegalStateException("ExprList not yet supported (" + current.toString() + ")");
+                logger.warning("ExprList not yet supported (" + current.toString() + ")");
+                return Collections.emptyList();
             } else if (current instanceof ExprQt) {
                 PropertyExtractor qtExtractor = new PropertyExtractor();
                 ExtractedProperty qtExtracted;
@@ -982,14 +1072,20 @@ public class TestsGenerator {
                     variableMapping = extendedMapping;
                     //continue; only add if anything is added to the following expression types
                 } catch (Exception e) {
-                    throw new IllegalStateException("Couldn't reduce quantifier expression", e);
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    String exceptionAsString = sw.toString();
+                    logger.warning("Couldn't reduce quantifier expression\n" + exceptionAsString);
+                    return Collections.emptyList();
                 }
             } else if (current instanceof ExprLet) {
                 //NOT YET
-                throw new IllegalStateException("ExprLet not yet supported (" + current.toString() + ")");
+                logger.warning("ExprLet not yet supported (" + current.toString() + ")");
+                return Collections.emptyList();
             } else {
                 //??? SOMETHING
-                throw new IllegalStateException("Expr not yet supported (" + current.toString() + ")");
+                logger.warning("Expr not yet supported (" + current.toString() + ")");
+                return Collections.emptyList();
             }
         }
     }
@@ -1004,6 +1100,22 @@ public class TestsGenerator {
         testBodies.add(unsatisfiablePredicate);
         testBodies.add(expectedInstance);
         return testBodies;
+    }
+
+    private boolean isArithmeticComparisonBinaryOp(ExprBinary.Op op) {
+        switch (op) {
+            case EQUALS:
+            case NOT_EQUALS:
+            case LT:
+            case LTE:
+            case GT:
+            case GTE:
+            case NOT_LT:
+            case NOT_LTE:
+            case NOT_GT:
+            case NOT_GTE: return true;
+            default: return false;
+        }
     }
 
     private boolean needToIterate(Expr x) {
