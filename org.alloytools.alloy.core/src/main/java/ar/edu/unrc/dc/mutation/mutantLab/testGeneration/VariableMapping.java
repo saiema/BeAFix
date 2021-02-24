@@ -5,6 +5,7 @@ import edu.mit.csail.sdg.ast.ExprVar;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.alloyNameToSkolem;
 import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.internalAtomNotationToAlloyName;
@@ -15,6 +16,7 @@ public class VariableMapping {
     private final Map<String, Integer> originalVarsLabelCount;
     private final List<ExprVar> skolemVars;
     private final Command cmd;
+    private boolean extended = false;
 
     public VariableMapping(List<ExprVar> originalVars, List<ExprVar> skolemVars, Command cmd) {
         originalVarsToSkolemVars = new HashMap<>();
@@ -31,11 +33,13 @@ public class VariableMapping {
         originalVarsLabelCount.putAll(from.originalVarsLabelCount);
         cmd = from.cmd;
         skolemVars = new LinkedList<>(from.skolemVars);
+        extended = from.extended;
     }
 
     public static VariableMapping extendPreviousMapping(VariableMapping from, List<ExprVar> newVars) {
         VariableMapping variableMapping = new VariableMapping(from);
         variableMapping.createMapping(newVars, variableMapping.skolemVars);
+        variableMapping.extended = true;
         return variableMapping;
     }
 
@@ -47,6 +51,15 @@ public class VariableMapping {
 
     public boolean isSkolemUsed(ExprVar svar) {
         return originalVarsToSkolemVars.containsValue(svar);
+    }
+
+    public boolean isExtended() { return extended; }
+
+    public VariableMapping cleanMappingToAlloyNames() {
+        List<ExprVar> cleanSkolemVars = skolemVars.stream().map(
+                sv -> ExprVar.make(null, internalAtomNotationToAlloyName(sv.label), sv.type())
+        ).collect(Collectors.toList());
+        return new VariableMapping(new LinkedList<>(originalVarsToSkolemVars.keySet()), cleanSkolemVars, cmd);
     }
 
     @Override
