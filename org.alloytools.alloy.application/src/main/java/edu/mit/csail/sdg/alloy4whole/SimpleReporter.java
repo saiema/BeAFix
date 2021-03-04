@@ -1131,6 +1131,7 @@ final class SimpleReporter extends A4Reporter {
             for (Command c : world.getAllCommands()) {
                 if (c.isGenerated()) {
                     String command = c.toString();
+                    command += " (" + c.testType().toString() + ")";
                     Optional<Func> testFunc = DependencyScanner.getFuncByName(((ExprHasName)c.nameExpr).label, world.getAllFunc());
                     if (!testFunc.isPresent())
                         throw new Error("Something went wrong, test command " + command + " has no associated predicate");
