@@ -303,16 +303,10 @@ public class TestsGenerator {
                 }
             }
         }
-        Map<ExprVar, List<Expr>> usedVariablesValues = new HashMap<>();
-        List<ExprVar> usedVariables = new LinkedList<>();
-        for (Entry<ExprVar, List<Expr>> vValues : variablesValues.entrySet()) {
-            if (variableMapping.isSkolemUsed(vValues.getKey())) {
-                usedVariablesValues.put(vValues.getKey(), vValues.getValue());
-                usedVariables.add(vValues.getKey());
-            }
-        }
+        Map<ExprVar, List<Expr>> usedVariablesValues = getUsedVariableValues(variablesValues, variableMapping);
+        List<ExprVar> usedVariables = new LinkedList<>(usedVariablesValues.keySet());
         List<Expr> fieldOverrides = getFieldOverrides(solution, context, signatureValues);
-        Expr initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
+        Expr initialization;
         if (arepairIntegration()) {
             FunctionsCollector functionsCollector = FunctionsCollector.buggedFunctionsCollector();
             Set<Func> buggyFunctions = functionsCollector.visitThis(cleanedFormula);
@@ -333,6 +327,9 @@ public class TestsGenerator {
                 );
             }
             for (TestBody testBody : testBodies) {
+                Set<ExprVar> testUsedVariables = new TreeSet<>(Comparator.comparing(o -> o.label));
+                Map<ExprVar, List<Expr>> testUsedVariablesValues = null;
+                testUsedVariables.addAll(usedVariables);
                 if (request.hasForcedExpect())
                     testBody.trusted = false;
                 if (arepairRelaxedFacts())
@@ -345,17 +342,24 @@ public class TestsGenerator {
                     if (testBody.hasVariableMapping()) {
                         VariableExchanger refinedVariableExchanger = new VariableExchanger(testBody.getRelatedVariableMapping().cleanMappingToAlloyNames());
                         testBody.body = refinedVariableExchanger.replaceVariables((Expr) testBody.body.clone());
+                        testUsedVariablesValues = getUsedVariableValues(variablesValues, testBody.getRelatedVariableMapping().cleanMappingToAlloyNames());
+                        testUsedVariablesValues.forEach((exprVar, exprs) -> testUsedVariables.add(exprVar));
                     } else {
                         testBody.body = variableExchanger.replaceVariables((Expr) testBody.body.clone());
                     }
                 }
+                if (testUsedVariablesValues == null) {
+                    testUsedVariablesValues = getUsedVariableValues(variablesValues, variableMapping);
+                }
                 if (allUntrusted)
                     testBody.trusted = false;
-                Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
+                initialization = generateInitialization(signatureValues, fieldValues, testUsedVariablesValues, fieldOverrides);
+                Command testCommand = generateTest(initialization, testBody, new LinkedList<>(testUsedVariables), declSignatureValues, command, context);
                 testCommands.add(testCommand);
             }
             return testCommands;
         } else {
+            initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
             TestBody testBody;
             if (!request.isInstanceTestRequest()) {
                 testBody = TestBody.trustedSatisfiablePredicate(testFormula, null);
@@ -433,6 +437,15 @@ public class TestsGenerator {
         return testPredicate;
     }
 
+    private Map<ExprVar, List<Expr>> getUsedVariableValues(Map<ExprVar, List<Expr>> variablesValues, VariableMapping variableMapping) {
+        Map<ExprVar, List<Expr>>  usedVariablesValues = new HashMap<>();
+        for (Entry<ExprVar, List<Expr>> vValues : variablesValues.entrySet()) {
+            if (variableMapping.isSkolemUsed(vValues.getKey())) {
+                usedVariablesValues.put(vValues.getKey(), vValues.getValue());
+            }
+        }
+        return usedVariablesValues;
+    }
 
     private static class TestBody {
         private Expr body;

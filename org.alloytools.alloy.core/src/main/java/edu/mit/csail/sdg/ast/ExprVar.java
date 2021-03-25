@@ -39,6 +39,8 @@ public final class ExprVar extends ExprHasName implements Clause {
     public static void resetIDs() {
         NEXT_VAR_ID = 0;
     }
+    public int getVarID() { return VAR_ID; }
+    public void setVarID(int newVarID) { this.VAR_ID = newVarID; }
 
     @Override
     public boolean equals(Object other) {

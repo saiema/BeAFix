@@ -7,8 +7,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.alloyNameToSkolem;
-import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.internalAtomNotationToAlloyName;
+import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.*;
 
 public class VariableMapping {
 
@@ -50,14 +49,14 @@ public class VariableMapping {
     public boolean availableSkolem(ExprVar var) {return originalVarsToSkolemVars.containsKey(var);}
 
     public boolean isSkolemUsed(ExprVar svar) {
-        return originalVarsToSkolemVars.containsValue(svar);
+        return originalVarsToSkolemVars.values().stream().anyMatch(exprVar -> exprVar.label.compareTo(svar.label) == 0);
     }
 
     public boolean isExtended() { return extended; }
 
     public VariableMapping cleanMappingToAlloyNames() {
         List<ExprVar> cleanSkolemVars = skolemVars.stream().map(
-                sv -> ExprVar.make(null, internalAtomNotationToAlloyName(sv.label), sv.type())
+                TestGeneratorHelper::internalNamedVarToAlloyNamedVar
         ).collect(Collectors.toList());
         return new VariableMapping(new LinkedList<>(originalVarsToSkolemVars.keySet()), cleanSkolemVars, cmd);
     }

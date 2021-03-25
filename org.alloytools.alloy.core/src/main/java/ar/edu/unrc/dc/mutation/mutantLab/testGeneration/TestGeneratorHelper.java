@@ -90,6 +90,12 @@ public class TestGeneratorHelper {
         return internalNotation.replaceAll("\\$", "");
     }
 
+    public static String alloyVarNameToInternalAtomNotation(String alloyName) {
+        if (alloyName.startsWith("\\$"))
+            throw new IllegalArgumentException("Alloy Name is already in internal atom notation (" + alloyName + ")");
+        return "$" + alloyName;
+    }
+
     static String alloyNameToSkolem(String alloyName, Command cmd) {
         if (cmd.nameExpr instanceof ExprVar) {
             return ((ExprVar) cmd.nameExpr).label + "_" + alloyName;
@@ -352,6 +358,18 @@ public class TestGeneratorHelper {
             predicateOrAssertionCalled = command.nameExpr;
         }
         return predicateOrAssertionCalled == null?null: (Browsable) predicateOrAssertionCalled.clone();
+    }
+
+    public static ExprVar internalNamedVarToAlloyNamedVar(ExprVar var) {
+        ExprVar copy = ExprVar.make(null, internalAtomNotationToAlloyName(var.label), var.type());
+        copy.setVarID(var.getVarID());
+        return copy;
+    }
+
+    public static ExprVar alloyNamedVarToInternalNamedVar(ExprVar var) {
+        ExprVar copy = ExprVar.make(null, alloyVarNameToInternalAtomNotation(var.label), var.type());
+        copy.setVarID(var.getVarID());
+        return copy;
     }
 
     private static String removeAlias(String key) {
