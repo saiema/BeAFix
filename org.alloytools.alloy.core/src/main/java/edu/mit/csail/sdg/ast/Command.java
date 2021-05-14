@@ -36,7 +36,7 @@ import java.util.*;
 
 public final class Command extends Browsable {
 
-    public enum TestType {FROM_MODEL, CE, POS_TRUSTED, POS_UNTRUSTED, NEG_TRUSTED, NEG_UNTRUSTED}
+    public enum TestType {FROM_MODEL, CE, TRUSTED, UNTRUSTED}
 
     private boolean isVariabilizationTest = false;
     private boolean isPerfectOracleTest = false;

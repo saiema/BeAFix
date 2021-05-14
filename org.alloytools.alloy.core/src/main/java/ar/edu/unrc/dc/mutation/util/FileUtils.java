@@ -32,7 +32,7 @@ public class FileUtils {
             File repairFile = new File(outputFile);
             if (repairFile.exists()) {
                 if (!repairFile.delete()) {
-                    logger.info("Failed to write repair file : " + repairFile.toString());
+                    logger.info("Failed to write repair file : " + repairFile);
                     return null;
                 }
             }
@@ -134,10 +134,8 @@ public class FileUtils {
     }
 
     private static final String CE_FILE_POSTFIX = "_counterexamples.tests";
-    private static final String POS_TRUSTED_POSTFIX = "_positive_trusted.tests";
-    private static final String POS_UNTRUSTED_POSTFIX = "_positive_untrusted.tests";
-    private static final String NEG_TRUSTED_POSTFIX = "_negative_trusted.tests";
-    private static final String NEG_UNTRUSTED_POSTFIX = "_negative_untrusted.tests";
+    private static final String TRUSTED_POSTFIX = "_trusted.tests";
+    private static final String UNTRUSTED_POSTFIX = "_untrusted.tests";
     public static File[] setUpTestGenerationFiles(String originalFilename, boolean includePosAndNegTests) {
         String outputFolderPath = (String) MutationConfiguration.getInstance().getConfigValue(MutationConfiguration.ConfigKey.TEST_GENERATION_OUTPUT_FOLDER).orElse("");
         File outFolder = new File(outputFolderPath);
@@ -154,15 +152,11 @@ public class FileUtils {
         createNewFile(testsFile);
         createNewFile(reportFile);
         if (includePosAndNegTests) {
-            File positiveTestsTrusted = Paths.get(outputFolderPath, modelName + POS_TRUSTED_POSTFIX).toFile();
-            File positiveTestsUntrusted = Paths.get(outputFolderPath, modelName + POS_UNTRUSTED_POSTFIX).toFile();
-            File negativeTrustedTests = Paths.get(outputFolderPath, modelName + NEG_TRUSTED_POSTFIX).toFile();
-            File negativeUntrustedTests = Paths.get(outputFolderPath, modelName + NEG_UNTRUSTED_POSTFIX).toFile();
-            createNewFile(positiveTestsTrusted);
-            createNewFile(positiveTestsUntrusted);
-            createNewFile(negativeTrustedTests);
-            createNewFile(negativeUntrustedTests);
-            return new File[] {testsFile, reportFile, positiveTestsTrusted, positiveTestsUntrusted, negativeTrustedTests, negativeUntrustedTests};
+            File trustedTests = Paths.get(outputFolderPath, modelName + TRUSTED_POSTFIX).toFile();
+            File untrustedTests = Paths.get(outputFolderPath, modelName + UNTRUSTED_POSTFIX).toFile();
+            createNewFile(trustedTests);
+            createNewFile(untrustedTests);
+            return new File[] {testsFile, reportFile, trustedTests, untrustedTests};
         }
         return new File[] {testsFile, reportFile};
     }
@@ -170,9 +164,9 @@ public class FileUtils {
     private static void createNewFile(File f) {
         try {
             if (!f.createNewFile())
-                throw new IllegalStateException("File already exists ( " + f.toString() + " )");
+                throw new IllegalStateException("File already exists ( " + f + " )");
         } catch (IOException e) {
-            throw new Error("Couldn't create file ( " + f.toString() + " )", e);
+            throw new Error("Couldn't create file ( " + f + " )", e);
         }
     }
 
@@ -181,7 +175,7 @@ public class FileUtils {
             File repairFile = new File(originalFileName.replace(".als", ".verification"));
             if (repairFile.exists()) {
                 if (!repairFile.delete()) {
-                    logger.info("Failed to write verification file : " + repairFile.toString());
+                    logger.info("Failed to write verification file : " + repairFile);
                     return;
                 }
             }

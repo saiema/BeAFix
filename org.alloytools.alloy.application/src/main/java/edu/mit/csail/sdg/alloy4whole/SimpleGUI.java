@@ -18,7 +18,6 @@ package edu.mit.csail.sdg.alloy4whole;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.util.AStrykerConfigReader;
 import edu.mit.csail.sdg.alloy4.*;
-import edu.mit.csail.sdg.alloy4.A4Preferences.*;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleCallback1;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask1;

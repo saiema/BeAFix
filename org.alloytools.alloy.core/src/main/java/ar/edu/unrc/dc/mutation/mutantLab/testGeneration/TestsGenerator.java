@@ -54,6 +54,15 @@ public class TestsGenerator {
     private final Map<String, Integer> testsPerProperty;
     private final String testName;
     private int testIndex;
+    private int subTestIndex;
+    private String testType = EMPTY_TYPE;
+    private static final String EMPTY_TYPE = "";
+    private static final String FROM_COUNTEREXAMPLE_TYPE = "CE";
+    private static final String FROM_PREDICATE_TYPE = "PRED";
+    private String testNamePostfix = EMPTY_POSTFIX;
+    private static final String EMPTY_POSTFIX = "";
+    private static final String POS_POSTFIX = "POS";
+    private static final String NEG_POSTFIX = "NEG";
 
     private static TestsGenerator instance;
 
@@ -79,6 +88,7 @@ public class TestsGenerator {
         } else {
             this.testName = null;
         }
+        this.subTestIndex = 0;
         if (useModelOverriding()) {
             String overridingFolder = modelOverridingFolder();
             if (!overridingFolder.trim().isEmpty()) {
@@ -172,6 +182,9 @@ public class TestsGenerator {
         int testsGenerated = 0;
         boolean positiveAndNegativeTestGeneration = false;
         for (int i = 0; i < testsToGenerate && i < testsPerGeneration(); i++) {
+            subTestIndex = 0;
+            testNamePostfix = EMPTY_POSTFIX;
+            testType = request.command().check?FROM_COUNTEREXAMPLE_TYPE:FROM_PREDICATE_TYPE;
             String msg = "";
             if (!request.isInstanceTestRequest()) {
                 msg = "Generating CE based test for instance\n";
@@ -183,11 +196,16 @@ public class TestsGenerator {
                 msg = "Generating positive and negative test from untrusted command for instance\n";
                 positiveAndNegativeTestGeneration = true;
             }
-            logger.info(msg + request.solution().getEvaluator().instance().relationTuples().entrySet().toString());
+            logger.info(msg + request.solution().getEvaluator().instance().relationTuples().entrySet());
             if (positiveAndNegativeTestGeneration) {
+                int testIndexBackup = testIndex;
                 List<TestGenerationRequest> positiveAndNegativeRequests = request.splitABothRequestIntoPositiveAndNegative();
+                testNamePostfix = POS_POSTFIX;
                 Set<Command> positiveTests = generateNewTest(positiveAndNegativeRequests.get(0));
                 generatedTests.addAll(positiveTests);
+                testNamePostfix = NEG_POSTFIX;
+                testIndex = testIndexBackup;
+                subTestIndex = 0;
                 Set<Command> negativeTests = generateNewTest(positiveAndNegativeRequests.get(1));
                 generatedTests.addAll(negativeTests);
                 testsGenerated += positiveTests.size() + negativeTests.size();
@@ -196,6 +214,7 @@ public class TestsGenerator {
                 generatedTests.addAll(newTests);
                 testsGenerated += newTests.size();
             }
+            testIndex++;
             observedInstances.add(request.solution().toString());
             Optional<A4Solution> next = advanceToNextInstance(request.solution());
             if (next.isPresent()) {
@@ -246,7 +265,7 @@ public class TestsGenerator {
         List<ExprVar> skolemVariables = new LinkedList<>(variablesValues.keySet());
         Browsable predicateOrAssertionCalled = getPredicateOrAssertionCalled(command, context);
         if (predicateOrAssertionCalled == null)
-            throw new IllegalStateException("Couldn't get predicate or assertion for " + command.toString());
+            throw new IllegalStateException("Couldn't get predicate or assertion for " + command);
         PropertyExtractor propertyExtractor = new PropertyExtractor();
         ExtractedProperty extractedProperty;
         if (predicateOrAssertionCalled instanceof Func) {
@@ -267,12 +286,12 @@ public class TestsGenerator {
             FunctionsCollector functionsCollector = FunctionsCollector.buggedFunctionsCollector();
             Set<Func> buggyFunctions = functionsCollector.visitThis(cleanedFormula);
             if (buggyFunctions.size() > 1 && !arepairRelaxed()) {
-                String message = "ARepair integration mode can only support at most one predicate without using relaxed mode, we found " + buggyFunctions.size() + " for current expression " + cleanedFormula.toString();
+                String message = "ARepair integration mode can only support at most one predicate without using relaxed mode, we found " + buggyFunctions.size() + " for current expression " + cleanedFormula;
                 logger.severe(message);
                 throw new IllegalStateException(message);
             }
             if (buggyFunctions.stream().filter(f -> !f.isPred).count() > 1) {
-                String message = "ARepair integration mode can only support predicates, we found a function (showing first) " + buggyFunctions.stream().filter(f -> f.isPred).findFirst().map(Func::toString).orElse("N/A") + " in current expression " + cleanedFormula.toString();
+                String message = "ARepair integration mode can only support predicates, we found a function (showing first) " + buggyFunctions.stream().filter(f -> f.isPred).findFirst().map(Func::toString).orElse("N/A") + " in current expression " + cleanedFormula;
                 logger.severe(message);
                 throw new IllegalStateException(message);
             }
@@ -302,6 +321,8 @@ public class TestsGenerator {
                     testFormula.setCommentPreviousLine("testFormulaWithFacts");
                 }
             }
+        } else if (request.forcedExpect() == TestGenerationRequest.NEGATIVE_FORCE) {
+            cleanedFormula = ExprUnary.Op.NOT.make(null, cleanedFormula);
         }
         Map<ExprVar, List<Expr>> usedVariablesValues = getUsedVariableValues(variablesValues, variableMapping);
         List<ExprVar> usedVariables = new LinkedList<>(usedVariablesValues.keySet());
@@ -369,7 +390,7 @@ public class TestsGenerator {
             } else if (request.isInstanceNegativeTestRequest()) {
                 testBody = request.fromTrustedCommand()?TestBody.trustedUnsatisfiablePredicate(testFormula, null):TestBody.untrustedUnsatisfiablePredicate(testFormula, null);
             } else {
-                throw new IllegalStateException("Unexpected request: " + request.toString());
+                throw new IllegalStateException("Unexpected request: " + request);
             }
             Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
             return Collections.singleton(testCommand);
@@ -382,7 +403,7 @@ public class TestsGenerator {
         testPredicate.setCommentNextLine("TEST FINISH");
         Command testCommand = generateTestCommand(testPredicate, !testBody.fromInstance(), testBody.isExpected(), testBody.isTrusted());
         logger.info("Test generated\n" +
-                testPredicate.toString() + "\n" +
+                testPredicate + "\n" +
                 testPredicate.getBody().toString()
         );
         try {
@@ -407,13 +428,10 @@ public class TestsGenerator {
         testCommand.setAsGenerated();
         if (counterexample)
             testCommand.testType(Command.TestType.CE);
-        else if (positiveTest && trusted)
-            testCommand.testType(Command.TestType.POS_TRUSTED);
-        else if (positiveTest)
-            testCommand.testType(Command.TestType.POS_UNTRUSTED);
         else if (trusted)
-            testCommand.testType(Command.TestType.NEG_TRUSTED);
-        else testCommand.testType(Command.TestType.NEG_UNTRUSTED);
+            testCommand.testType(Command.TestType.TRUSTED);
+        else
+            testCommand.testType(Command.TestType.UNTRUSTED);
         return testCommand;
     }
 
@@ -431,7 +449,7 @@ public class TestsGenerator {
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = getTestName(from);
         if (relatedTo != null)
-             name += "relTo_" + relatedTo;
+             name += "_relTo-" + relatedTo;
         Func testPredicate = new Func(null, name, null, null, body);
         testPredicate.setGenerated();
         return testPredicate;
@@ -579,7 +597,7 @@ public class TestsGenerator {
                     formulaToEvaluate = currentAsBinaryExpr.left;
                     lor = true;
                 } else {
-                    logger.warning("Predicate exists but can't be located in the expression (pred: " + buggyFunc.toString() + ") (expr: " + current.toString() + ")");
+                    logger.warning("Predicate exists but can't be located in the expression (pred: " + buggyFunc + ") (expr: " + current + ")");
                     return Collections.emptyList();
                 }
                 Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
@@ -607,17 +625,17 @@ public class TestsGenerator {
                             }
                             return testBodies;
                         } else {
-                            logger.warning("Evaluation of " + formulaToEvaluate.toString() + " didn't yield any integer constant value");
+                            logger.warning("Evaluation of " + formulaToEvaluate + " didn't yield any integer constant value");
                             return Collections.emptyList();
                         }
                     } else {
-                        logger.warning("Can't support other arithmetic operators, only equality ones; current operator is (" + currentAsBinaryExpr.op.toString() + ") in " + currentAsBinaryExpr.toString());
+                        logger.warning("Can't support other arithmetic operators, only equality ones; current operator is (" + currentAsBinaryExpr.op + ") in " + currentAsBinaryExpr);
                         return Collections.emptyList();
                     }
                 }
                 Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, variableMapping);
                 if (!formulaEvaluation.isPresent()) {
-                    logger.warning("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
+                    logger.warning("Failed to evaluate " + formulaToEvaluate + " to a boolean value");
                     return Collections.emptyList();
                 }
                 switch (currentAsBinaryExpr.op) {
@@ -739,7 +757,7 @@ public class TestsGenerator {
                         }
                     }
                     default: {
-                        logger.warning("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
+                        logger.warning("Unsupported binary operator (" + currentAsBinaryExpr.op + ") in expression: " + currentAsBinaryExpr);
                         return Collections.emptyList();
                     }
                 }
@@ -768,7 +786,7 @@ public class TestsGenerator {
                                 Collections.singletonList(TestBody.trustedSatisfiablePredicate(currentAsExprUnary.sub, variableMapping));
                     }
                 } else {
-                    logger.warning("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
+                    logger.warning("Unsupported unary operator (" + currentAsExprUnary.op + ") in expression: " + currentAsExprUnary);
                     return Collections.emptyList();
                 }
             } else if (current instanceof ExprCall) {
@@ -790,7 +808,7 @@ public class TestsGenerator {
                 return Collections.singletonList(TestBody.trustedUnexpectedInstance());
             } else if (current instanceof ExprList) {
                 //NOT YET
-                logger.warning("ExprList not yet supported (" + current.toString() + ")");
+                logger.warning("ExprList not yet supported (" + current + ")");
                 return Collections.emptyList();
             } else if (current instanceof ExprQt) {
                 PropertyExtractor qtExtractor = new PropertyExtractor();
@@ -810,7 +828,7 @@ public class TestsGenerator {
                 }
             } else if (current instanceof ExprLet) {
                 //NOT YET
-                logger.warning("ExprLet not yet supported (" + current.toString() + ")");
+                logger.warning("ExprLet not yet supported (" + current + ")");
                 return Collections.emptyList();
             } else {
                 //??? SOMETHING
@@ -855,7 +873,7 @@ public class TestsGenerator {
                     formulaToEvaluate = currentAsBinaryExpr.left;
                     lor = true;
                 } else {
-                    logger.warning("Predicate exists but can't be located in the expression (pred: " + buggyFunc.toString() + ") (expr: " + current.toString() + ")");
+                    logger.warning("Predicate exists but can't be located in the expression (pred: " + buggyFunc + ") (expr: " + current + ")");
                     return Collections.emptyList();
                 }
                 Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
@@ -883,17 +901,17 @@ public class TestsGenerator {
                             }
                             return testBodies;
                         } else {
-                            logger.warning("Evaluation of " + formulaToEvaluate.toString() + " didn't yield any integer constant value");
+                            logger.warning("Evaluation of " + formulaToEvaluate + " didn't yield any integer constant value");
                             return Collections.emptyList();
                         }
                     } else {
-                        logger.warning("Can't support other arithmetic operators, only equality ones; current operator is (" + currentAsBinaryExpr.op.toString() + ") in " + currentAsBinaryExpr.toString());
+                        logger.warning("Can't support other arithmetic operators, only equality ones; current operator is (" + currentAsBinaryExpr.op + ") in " + currentAsBinaryExpr);
                         return Collections.emptyList();
                     }
                 }
                 Optional<Boolean> formulaEvaluation = ExpressionEvaluator.evaluateFormula(instance, formulaToEvaluate, variableMapping);
                 if (!formulaEvaluation.isPresent()) {
-                    logger.warning("Failed to evaluate " + formulaToEvaluate.toString() + " to a boolean value");
+                    logger.warning("Failed to evaluate " + formulaToEvaluate + " to a boolean value");
                     return Collections.emptyList();
                 }
                 switch (currentAsBinaryExpr.op) {
@@ -933,7 +951,7 @@ public class TestsGenerator {
                         if (lor) {
                             Optional<Boolean> predEvaluation = ExpressionEvaluator.evaluateFormula(instance, predsFormula, variableMapping);
                             if (!predEvaluation.isPresent()) {
-                                logger.warning("Failed to evaluate " + predsFormula.toString() + " to a boolean value");
+                                logger.warning("Failed to evaluate " + predsFormula + " to a boolean value");
                                 return Collections.emptyList();
                             }
                             precedentIsTrue = predEvaluation.get();
@@ -1042,7 +1060,7 @@ public class TestsGenerator {
                         return testBodies;
                     }
                     default: {
-                        logger.warning("Unsupported binary operator (" + currentAsBinaryExpr.op.toString() + ") in expression: " + currentAsBinaryExpr.toString());
+                        logger.warning("Unsupported binary operator (" + currentAsBinaryExpr.op + ") in expression: " + currentAsBinaryExpr);
                         return Collections.emptyList();
                     }
                 }
@@ -1071,7 +1089,7 @@ public class TestsGenerator {
                                 Collections.singletonList(TestBody.trustedSatisfiablePredicate(currentAsExprUnary.sub, variableMapping));
                     }
                 } else {
-                    logger.warning("Unsupported unary operator (" + currentAsExprUnary.op.toString() + ") in expression: " + currentAsExprUnary.toString());
+                    logger.warning("Unsupported unary operator (" + currentAsExprUnary.op + ") in expression: " + currentAsExprUnary);
                     return Collections.emptyList();
                 }
             } else if (current instanceof ExprCall) {
@@ -1088,7 +1106,7 @@ public class TestsGenerator {
                 return Collections.singletonList(TestBody.trustedExpectedInstance());
             } else if (current instanceof ExprList) {
                 //NOT YET
-                logger.warning("ExprList not yet supported (" + current.toString() + ")");
+                logger.warning("ExprList not yet supported (" + current + ")");
                 return Collections.emptyList();
             } else if (current instanceof ExprQt) {
                 PropertyExtractor qtExtractor = new PropertyExtractor();
@@ -1108,7 +1126,7 @@ public class TestsGenerator {
                 }
             } else if (current instanceof ExprLet) {
                 //NOT YET
-                logger.warning("ExprLet not yet supported (" + current.toString() + ")");
+                logger.warning("ExprLet not yet supported (" + current + ")");
                 return Collections.emptyList();
             } else {
                 //??? SOMETHING
@@ -1154,7 +1172,7 @@ public class TestsGenerator {
         if (this.testName == null) {
             return "CE_" + from + "_" + generateRandomName(10);
         }
-        return this.testName + this.testIndex++;
+        return this.testName + (testType.isEmpty()?"":("_" + testType + "_")) + (this.testIndex) + "_" + (this.subTestIndex++) + (testNamePostfix.isEmpty()?"":("_" + testNamePostfix));
     }
 
     private List<Decl> getVariablesDecls(Map<Sig, List<ExprVar>> varsPerSignature) {
@@ -1248,9 +1266,9 @@ public class TestsGenerator {
         Expr initialization = initExpressions.isEmpty()?null:ExprList.make(null, null, ExprList.Op.AND, initExpressions);
         if (initialization != null && initialization.errors != null && !initialization.errors.isEmpty())
             throw new IllegalStateException("Bad expression generated when creating test initialization (\n" +
-                    " signatures: "  + signaturesValues.toString() +
-                    " fields: " + fieldsValues.toString() +
-                    " variables: " + variablesValues.toString() +
+                    " signatures: "  + signaturesValues +
+                    " fields: " + fieldsValues +
+                    " variables: " + variablesValues +
                     "\n) : " + initialization.errors.stream().map(Throwable::toString).collect(Collectors.joining(","))
             );
         return initialization;
@@ -1285,7 +1303,7 @@ public class TestsGenerator {
         for (Map.Entry<Relation, TupleSet> ceSignature : counterExampleSignatures.entrySet()) {
             Optional<Sig> oSig = nameToSig(ceSignature.getKey(), context);
             if (!oSig.isPresent())
-                throw new IllegalStateException("No signature found for " + ceSignature.toString());
+                throw new IllegalStateException("No signature found for " + ceSignature);
             List<ExprVar> sigValues = new LinkedList<>();
             for (Tuple value : ceSignature.getValue()) {
                 String varName = internalAtomNotationToAlloyName(value.atom(0).toString());
@@ -1309,7 +1327,7 @@ public class TestsGenerator {
         for (Map.Entry<Relation, TupleSet> ceField : counterExampleFields.entrySet()) {
             Optional<Field> oField = nameToField(ceField.getKey(), context);
             if (!oField.isPresent())
-                throw new IllegalStateException("No field found for " + ceField.toString());
+                throw new IllegalStateException("No field found for " + ceField);
             List<Expr> fValues = new LinkedList<>();
             for (Tuple rawValue : ceField.getValue()) {
                 Expr fValue = tupleToExpr(rawValue, signatureValues);

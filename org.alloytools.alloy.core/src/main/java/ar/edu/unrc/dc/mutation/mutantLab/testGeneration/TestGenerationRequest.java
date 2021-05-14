@@ -55,7 +55,9 @@ public class TestGenerationRequest {
             throw new IllegalStateException("Forced expect requests can't be split (forced expect == " + forceExpect + ")");
         List<TestGenerationRequest> split = new LinkedList<>();
         TestGenerationRequest positive = TestGenerationRequest.createInstancePositiveTest(solution, context, command, false);
+        positive.forceExpect = POSITIVE_FORCE;
         TestGenerationRequest negative = TestGenerationRequest.createInstanceNegativeTestRequest(solution, context, command);
+        negative.forceExpect = NEGATIVE_FORCE;
         split.add(positive);
         split.add(negative);
         return split;
