@@ -136,7 +136,7 @@ public class Pruning {
                 if (solverResult)
                     RepairReport.getInstance().incVariabilizationChecksPassed();
                 else
-                    RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression(), from.mutationsForCurrentIndex());
+                    RepairReport.getInstance().incVariabilizationChecksFailed(from.getCurrentMarkedExpression(), from.isFirst()?0:from.mutationsForCurrentIndex());
             }
         }
         restoreAst(from, magicSig, !astRestored, true);

@@ -19,8 +19,6 @@ public class Candidate {
     public static final Candidate SEARCH_SPACE_EXHAUSTED;
     public static final Candidate GENERATION_FAILED;
     public static final Candidate TIMEOUT;
-    private boolean isSignal = false;
-    public boolean isSignal() {return isSignal;}
 
     private Candidate parent;
     private Mutation mutation;
@@ -59,7 +57,6 @@ public class Candidate {
         this.mutation = mutation;
         this.parent = parent;
         this.context = context;
-        this.isSignal = context == null;
         if (mutation != null)
             collectRelatedAssertionsAndFunctions();
         markedExpressions = MutantLab.getInstance().getMarkedExpressions();
@@ -366,7 +363,10 @@ public class Candidate {
         StringBuilder sb = new StringBuilder();
         if (current.mutation == null)
             sb.append("ORIGINAL").append("\n");
-        else {
+        else if (mutation.operator().equals(Ops.VAR)) {
+            sb.append("VARIABILIZATION").append("\n");
+            sb.append(mutation.toString());
+        } else {
             for (String mutRep : mutationsRepresentations) {
                 String[] mutRepParts = mutRep.split("\\$\\$\\$");
                 sb.append("Line : ").append(mutRepParts[0]).append(" : ");
@@ -375,9 +375,6 @@ public class Candidate {
                 sb.append(" |> ").append(mutRepParts[3]);
                 sb.append("\n");
             }
-//            sb.append(toString(current.parent));
-//            sb.append("Line: ").append(current.mutation.original().pos.y).append(" : ");
-//            sb.append(current.mutation.toString()).append("\n");
         }
         return sb.toString();
     }

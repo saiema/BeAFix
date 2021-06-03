@@ -629,6 +629,36 @@ public final class Cheats {
         }
     }
 
+    public static void copyScopes(Command from, Command to) throws CheatingIsBadMkay {
+        /*
+         * this.overall = (overall < 0 ? -1 : overall);
+         * this.bitwidth = (bitwidth < 0 ? -1 : bitwidth);
+         * this.maxseq = (maxseq < 0 ? -1 : maxseq);
+         * this.scope = ConstList.make(scope);
+         * this.additionalExactScopes = ConstList.make(additionalExactSig);
+         */
+        Field overallField = getField(Command.class, "overall");
+        if (overallField == null)
+            throw new CheatingIsBadMkay("Couldn't find overall field");
+        Field bitwithField = getField(Command.class, "bitwidth");
+        if (bitwithField == null)
+            throw new CheatingIsBadMkay("Couldn't find bitwidth field");
+        Field maxseqField = getField(Command.class, "maxseq");
+        if (maxseqField == null)
+            throw new CheatingIsBadMkay("Couldn't find maxseq field");
+        Field scopeField = getField(Command.class, "scope");
+        if (scopeField == null)
+            throw new CheatingIsBadMkay("Couldn't find scope field");
+        Field additionalExactScopesField = getField(Command.class, "additionalExactScopes");
+        if (additionalExactScopesField == null)
+            throw new CheatingIsBadMkay("Couldn't find additionalExactScopes field");
+        copyFieldValue(from, to, overallField);
+        copyFieldValue(from, to, bitwithField);
+        copyFieldValue(from, to, maxseqField);
+        copyFieldValue(from, to, scopeField);
+        copyFieldValue(from, to, additionalExactScopesField);
+    }
+
     private static void copyFieldValue(Object original, Object target, Field field) throws CheatingIsBadMkay {
         boolean oldAccessibleStatus = setAccessibleStatus(field, true);
         try {

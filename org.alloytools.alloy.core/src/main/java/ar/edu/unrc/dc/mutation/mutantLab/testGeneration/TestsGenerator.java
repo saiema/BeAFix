@@ -402,6 +402,11 @@ public class TestsGenerator {
         testPredicate.setCommentPreviousLine("TEST START");
         testPredicate.setCommentNextLine("TEST FINISH");
         Command testCommand = generateTestCommand(testPredicate, !testBody.fromInstance(), testBody.isExpected(), testBody.isTrusted());
+        try {
+            Cheats.copyScopes(command, testCommand);
+        } catch (CheatingIsBadMkay e) {
+            throw new Error("An error occurred while copying original command scopes to test command", e);
+        }
         logger.info("Test generated\n" +
                 testPredicate + "\n" +
                 testPredicate.getBody().toString()

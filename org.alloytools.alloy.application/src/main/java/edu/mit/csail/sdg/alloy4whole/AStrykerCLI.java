@@ -31,6 +31,7 @@ public class AStrykerCLI {
     private static final String CHECK = "CHECK";
     private static final String MUTANTGEN = "MUTANTS";
     private static final String HELP = "--help";
+    private static final String VERSION = "--version";
     public static void main(String[] args) throws IOException {
         AlloyCore.debug = false;
         if (args.length == 0) throw new IllegalArgumentException("At least one argument (the module to repair) is required");
@@ -40,6 +41,9 @@ public class AStrykerCLI {
             else
                 printHelp();
             return;
+        }
+        if (args[0].compareToIgnoreCase(VERSION) == 0) {
+            printVersion();
         }
         String sourcefile = args[0];
         if (args.length > 1) {
@@ -434,6 +438,7 @@ public class AStrykerCLI {
         String sb = "BeAFix (" + AStryker.BEAFIX_VERSION + ")\n" +
                 "--help                               :   To print this help." + "\n" +
                 "--help (mode)                        :   To print mode specific help" + "\n" +
+                "--version                            :   Returns current version of BeAFix" + "\n" +
                 "<path to model> REPAIR [options]     :   To repair a model." + "\n" +
                 "<path to model> TESTS [options]      :   To generate tests from counterexamples." + "\n" +
                 "<path to model> MUTANTS [options]    :   To generate mutants from a model." + "\n" +
@@ -441,6 +446,10 @@ public class AStrykerCLI {
                 "\n" +
                 "note: all options will be saved in a astryker.properties file, so using all required options each time is suggested.";
         System.out.println(sb);
+    }
+
+    private static void printVersion() {
+        System.out.println(AStryker.BEAFIX_VERSION);
     }
 
     private static void printHelp(String mode) {
