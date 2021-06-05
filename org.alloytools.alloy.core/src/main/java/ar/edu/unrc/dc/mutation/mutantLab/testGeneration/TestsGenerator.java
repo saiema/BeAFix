@@ -10,7 +10,6 @@ import ar.edu.unrc.dc.mutation.visitors.FunctionsCollector;
 import ar.edu.unrc.dc.mutation.visitors.SearchCall;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompModule;
@@ -374,13 +373,25 @@ public class TestsGenerator {
                 }
                 if (allUntrusted)
                     testBody.trusted = false;
+                Expr disjoints = generateDisjointExpression(new LinkedList<>(testUsedVariables), signatureValues.values(), solution);
                 initialization = generateInitialization(signatureValues, fieldValues, testUsedVariablesValues, fieldOverrides);
+                if (disjoints != null && initialization == null) {
+                    initialization = disjoints;
+                } else if (disjoints != null) {
+                    initialization = ExprList.makeAND(null, null, disjoints, initialization);
+                }
                 Command testCommand = generateTest(initialization, testBody, new LinkedList<>(testUsedVariables), declSignatureValues, command, context);
                 testCommands.add(testCommand);
             }
             return testCommands;
         } else {
+            Expr disjoints = generateDisjointExpression(usedVariables, signatureValues.values(), solution);
             initialization = generateInitialization(signatureValues, fieldValues, usedVariablesValues, fieldOverrides);
+            if (disjoints != null && initialization == null) {
+                initialization = disjoints;
+            } else if (disjoints != null) {
+                initialization = ExprList.makeAND(null, null, disjoints, initialization);
+            }
             TestBody testBody;
             if (!request.isInstanceTestRequest()) {
                 testBody = TestBody.trustedSatisfiablePredicate(testFormula, null);
@@ -395,6 +406,30 @@ public class TestsGenerator {
             Command testCommand = generateTest(initialization, testBody, usedVariables, declSignatureValues, command, context);
             return Collections.singleton(testCommand);
         }
+    }
+
+
+    private Expr generateDisjointExpression(List<ExprVar> skolemVars, Collection<List<ExprVar>> signatureVars, A4Solution solution) {
+        Expr disjoint = null;
+        List<Expr> skolemDisjoints = generateDisjointExpressions(skolemVars, solution, true);
+        if (!skolemDisjoints.isEmpty())
+            disjoint = ExprList.make(null, null, ExprList.Op.AND, skolemDisjoints);
+        Expr signatureVarsDisjointExpressionAll = null;
+        for (List<ExprVar> sigVars : signatureVars) {
+            List<Expr> signatureAtomsDisjoints = generateDisjointExpressions(sigVars, solution, false);
+            if (!signatureAtomsDisjoints.isEmpty()) {
+                Expr signatureVarsDisjointExpression = ExprList.make(null, null, ExprList.Op.AND, signatureAtomsDisjoints);
+                if (signatureVarsDisjointExpressionAll == null)
+                    signatureVarsDisjointExpressionAll = signatureVarsDisjointExpression;
+                else
+                    signatureVarsDisjointExpressionAll = ExprBinary.Op.AND.make(null, null, signatureVarsDisjointExpressionAll, signatureVarsDisjointExpression);
+            }
+        }
+        if (signatureVarsDisjointExpressionAll != null && disjoint == null)
+            disjoint = signatureVarsDisjointExpressionAll;
+        else if (signatureVarsDisjointExpressionAll != null)
+            disjoint = ExprBinary.Op.AND.make(null, null, disjoint, signatureVarsDisjointExpressionAll);
+        return disjoint;
     }
 
     private Command generateTest(Expr initialization, TestBody testBody, List<ExprVar> usedVariables, Map<Sig, List<ExprVar>> declSignatureValues, Command command, CompModule context) {
@@ -446,10 +481,10 @@ public class TestsGenerator {
         List<Decl> skolemDecls = getVariablesDecls(skolemVariables);
         Expr body;
         if (!skolemDecls.isEmpty()) {
-            body = generateDisjSome(skolemDecls, sub);
-            body = generateDisjSome(signatureDecls, body);
+            body = generateSome(skolemDecls, sub);//generateDisjSome(skolemDecls, sub);
+            body = generateSome(signatureDecls, body);//generateDisjSome(signatureDecls, body);
         } else {
-            body = generateDisjSome(signatureDecls, sub);
+            body = generateSome(signatureDecls, sub);//generateDisjSome(signatureDecls, sub);
         }
         String from = cmd.nameExpr instanceof ExprVar?((ExprVar) cmd.nameExpr).label:"NO_NAME";
         String name = getTestName(from);
@@ -1221,6 +1256,65 @@ public class TestsGenerator {
         return decls;
     }
 
+    private ExprVar getSkolemVarFromInstance(A4Solution instance, String name) {
+        for (ExprVar skolem : instance.getAllSkolems()) {
+            if (skolem.label.compareToIgnoreCase(name) == 0|| skolem.label.compareToIgnoreCase(TestGeneratorHelper.alloyVarNameToInternalAtomNotation(name, true)) == 0)
+                return skolem;
+        }
+        return null;
+    }
+
+    private ExprVar getSignatureVarFromInstance(A4Solution instance, String name) {
+        for (ExprVar atom : instance.getAllAtoms()) {
+            if (atom.label.compareToIgnoreCase(name) == 0|| atom.label.compareToIgnoreCase(TestGeneratorHelper.alloyVarNameToInternalAtomNotation(name, false)) == 0)
+                return atom;
+        }
+        return null;
+    }
+
+    private List<Expr> generateDisjointExpressions(List<ExprVar> vars, A4Solution instance, boolean skolemVars) {
+        List<Expr> disjointExpressions = new LinkedList<>();
+        for (int i = 0; i < vars.size(); i++) {
+            ExprVar var1 = vars.get(i);
+            for (int j = i + 1; j < vars.size(); j++) {
+                ExprVar var2 = vars.get(j);
+                if (var1 == var2)
+                    continue;
+                ExprVar var1Updated = skolemVars?getSkolemVarFromInstance(instance, var1.label):getSignatureVarFromInstance(instance, var1.label);
+                ExprVar var2Updated = skolemVars?getSkolemVarFromInstance(instance, var2.label):getSignatureVarFromInstance(instance, var2.label);
+                Expr equalityCheck = ExprBinary.Op.EQUALS.make(null, null, var1Updated, var2Updated);
+                if (equalityCheck.errors != null && !equalityCheck.errors.isEmpty())
+                    throw new IllegalStateException("Bad expression generated when creating variable equality check (\n" +
+                            " var1: "  + var1Updated +
+                            " var2: " + var2Updated +
+                            "\n) : " + equalityCheck.errors.stream().map(Throwable::toString).collect(Collectors.joining(","))
+                    );
+                Optional<Boolean> constantValue = ExpressionEvaluator.evaluateFormula(instance, equalityCheck);
+                if (constantValue.isPresent()) {
+                    if (!constantValue.get()) {
+                        List<Expr> disjointArgs = new LinkedList<>();
+                        disjointArgs.add(var1);
+                        disjointArgs.add(var2);
+                        Expr disjoint = ExprList.makeDISJOINT(null, null, disjointArgs);
+                        disjointExpressions.add(disjoint);
+                    }
+                } else {
+                    throw new IllegalStateException("Variable equality check failed to evaluate (" +  equalityCheck + ")");
+                }
+            }
+        }
+        return disjointExpressions;
+    }
+
+    private Expr generateSome(List<Decl> decls, Expr sub) {
+        if (decls.isEmpty())
+            return sub;
+        return ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
+    }
+
+
+    /*
+    TODO: Remove in the next version
     private Expr generateDisjSome(List<Decl> decls, Expr sub) {
         if (decls.isEmpty())
             return sub;
@@ -1244,7 +1338,7 @@ public class TestsGenerator {
             sub = guard.and(sub);
         }
         return ExprQt.Op.SOME.make(null, null, ConstList.make(newdecls), sub);
-    }
+    }*/
 
     private Expr getFacts(CompModule context) {
         Expr facts = context.getAllReachableFacts();
@@ -1260,7 +1354,7 @@ public class TestsGenerator {
         return !(getFacts(context) instanceof ExprConstant);
     }
 
-    private Expr generateInitialization(Map<Sig, List<ExprVar>> signaturesValues, Map<Field, List<Expr>> fieldsValues, Map<ExprVar, List<Expr>> variablesValues, List<Expr> fieldOverridesInitialization) {
+    private ExprList generateInitialization(Map<Sig, List<ExprVar>> signaturesValues, Map<Field, List<Expr>> fieldsValues, Map<ExprVar, List<Expr>> variablesValues, List<Expr> fieldOverridesInitialization) {
         List<Expr> sigsInitialization = generateInitialization(signaturesValues);
         List<Expr> fieldsInitialization = generateInitialization(fieldsValues);
         List<Expr> variablesInitialization = generateInitialization(variablesValues);
@@ -1276,7 +1370,7 @@ public class TestsGenerator {
                     " variables: " + variablesValues +
                     "\n) : " + initialization.errors.stream().map(Throwable::toString).collect(Collectors.joining(","))
             );
-        return initialization;
+        return (ExprList) initialization;
     }
 
     private <E extends Expr, F extends Expr> List<Expr> generateInitialization(Map<E, List<F>> map) {

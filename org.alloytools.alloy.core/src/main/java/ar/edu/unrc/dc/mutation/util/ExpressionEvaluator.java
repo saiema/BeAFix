@@ -20,6 +20,14 @@ public class ExpressionEvaluator {
         return Optional.empty();
     }
 
+    public static Optional<Boolean> evaluateFormula(A4Solution instance, Expr x) {
+        Object res = instance.eval(x);
+        if (res instanceof Boolean) {
+            return Optional.of((Boolean) res);
+        }
+        return Optional.empty();
+    }
+
     public static Optional<ExprConstant> evaluateIntFormula(A4Solution instance, Expr x, VariableMapping variableMapping) {
         VariableExchanger variableExchanger = new VariableExchanger(variableMapping);
         Expr expressionWithInternalVariables = variableExchanger.replaceVariables((Expr) x.clone());

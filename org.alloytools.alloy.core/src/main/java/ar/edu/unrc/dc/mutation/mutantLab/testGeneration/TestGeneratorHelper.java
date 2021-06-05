@@ -90,10 +90,17 @@ public class TestGeneratorHelper {
         return internalNotation.replaceAll("\\$", "");
     }
 
-    public static String alloyVarNameToInternalAtomNotation(String alloyName) {
+    public static String alloyVarNameToInternalAtomNotation(String alloyName, boolean var) {
         if (alloyName.startsWith("\\$"))
             throw new IllegalArgumentException("Alloy Name is already in internal atom notation (" + alloyName + ")");
-        return "$" + alloyName;
+        if (var)
+            return "$" + alloyName;
+        int index = 0;
+        while (index < alloyName.length() && !Character.isDigit(alloyName.charAt(index)))
+            index++;
+        if (index == alloyName.length())
+            throw new IllegalArgumentException("There should be a digit in the name");
+        return alloyName.substring(0, index) + "$" + alloyName.substring(index);
     }
 
     static String alloyNameToSkolem(String alloyName, Command cmd) {
@@ -367,7 +374,7 @@ public class TestGeneratorHelper {
     }
 
     public static ExprVar alloyNamedVarToInternalNamedVar(ExprVar var) {
-        ExprVar copy = ExprVar.make(null, alloyVarNameToInternalAtomNotation(var.label), var.type());
+        ExprVar copy = ExprVar.make(null, alloyVarNameToInternalAtomNotation(var.label, true), var.type());
         copy.setVarID(var.getVarID());
         return copy;
     }

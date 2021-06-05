@@ -252,7 +252,7 @@ public class ExprToStringNicePrint extends VisitReturn<Void> {
     @Override
     public Void visit(ExprQt x) throws Err {
         if (!x.op.equals(ExprQt.Op.COMPREHENSION))
-            sb.append(x.op.toString()).append(" ");
+            sb.append(x.op).append(" ");
         Iterator<Decl> it = x.decls.iterator();
         while(it.hasNext()) {
             Decl d = it.next();
