@@ -44,6 +44,7 @@ public class AStrykerCLI {
         }
         if (args[0].compareToIgnoreCase(VERSION) == 0) {
             printVersion();
+            return;
         }
         String sourcefile = args[0];
         if (args.length > 1) {
