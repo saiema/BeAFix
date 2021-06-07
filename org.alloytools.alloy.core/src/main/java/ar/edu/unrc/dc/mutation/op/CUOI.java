@@ -7,10 +7,7 @@ import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static ar.edu.unrc.dc.mutation.util.TypeChecking.getType;
 
@@ -70,7 +67,7 @@ public class CUOI extends Mutator {
     @Override
     public Optional<List<Mutation>> visit(ExprVar x) throws Err {
         Optional<Mutation> mutant = getMutation(x);
-        return mutant.map(mutation -> Optional.of(Arrays.asList(mutation))).orElse(Optional.empty());
+        return mutant.map(Collections::singletonList);
     }
 
     private boolean isBooleanExpression(Expr x) {
@@ -81,7 +78,8 @@ public class CUOI extends Mutator {
         if (!mutGenLimitCheck(x))
             return Optional.empty();
         if (isBooleanExpression(x)) {
-            return Optional.of(new Mutation(whoiam(), x, ExprUnary.Op.NOT.make(x.pos(), (Expr) x.clone())));
+            Mutation negation = new Mutation(whoiam(), x, ExprUnary.Op.NOT.make(x.pos(), (Expr) x.clone()));
+            return Optional.of(negation);
         }
         return Optional.empty();
     }

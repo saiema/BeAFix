@@ -17,7 +17,6 @@ package edu.mit.csail.sdg.translator;
 
 import edu.mit.csail.sdg.alloy4.*;
 import edu.mit.csail.sdg.ast.*;
-import edu.mit.csail.sdg.ast.Sig.*;
 import edu.mit.csail.sdg.translator.A4Options.SatSolver;
 import kodkod.ast.Decl;
 import kodkod.ast.*;
@@ -167,6 +166,7 @@ public final class A4Solution {
      * short name.
      */
     private Map<Object,String>                atom2name   = new LinkedHashMap<Object,String>();
+    public Map<Object, String> getAtom2name() { return atom2name; }
 
     /**
      * If solved==true and is satisfiable, then this maps each Kodkod atom to its

@@ -1241,7 +1241,9 @@ final class SimpleReporter extends A4Reporter {
             Candidate repair = null;
             int initialCommands = world.getAllCommands().size();
             if (variabilizationTestGeneration()) {
+                Browsable.freezeParents();
                 generateVariabilizationTests(world, rep, false);
+                Browsable.unfreezeParents();
             }
             cb(out, "RepairSubTittle", "Repairing... ");
             RepairReport.getInstance().clockStart();

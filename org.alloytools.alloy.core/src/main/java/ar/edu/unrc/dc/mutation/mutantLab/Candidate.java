@@ -365,7 +365,11 @@ public class Candidate {
             sb.append("ORIGINAL").append("\n");
         else if (mutation.operator().equals(Ops.VAR)) {
             sb.append("VARIABILIZATION").append("\n");
-            sb.append(mutation.toString());
+            Candidate currCandidate = current;
+            while (currCandidate != null && currCandidate.mutation != null) {
+                sb.append(currCandidate.mutation);
+                currCandidate = currCandidate.parent;
+            }
         } else {
             for (String mutRep : mutationsRepresentations) {
                 String[] mutRepParts = mutRep.split("\\$\\$\\$");

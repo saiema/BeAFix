@@ -1265,9 +1265,27 @@ public class TestsGenerator {
     }
 
     private ExprVar getSignatureVarFromInstance(A4Solution instance, String name) {
-        for (ExprVar atom : instance.getAllAtoms()) {
-            if (atom.label.compareToIgnoreCase(name) == 0|| atom.label.compareToIgnoreCase(TestGeneratorHelper.alloyVarNameToInternalAtomNotation(name, false)) == 0)
-                return atom;
+        boolean retry = true;
+        while (retry) {
+            retry = false;
+            for (ExprVar atom : instance.getAllAtoms()) {
+                if (atom.label.compareToIgnoreCase(name) == 0 || atom.label.compareToIgnoreCase(TestGeneratorHelper.alloyVarNameToInternalAtomNotation(name, false)) == 0)
+                    return atom;
+            }
+            for (Entry<Object, String> entry : instance.getAtom2name().entrySet()) {
+                if (entry.getKey() instanceof String) {
+                    String key = (String) entry.getKey();
+                    if (key.compareToIgnoreCase(entry.getValue()) == 0)
+                        break;
+                    if (key.compareToIgnoreCase(name) == 0 || key.compareToIgnoreCase(TestGeneratorHelper.alloyVarNameToInternalAtomNotation(name, false)) == 0) {
+                        name = entry.getValue();
+                        if (!name.startsWith("unused")) {
+                            retry = true;
+                        }
+                        break;
+                    }
+                }
+            }
         }
         return null;
     }
