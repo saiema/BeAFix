@@ -9,10 +9,18 @@ public class FactsFixer extends VisitReturn<Optional<Expr>> {
 
     private final ExprVar target;
     private final Sig replacement;
+    private final boolean fixTrue;
 
     public FactsFixer(ExprVar expr, Sig replacement) {
         this.target = expr;
         this.replacement = replacement;
+        this.fixTrue = false;
+    }
+
+    public FactsFixer() {
+        this.target = null;
+        this.replacement = null;
+        this.fixTrue = true;
     }
 
     @Override
@@ -22,6 +30,11 @@ public class FactsFixer extends VisitReturn<Optional<Expr>> {
 
     @Override
     public Optional<Expr> visit(ExprBinary x) throws Err {
+        if (fixTrue && isTrueConstant(x.left)) {
+            return x.left.accept(this);
+        } else if (fixTrue && isTrueConstant(x.right)) {
+            return x.right.accept(this);
+        }
         Optional<Expr> leftReplacement = visitThis(x.left);
         Optional<Expr> rightReplacement = visitThis(x.right);
         boolean modified = false;
@@ -33,6 +46,8 @@ public class FactsFixer extends VisitReturn<Optional<Expr>> {
             x = (ExprBinary) x.mutateRight(rightReplacement.get());
             modified = true;
         }
+        if (fixTrue && modified)
+            return x.accept(this);
         return modified?Optional.of(x):Optional.empty();
     }
 
@@ -41,12 +56,23 @@ public class FactsFixer extends VisitReturn<Optional<Expr>> {
         Optional<Expr> argReplacement;
         boolean modified = false;
         for (Expr e : x.args) {
-            argReplacement = e.accept(this);
-            if (argReplacement.isPresent()) {
-                x = x.replaceArg(e, argReplacement.get());
+            if (fixTrue && isTrueConstant(e)) {
+                x = x.removeArg(e);
                 modified = true;
+            } else {
+                argReplacement = e.accept(this);
+                if (argReplacement.isPresent()) {
+                    if (fixTrue && isTrueConstant(argReplacement.get())) {
+                        x = x.removeArg(argReplacement.get());
+                    } else {
+                        x = x.replaceArg(e, argReplacement.get());
+                    }
+                    modified = true;
+                }
             }
         }
+        if (fixTrue && x.args.isEmpty())
+            return Optional.of(ExprConstant.Op.TRUE.make(null, 0));
         return modified?Optional.of(x):Optional.empty();
     }
 
@@ -66,6 +92,8 @@ public class FactsFixer extends VisitReturn<Optional<Expr>> {
 
     @Override
     public Optional<Expr> visit(ExprConstant x) throws Err {
+        if (fixTrue && isTrueConstant(x))
+            return Optional.of(x);
         return Optional.empty();
     }
 
@@ -137,6 +165,10 @@ public class FactsFixer extends VisitReturn<Optional<Expr>> {
 
     @Override
     public Optional<Expr> visit(ExprVar x) throws Err {
+        if (fixTrue)
+            return Optional.empty();
+        if (target == null || replacement == null)
+            throw new IllegalStateException("This fixer is not fixing true but does not have both target and replacement expressions set to a non null value");
         if (x.label.compareTo(target.label) == 0)
             return Optional.of(replacement);
         return Optional.empty();
@@ -150,6 +182,13 @@ public class FactsFixer extends VisitReturn<Optional<Expr>> {
     @Override
     public Optional<Expr> visit(Sig.Field x) throws Err {
         return Optional.empty();
+    }
+
+    private boolean isTrueConstant(Expr x) {
+        if (x instanceof ExprConstant) {
+            return ((ExprConstant)x).op.equals(ExprConstant.Op.TRUE);
+        }
+        return false;
     }
 
 }

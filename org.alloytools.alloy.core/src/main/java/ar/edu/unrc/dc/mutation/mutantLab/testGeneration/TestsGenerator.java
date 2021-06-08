@@ -1363,15 +1363,25 @@ public class TestsGenerator {
         for (Sig s : context.getAllSigs()) {
             for (Expr sFact : s.getFacts()) {
                 Expr fixedSignatureFacts = fixFacts(sFact, s);
-                facts = ExprBinary.Op.AND.make(null, null, facts, fixedSignatureFacts);
+                if (facts instanceof ExprConstant)
+                    facts = fixedSignatureFacts;
+                else
+                    facts = ExprBinary.Op.AND.make(null, null, facts, fixedSignatureFacts);
             }
         }
         return facts;
+        //return fixFactsTrueConstants(facts);
     }
 
     private Expr fixFacts(Expr facts, Sig sig) {
         ExprVar thisVar = ExprVar.make(null, "this");
         FactsFixer factsFixer = new FactsFixer(thisVar, sig);
+        Optional<Expr> fixedFacts = factsFixer.visitThis(facts);
+        return fixedFacts.orElse(facts);
+    }
+
+    private Expr fixFactsTrueConstants(Expr facts) {
+        FactsFixer factsFixer = new FactsFixer();
         Optional<Expr> fixedFacts = factsFixer.visitThis(facts);
         return fixedFacts.orElse(facts);
     }
