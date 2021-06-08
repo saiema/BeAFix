@@ -1362,10 +1362,18 @@ public class TestsGenerator {
         Expr facts = context.getAllReachableFacts();
         for (Sig s : context.getAllSigs()) {
             for (Expr sFact : s.getFacts()) {
-                facts = ExprBinary.Op.AND.make(null, null, facts, sFact);
+                Expr fixedSignatureFacts = fixFacts(sFact, s);
+                facts = ExprBinary.Op.AND.make(null, null, facts, fixedSignatureFacts);
             }
         }
         return facts;
+    }
+
+    private Expr fixFacts(Expr facts, Sig sig) {
+        ExprVar thisVar = ExprVar.make(null, "this");
+        FactsFixer factsFixer = new FactsFixer(thisVar, sig);
+        Optional<Expr> fixedFacts = factsFixer.visitThis(facts);
+        return fixedFacts.orElse(facts);
     }
 
     private boolean hasFacts(CompModule context) {
