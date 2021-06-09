@@ -45,8 +45,10 @@ public class ParentRelationshipFixer extends VisitReturn<Void> {
             Func currentAsFunc = (Func) currentParent;
             visitThis(currentAsFunc.getBody());
             for (Decl arg : currentAsFunc.decls) {
+                varConstantReplacement = null;
                 visitThis(arg.expr);
                 for (Expr argName : arg.names) {
+                    varConstantReplacement = null;
                     visitThis(argName);
                 }
             }
