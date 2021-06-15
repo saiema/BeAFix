@@ -358,6 +358,20 @@ public final class ExprList extends Expr {
         return mutant;
     }
 
+    public ExprList appendArg(Expr newArg) {
+        List<Expr> argsClone = new LinkedList<>();
+        for (Expr a : this.args) {
+            argsClone.add((Expr) a.clone());
+        }
+        argsClone.add((Expr) newArg.clone());
+        ExprList mutant = new ExprList(this.pos, this.closingBracket, this.op, this.ambiguous, ConstList.make(argsClone), this.weight, this.errors);
+        mutant.mutGenLimit(directMutGenLimit());
+        mutant.skipBlockMutation = skipBlockMutation;
+        mutant.setVariabilizationVariables(directVariabilizationVariables());
+        mutant.copyCommentsFrom(this);
+        return mutant;
+    }
+
     public ExprList removeArg(Expr target) {
         List<Expr> argsClone = new LinkedList<>();
         for (Expr a : this.args) {

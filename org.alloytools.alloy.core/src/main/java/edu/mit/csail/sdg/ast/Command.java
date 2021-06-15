@@ -295,7 +295,8 @@ public final class Command extends Browsable {
             return Collections.emptyList();
         List<Expr> allCombinations = new LinkedList<>();
         Expr fact = facts.get(0);
-        List<Expr> rest = facts.size() > 1?facts.subList(1, facts.size()):Collections.emptyList();
+        List<Expr> constRest = facts.size() > 1?facts.subList(1, facts.size()):Collections.emptyList();
+        List<Expr> rest = new LinkedList<>(constRest);
         if (!rest.isEmpty()) {
             List<Expr> newCombined = new LinkedList<>();
             List<Expr> combined = combine(rest, max - 1);
@@ -306,7 +307,7 @@ public final class Command extends Browsable {
                     if (combinationAsList.args.size() + 1 >= max)
                         continue;
                     combinedFact = ((ExprList) combinationAsList.clone());
-                    combinedFact.args.add((Expr) fact.clone());
+                    combinedFact.appendArg(fact);
                 } else {
                     combinedFact = ExprList.makeAND(null, null, (Expr) fact.clone(), (Expr) combination.clone());
                 }
