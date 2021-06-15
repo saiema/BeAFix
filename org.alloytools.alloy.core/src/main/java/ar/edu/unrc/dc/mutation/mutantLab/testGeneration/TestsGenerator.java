@@ -1310,10 +1310,7 @@ public class TestsGenerator {
                 Optional<Boolean> constantValue = ExpressionEvaluator.evaluateFormula(instance, equalityCheck);
                 if (constantValue.isPresent()) {
                     if (!constantValue.get()) {
-                        List<Expr> disjointArgs = new LinkedList<>();
-                        disjointArgs.add(var1);
-                        disjointArgs.add(var2);
-                        Expr disjoint = ExprList.makeDISJOINT(null, null, disjointArgs);
+                        Expr disjoint = ExprBinary.Op.NOT_EQUALS.make(null, null, var1, var2);
                         disjointExpressions.add(disjoint);
                     }
                 } else {

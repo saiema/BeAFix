@@ -236,8 +236,6 @@ public class MutantLab {
             logger.info("Received invalid candidate, skipping candidate");
             return advance();
         }
-        logger.info("Inserting current to candidate input channel");
-        //sendCandidateToInput(current.get());
         return current.get();
     }
 

@@ -78,13 +78,13 @@ public class CandidateGenerator  {
                 continue;
             }
             //=============VARIABILIZATION=============
-            logger.info("Current candidate:\n" + from.toString());
+            logger.info("Current candidate:\n" + from);
             if (variabilizationCheck(from)) {
                 logger.info("variabilization check SUCCEEDED");
                 Candidate nextMutationSpotCandidate = from.copy();
                 nextMutationSpotCandidate.copyAllMutationsRepsFrom(from);
                 nextMutationSpotCandidate.currentMarkedExpressionInc();
-                logger.info("Sending next index candidate:\n" + nextMutationSpotCandidate.toString());
+                logger.info("Sending next index candidate:\n" + nextMutationSpotCandidate);
                 if (!nextMutationSpotCandidate.isLast()) {
                     if (from.isPartialRepair())
                         outputChannel.addToPriorityChannel(nextMutationSpotCandidate);
@@ -92,7 +92,7 @@ public class CandidateGenerator  {
                         outputChannel.add(nextMutationSpotCandidate);
                 }
                 if (!nextMutationSpotCandidate.isLast()) {
-                    logger.info("Sending mutants of:\n" + nextMutationSpotCandidate.toString());
+                    logger.info("Sending mutants of:\n" + nextMutationSpotCandidate);
                     generateMutationsFor(nextMutationSpotCandidate);
                 }
             } else {
@@ -103,9 +103,8 @@ public class CandidateGenerator  {
                     return;
                 }
             }
-            //from.clearCommandsResults();
             if (!from.isFirst()) {
-                logger.info("Sending mutants of:\n" + from.toString());
+                logger.info("Sending mutants of:\n" + from);
                 generateMutationsFor(from);
             }
             if (mutationsAdded == 0 && outputChannel.isEmpty() && inputChannel.isEmpty()) {
@@ -131,7 +130,6 @@ public class CandidateGenerator  {
             return;
         }
         boolean fromPriority = from.isPartialRepair() && Pruning.getInstance().partialPruning();
-//        Optional<Mutation> fromLastMutation = from.getLastMutation();
         AtomicReference<Candidate> updatedFrom = new AtomicReference<>(Candidate.original(context));
         updatedFrom.get().setCurrentMarkedExpression(from.getCurrentMarkedExpression());
         AtomicReference<Candidate> lastCandidate = new AtomicReference<>(updatedFrom.get());
@@ -149,7 +147,6 @@ public class CandidateGenerator  {
             mutationsOp.ifPresent(mutations -> mutations.forEach(m -> {
                 Candidate newCandidate = Candidate.mutantFromCandidate(updatedFrom.get(), m);
                 newCandidate.copyAllMutationsRepsFrom(from);
-//                fromLastMutation.ifPresent(newCandidate::addMutationRep);
                 newCandidate.addMutationRep(m);
                 newCandidate.increaseMutations(newCandidate.getCurrentMarkedExpression());
                 RepairReport.getInstance().incGeneratedCandidates();
@@ -158,7 +155,7 @@ public class CandidateGenerator  {
                     if (lastMutation.isPresent()) {
                         if (IrrelevantMutationChecker.isIrrelevant(lastMutation.get())) {
                             Mutation.overrideFullToString(true);
-                            logger.info("Irrelevant mutation detected: " + lastMutation.get().toString());
+                            logger.info("Irrelevant mutation detected: " + lastMutation.get());
                             Mutation.overrideFullToString(false);
                             RepairReport.getInstance().incIrrelevantMutationsSkipped();
                         } else {
@@ -174,7 +171,7 @@ public class CandidateGenerator  {
                             newCandidates.add(newCandidate);
                         }
                     } else {
-                        throw new IllegalStateException("A new candidate was created with no mutations " + newCandidate.toString());
+                        throw new IllegalStateException("A new candidate was created with no mutations " + newCandidate);
                     }
                 } else {
                     RepairReport.getInstance().incRepeatedCandidates();
@@ -186,7 +183,6 @@ public class CandidateGenerator  {
         else if (!newCandidates.isEmpty()) {
             RepairReport.getInstance().incGenerations(from.getCurrentMarkedExpression());
             mutationsAdded += newCandidates.size();
-            //outputChannel.addAll(newCandidates);
             sendNewCandidatesToOutput(newCandidates, fromPriority);
         }
     }
