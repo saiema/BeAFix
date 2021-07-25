@@ -75,10 +75,9 @@ public class TestGeneratorHelper {
                 return Optional.of(ExprConstant.IDEN);
             }
         } else {
-            String oValueAsAlloyName = internalAtomNotationToAlloyName(o.toString());
             for (List<ExprVar> vars : signatureValues.values()) {
                 for (ExprVar var : vars) {
-                    if (var.label.compareTo(oValueAsAlloyName) == 0)
+                    if (var.label.compareTo(o.toString()) == 0)
                         return Optional.of(var);
                 }
             }
@@ -131,38 +130,11 @@ public class TestGeneratorHelper {
          return Optional.empty();
      }
 
-     static boolean filterRelation(Relation relation, A4Solution solution) {
-         if (relation.name().startsWith("Int/"))
-             return true;
-         if (relation.name().compareTo("seq/Int") == 0)
-             return true;
-         if (relation.name().compareTo("String") == 0)
-             return true;
-         if (relation.name().contains("$"))
-             return true;
-         return isSkolem(relation, solution);
-     }
-
-     static boolean isSignature(Relation relation) {
-         return !relation.isSkolem() && !relation.name().contains(".");
-     }
-
-     static boolean isSkolem(Relation relation, A4Solution solution) {
-         for (ExprVar skolem : solution.getAllSkolems()) {
-             if (relation.name().equals(skolem.label))
-                 return true;
-         }
-         return false;
-     }
-
-     static boolean isField(Relation relation) {
-         return !relation.isSkolem() && relation.name().contains(".");
-     }
-
-     static Expr tupleToExpr(Tuple rawValue, Map<Sig, List<ExprVar>> signatureValues) {
+     static Expr tupleToExpr(Tuple rawValue, Map<Sig, List<ExprVar>> signatureValues, A4Solution solution) {
          Expr expr = null;
          for (int i = 0; i < rawValue.arity(); i++) {
-             Object atom = rawValue.atom(i);
+             Object rawAtom = rawValue.atom(i);
+             Object atom = solution.getAtom2name().containsKey(rawAtom)?solution.getAtom2name().get(rawAtom):rawAtom;
              Optional<Expr> atomAsExpr = objectToExpr(atom, signatureValues);
              if (!atomAsExpr.isPresent())
                  throw new IllegalStateException("Couldn't get an expression for " + atom.toString());
@@ -194,32 +166,13 @@ public class TestGeneratorHelper {
      }
 
     private static final String SYMBOLS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    static String generateRandomName(int length) {
+    private static final int NAME_LENGTH = 10;
+    static String generateRandomName() {
         StringBuilder sb = new StringBuilder();
         Random rng = new Random();
-        for (int i = 0; i < length; i++)
+        for (int i = 0; i < NAME_LENGTH; i++)
             sb.append(SYMBOLS.charAt(rng.nextInt(SYMBOLS.length())));
         return sb.toString();
-    }
-
-    static boolean extendsNonBuiltIn(Sig s) {
-        if (s == null)
-            return false;
-        if (s.isBuiltInSig())
-            return false;
-        if (s instanceof Sig.PrimSig) {
-            Sig.PrimSig sAsPrimSig = (Sig.PrimSig) s;
-            return sAsPrimSig.parent != null && !sAsPrimSig.parent.isBuiltInSig() && sAsPrimSig.parent.isAbstract == null;
-        }
-        if (s instanceof Sig.SubsetSig) {
-            Sig.SubsetSig sAsSubsetSig = (Sig.SubsetSig) s;
-            for (Sig parent : sAsSubsetSig.parents) {
-                if (!parent.isBuiltInSig() && parent.isAbstract == null)
-                    return true;
-            }
-            return false;
-        }
-        return false;
     }
 
     static boolean extendsSignatures(Sig thiz, Sig that) {
@@ -263,7 +216,6 @@ public class TestGeneratorHelper {
                             List<String> currentVarsToRemove = toRemove.getOrDefault(extendingSig, new LinkedList<>());
                             currentVarsToRemove.add(eVar.label);
                             toRemove.put(extendingSig, currentVarsToRemove);
-                            //remove(eVar.label, sVars);
                             modified = true;
                         }
                     }
@@ -271,10 +223,6 @@ public class TestGeneratorHelper {
                 if (modified) {
                     updateSignatureVariables(mergedSignatures, toRemove);
                 }
-                /*if (sVars.isEmpty() && modified)
-                    signaturesValues.remove(s);
-                else
-                    signaturesValues.put(s, sVars);*/
             }
         }
         return mergedSignatures;
@@ -365,18 +313,6 @@ public class TestGeneratorHelper {
             predicateOrAssertionCalled = command.nameExpr;
         }
         return predicateOrAssertionCalled == null?null: (Browsable) predicateOrAssertionCalled.clone();
-    }
-
-    public static ExprVar internalNamedVarToAlloyNamedVar(ExprVar var) {
-        ExprVar copy = ExprVar.make(null, internalAtomNotationToAlloyName(var.label), var.type());
-        copy.setVarID(var.getVarID());
-        return copy;
-    }
-
-    public static ExprVar alloyNamedVarToInternalNamedVar(ExprVar var) {
-        ExprVar copy = ExprVar.make(null, alloyVarNameToInternalAtomNotation(var.label, true), var.type());
-        copy.setVarID(var.getVarID());
-        return copy;
     }
 
     private static String removeAlias(String key) {

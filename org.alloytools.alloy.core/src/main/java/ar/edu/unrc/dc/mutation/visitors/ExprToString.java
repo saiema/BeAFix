@@ -1,6 +1,7 @@
 package ar.edu.unrc.dc.mutation.visitors;
 
 import ar.edu.unrc.dc.mutation.mutantLab.Candidate;
+import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.ast.*;
 
@@ -202,7 +203,7 @@ public class ExprToString extends VisitReturn<Void> {
 
     @Override
     public Void visit(ExprVar x) throws Err {
-        sb.append(x.toString());
+        sb.append(TestGeneratorHelper.internalAtomNotationToAlloyName(x.toString()));
         return null;
     }
 

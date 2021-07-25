@@ -5,9 +5,8 @@ import edu.mit.csail.sdg.ast.ExprVar;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
-import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.*;
+import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelper.alloyNameToSkolem;
 
 public class VariableMapping {
 
@@ -55,10 +54,12 @@ public class VariableMapping {
     public boolean isExtended() { return extended; }
 
     public VariableMapping cleanMappingToAlloyNames() {
+        return new VariableMapping(new LinkedList<>(originalVarsToSkolemVars.keySet()), new LinkedList<>(skolemVars), cmd);
+        /*TODO: remove in a later version
         List<ExprVar> cleanSkolemVars = skolemVars.stream().map(
                 TestGeneratorHelper::internalNamedVarToAlloyNamedVar
         ).collect(Collectors.toList());
-        return new VariableMapping(new LinkedList<>(originalVarsToSkolemVars.keySet()), cleanSkolemVars, cmd);
+        return new VariableMapping(new LinkedList<>(originalVarsToSkolemVars.keySet()), cleanSkolemVars, cmd);*/
     }
 
     @Override
@@ -75,7 +76,7 @@ public class VariableMapping {
         for (ExprVar v : vars) {
             if (!originalVarsToSkolemVars.containsKey(v)) { //first time variable is seen
                 String skolemLabel;
-                String varName = alloyNameToSkolem(v.label, cmd);
+                String varName = "$" + alloyNameToSkolem(v.label, cmd);
                 if (!originalVarsLabelCount.containsKey(v.label)) { //first time variable's label is seen
                     skolemLabel = varName;
                     originalVarsLabelCount.put(v.label, 1);
@@ -102,7 +103,8 @@ public class VariableMapping {
 
     private ExprVar getSkolemVar(String label, List<ExprVar> skolemVars) {
         for (ExprVar sVar : skolemVars) {
-            if (internalAtomNotationToAlloyName(sVar.label).compareTo(label) == 0)
+            //if (internalAtomNotationToAlloyName(sVar.label).compareTo(label) == 0)
+            if (sVar.label.compareTo(label) == 0)
                 return sVar;
         }
         return null;

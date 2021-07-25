@@ -21,7 +21,7 @@ public class ExtractedProperty {
         if (binaryPropertyExpression.errors != null && !binaryPropertyExpression.errors.isEmpty())
             throw new IllegalArgumentException(
                     "Bad expression generated (" +
-                    a.property.toString() + " " + op.toString() + " " + b.property.toString() +
+                    a.property.toString() + " " + op + " " + b.property.toString() +
                     ") : " +
                     binaryPropertyExpression.errors.stream().map(Throwable::toString).collect(Collectors.joining(","))
             );
@@ -50,7 +50,7 @@ public class ExtractedProperty {
         Expr ite = ExprITE.make(null, cond.property, left.property, right.property);
         if (ite.errors != null && !ite.errors.isEmpty())
             throw new IllegalArgumentException("Bad expression generated (" +
-                    "ITE [ " + cond.property.toString() + " " +
+                    "ITE [ " + cond.property + " " +
                     "THEN " + left.property.toString() + " " +
                     "ELSE " + right.property.toString() + "]) :" +
                     ite.errors.stream().map(Throwable::toString).collect(Collectors.joining(","))
@@ -66,7 +66,7 @@ public class ExtractedProperty {
             if (let.errors != null && !let.errors.isEmpty())
                 throw new IllegalArgumentException("Bad expression generated (" +
                         "LET [ " + declaredVariable.label + " " +
-                        " = " + bound.property.toString() + " " +
+                        " = " + bound.property + " " +
                         " | " + formula.property.toString() + "]) : " +
                         let.errors.stream().map(Throwable::toString).collect(Collectors.joining(","))
                 );
@@ -108,7 +108,7 @@ public class ExtractedProperty {
         Expr unary = op.make(null, sub.property);
         if (unary.errors != null && !unary.errors.isEmpty())
             throw new IllegalArgumentException("Bad expression generated (" +
-                    " " + op.toString() +
+                    " " + op +
                     " " + sub.property.toString() + ") : " +
                     unary.errors.stream().map(Throwable::toString).collect(Collectors.joining(","))
             );

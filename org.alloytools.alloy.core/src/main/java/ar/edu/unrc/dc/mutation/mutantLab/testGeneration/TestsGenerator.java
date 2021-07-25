@@ -1178,7 +1178,7 @@ public class TestsGenerator {
 
     private List<TestBody> generateUnsatPredicateTestBodies(Expr predsFormula, boolean trusted, VariableMapping variableMapping) {
         List<TestBody> testBodies = new LinkedList<>();
-        String relationName = generateRandomName(10);
+        String relationName = generateRandomName();
         TestBody unsatisfiablePredicate = trusted?TestBody.trustedUnsatisfiablePredicate(predsFormula, variableMapping):TestBody.untrustedUnsatisfiablePredicate(predsFormula, variableMapping);
         TestBody expectedInstance = trusted?TestBody.trustedExpectedInstance():TestBody.untrustedExpectedInstance();
         unsatisfiablePredicate.relatedTo(relationName);
@@ -1210,7 +1210,7 @@ public class TestsGenerator {
 
     private String getTestName(String from) {
         if (this.testName == null) {
-            return "CE_" + from + "_" + generateRandomName(10);
+            return "CE_" + from + "_" + generateRandomName();
         }
         return this.testName + (testType.isEmpty()?"":("_" + testType + "_")) + (this.testIndex) + "_" + (this.subTestIndex++) + (testNamePostfix.isEmpty()?"":("_" + testNamePostfix));
     }
@@ -1298,6 +1298,8 @@ public class TestsGenerator {
                 ExprVar var2 = vars.get(j);
                 if (var1 == var2)
                     continue;
+                if (!var1.type().equals(var2.type()))
+                    continue;
                 ExprVar var1Updated = skolemVars?getSkolemVarFromInstance(instance, var1.label):getSignatureVarFromInstance(instance, var1.label);
                 ExprVar var2Updated = skolemVars?getSkolemVarFromInstance(instance, var2.label):getSignatureVarFromInstance(instance, var2.label);
                 Expr equalityCheck = ExprBinary.Op.EQUALS.make(null, null, var1Updated, var2Updated);
@@ -1311,6 +1313,9 @@ public class TestsGenerator {
                 if (constantValue.isPresent()) {
                     if (!constantValue.get()) {
                         Expr disjoint = ExprBinary.Op.NOT_EQUALS.make(null, null, var1, var2);
+                        disjointExpressions.add(disjoint);
+                    } else {
+                        Expr disjoint = ExprBinary.Op.EQUALS.make(null, null, var1, var2);
                         disjointExpressions.add(disjoint);
                     }
                 } else {
@@ -1327,34 +1332,6 @@ public class TestsGenerator {
         return ExprQt.Op.SOME.make(null, null, ConstList.make(decls), sub);
     }
 
-
-    /*
-    TODO: Remove in the next version
-    private Expr generateDisjSome(List<Decl> decls, Expr sub) {
-        if (decls.isEmpty())
-            return sub;
-        List<Decl> newdecls = new LinkedList<>();
-        Expr guard = null;
-        for (Decl d : decls) {
-            if (d.names.size() <= 1 || arepairIntegration()) {
-                boolean disjoint = d.names.size() > 1 && arepairIntegration();
-                if (disjoint) {
-                    Decl disjDecl = new Decl(null, Pos.UNKNOWN, null, d.names, d.expr);
-                    newdecls.add(disjDecl);
-                } else {
-                    newdecls.add(d);
-                }
-                continue;
-            }
-            guard = ExprList.makeDISJOINT(d.disjoint, null, d.names).and(guard);
-            newdecls.add(new Decl(null, null, null, d.names, d.expr));
-        }
-        if (guard != null) {
-            sub = guard.and(sub);
-        }
-        return ExprQt.Op.SOME.make(null, null, ConstList.make(newdecls), sub);
-    }*/
-
     private Expr getFacts(CompModule context) {
         Expr facts = context.getAllReachableFacts();
         for (Sig s : context.getAllSigs()) {
@@ -1367,18 +1344,11 @@ public class TestsGenerator {
             }
         }
         return facts;
-        //return fixFactsTrueConstants(facts);
     }
 
     private Expr fixFacts(Expr facts, Sig sig) {
         ExprVar thisVar = ExprVar.make(null, "this");
         FactsFixer factsFixer = new FactsFixer(thisVar, sig);
-        Optional<Expr> fixedFacts = factsFixer.visitThis(facts);
-        return fixedFacts.orElse(facts);
-    }
-
-    private Expr fixFactsTrueConstants(Expr facts) {
-        FactsFixer factsFixer = new FactsFixer();
         Optional<Expr> fixedFacts = factsFixer.visitThis(facts);
         return fixedFacts.orElse(facts);
     }
@@ -1430,7 +1400,7 @@ public class TestsGenerator {
     private void clearVarsCache() {varsCache.clear();}
 
     private Map<Sig, List<ExprVar>> getSignaturesAtoms(A4Solution solution, CompModule context) {
-        Map<Relation, TupleSet> counterExampleSignatures = getCounterExampleSignatures(solution, context);
+        Map<Relation, TupleSet> counterExampleSignatures = getCounterExampleSignatures(solution, context); //TODO: This method can be simpified to just return the list of ExprVar
         Map<Sig, List<ExprVar>> signatureAtoms = new HashMap<>();
         for (Map.Entry<Relation, TupleSet> ceSignature : counterExampleSignatures.entrySet()) {
             Optional<Sig> oSig = nameToSig(ceSignature.getKey(), context);
@@ -1438,12 +1408,12 @@ public class TestsGenerator {
                 throw new IllegalStateException("No signature found for " + ceSignature);
             List<ExprVar> sigValues = new LinkedList<>();
             for (Tuple value : ceSignature.getValue()) {
-                String varName = internalAtomNotationToAlloyName(value.atom(0).toString());
+                String varName = solution.getAtom2name().get(value.atom(0).toString());
                 ExprVar valueAsVar;
                 if (varsCache.containsKey(varName)) {
                     valueAsVar = varsCache.get(varName);
                 } else {
-                    valueAsVar = ExprVar.make(null, varName, oSig.get().type());
+                    valueAsVar = getExprVar(varName, solution);
                     varsCache.put(varName, valueAsVar);
                 }
                 sigValues.add(valueAsVar);
@@ -1462,7 +1432,7 @@ public class TestsGenerator {
                 throw new IllegalStateException("No field found for " + ceField);
             List<Expr> fValues = new LinkedList<>();
             for (Tuple rawValue : ceField.getValue()) {
-                Expr fValue = tupleToExpr(rawValue, signatureValues);
+                Expr fValue = tupleToExpr(rawValue, signatureValues, solution);
                 fValues.add(fValue);
             }
             fieldValues.put(oField.get(), fValues);
@@ -1500,7 +1470,7 @@ public class TestsGenerator {
                             TupleSet tset = ((A4TupleSet) functionResult).debugGetKodkodTupleset();
                             Expr rightHandSide = null;
                             for (Tuple rawValue : tset) {
-                                Expr vValue = tupleToExpr(rawValue, signatureValues);
+                                Expr vValue = tupleToExpr(rawValue, signatureValues, solution);
                                 if (rightHandSide == null)
                                     rightHandSide = vValue;
                                 else
@@ -1521,13 +1491,12 @@ public class TestsGenerator {
         Map<ExprVar, List<Expr>> variablesValues = new HashMap<>();
         Map<ExprVar, TupleSet> counterExampleVariables = getCounterExampleVariables(solution);
         for (Map.Entry<ExprVar, TupleSet> ceVariable : counterExampleVariables.entrySet()) {
-            String fullVarName = ceVariable.getKey().label;
-            String varName = internalAtomNotationToAlloyName(fullVarName);
+            String varName = ceVariable.getKey().label;
             ExprVar varOriginal = ceVariable.getKey();
             ExprVar var = ExprVar.make(null, varName, varOriginal.type());
             List<Expr> vValues = new LinkedList<>();
             for (Tuple rawValue : ceVariable.getValue()) {
-                Expr vValue = tupleToExpr(rawValue, signatureValues);
+                Expr vValue = tupleToExpr(rawValue, signatureValues, solution);
                 vValues.add(vValue);
             }
             variablesValues.put(var, vValues);
@@ -1602,6 +1571,14 @@ public class TestsGenerator {
             sigValues.put(rel, tupleSet);
         }
         return sigValues;
+    }
+
+    private ExprVar getExprVar(String name, A4Solution solution) {
+        for (ExprVar atom : solution.getAllAtoms()) {
+            if (atom.label.compareTo(name) == 0)
+                return atom;
+        }
+        return null;
     }
 
 }

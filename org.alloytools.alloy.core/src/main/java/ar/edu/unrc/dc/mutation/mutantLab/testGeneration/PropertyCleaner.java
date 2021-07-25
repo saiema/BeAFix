@@ -69,7 +69,7 @@ public class PropertyCleaner extends VisitReturn<Expr> {
             ExprList cleanedExprList = ExprList.make(null, null, x.op, newArgs);
             if (cleanedExprList.errors != null && !cleanedExprList.errors.isEmpty())
                 throw new IllegalStateException("Bad expression while cleaning (" +
-                        x.op.toString() +
+                        x.op +
                         "[ " + newArgs.stream().map(Expr::toString).collect(Collectors.joining(",")) + "]" +
                         ") : " + cleanedExprList.errors.stream().map(Throwable::toString).collect(Collectors.joining(","))
                 );

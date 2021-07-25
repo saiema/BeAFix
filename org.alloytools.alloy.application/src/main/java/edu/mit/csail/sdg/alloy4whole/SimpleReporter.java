@@ -1074,8 +1074,18 @@ final class SimpleReporter extends A4Reporter {
             }
             //--------------------------
             ASTMutator.destroyInstance();
-            MutantLab.destroyInstance();
+            DependencyGraph.destroyInstance();
             Pruning.destroyInstance();
+            MutantLab.destroyInstance();
+            RepairReport.destroyInstance();
+            RepairTimeOut.destroyInstance();
+            Browsable.unfreezeParents();
+            Browsable.resetIDs();
+            ExprVar.resetIDs();
+            Sig.Field.resetIDs();
+            CompModule.enableFacts();
+            (new File(tempdir)).delete(); // In case it was UNSAT, or
+            // canceled...
         }
 
         private void runTestGeneration(WorkerEngine.WorkerCallback out) throws Exception {
@@ -1573,10 +1583,12 @@ final class SimpleReporter extends A4Reporter {
 
         private EvaluationResults evaluateCandidate(Candidate current, List<Command> cmds, SimpleReporter rep, boolean partialRepair) {
             boolean repaired = true;
+            boolean commandPass;
             Exception exception = null;
             Map<Command, Boolean> testsResults = partialRepair? new HashMap<>():null;
             CompModule world = current.getContext();
             for (int i = 0; i < cmds.size(); i++) {
+                commandPass = true;
                 logger.info("Running cmd " + cmds.get(i).toString() + " with complexity " + DependencyGraph.getInstance().getCommandComplexity(cmds.get(i)));
                 current.clearMutatedStatus();
                 Command cmd = cmds.get(i);
@@ -1594,6 +1606,7 @@ final class SimpleReporter extends A4Reporter {
                         if (ai.satisfiable()) {
                             if (cmd.expects == 0 || (cmd.expects == -1 && cmd.check)) {
                                 repaired = false;
+                                commandPass = false;
                                 if (variabilizationTestGeneration()) {
                                     try {
                                         List<Command> varTests = TestsGenerator.getInstance().generateCEBasedTestsFor(ai, world, cmd);
@@ -1615,17 +1628,20 @@ final class SimpleReporter extends A4Reporter {
                         } else {
                             if (cmd.expects == 1 || (cmd.expects == -1 && !cmd.check)) {
                                 repaired = false;
+                                commandPass = false;
                             }
                         }
                     } else {
                         repaired = false;
+                        commandPass = false;
                     }
                 } catch (Exception e) {
                     repaired = false;
+                    commandPass = false;
                     exception = e;
                 }
                 if (partialRepair)
-                    testsResults.put(cmd, repaired);
+                    testsResults.put(cmd, commandPass);
                 if (!repaired && !partialRepair) //TODO: test this (I added `&& !partialRepair`)
                     break;
             }
