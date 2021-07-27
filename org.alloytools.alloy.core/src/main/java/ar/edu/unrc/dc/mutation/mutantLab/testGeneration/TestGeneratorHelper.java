@@ -175,7 +175,7 @@ public class TestGeneratorHelper {
         return sb.toString();
     }
 
-    static boolean extendsSignatures(Sig thiz, Sig that) {
+    static boolean extendsSignature(Sig thiz, Sig that) {
         if (thiz.isBuiltInSig())
             return false;
         if (thiz instanceof Sig.PrimSig) {
@@ -183,14 +183,14 @@ public class TestGeneratorHelper {
             Sig parent = thizAsPrimSig.parent;
             if (parent.equals(that))
                 return true;
-            return extendsSignatures(parent, that);
+            return extendsSignature(parent, that);
         }
         if (thiz instanceof Sig.SubsetSig) {
             Sig.SubsetSig thizAsSubsetSig = (Sig.SubsetSig) thiz;
             for (Sig parent : thizAsSubsetSig.parents) {
                 if (parent.equals(that))
                     return true;
-                return extendsSignatures(parent, that);
+                return extendsSignature(parent, that);
             }
         }
         return false;
@@ -256,11 +256,24 @@ public class TestGeneratorHelper {
             for (Sig otherSig : allSigs) {
                 if (sig.equals(otherSig))
                     continue;
-                if (extendsSignatures(otherSig, sig))
+                if (extendsSignature(otherSig, sig))
                     extendingSigs.add(otherSig);
             }
         }
         return extendingSigs;
+    }
+
+    static List<Sig> parentSignatures(Sig sig, Collection<Sig> allSigs) {
+        List<Sig> parentSigs = new LinkedList<>();
+        if (!sig.isBuiltInSig()) {
+            for (Sig otherSig : allSigs) {
+                if (sig.equals(otherSig))
+                    continue;
+                if (extendsSignature(sig, otherSig))
+                    parentSigs.add(otherSig);
+            }
+        }
+        return parentSigs;
     }
 
     private static List<Sig> getAllSigs(CompModule root) {
@@ -313,6 +326,19 @@ public class TestGeneratorHelper {
             predicateOrAssertionCalled = command.nameExpr;
         }
         return predicateOrAssertionCalled == null?null: (Browsable) predicateOrAssertionCalled.clone();
+    }
+
+    public static Sig unaryTypeToSig(Type t) {
+        if (t.arity() != 1)
+            throw new IllegalArgumentException("Type t must have arity 1, it has " + t.arity());
+        Iterator<Type.ProductType> it = t.iterator();
+        Type.ProductType first = it.hasNext() ? it.next() : null;
+        if (first == null)
+            throw new IllegalStateException("Could not get the iterator to obtain the first sig");
+        Sig.PrimSig[] types = first.getAll();
+        if (types.length == 0 || types[0] == null)
+            throw new IllegalStateException("Could not transform to Sig");
+        return types[0];
     }
 
     private static String removeAlias(String key) {

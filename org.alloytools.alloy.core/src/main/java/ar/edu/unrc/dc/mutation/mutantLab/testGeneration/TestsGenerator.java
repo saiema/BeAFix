@@ -1292,13 +1292,20 @@ public class TestsGenerator {
 
     private List<Expr> generateDisjointExpressions(List<ExprVar> vars, A4Solution instance, boolean skolemVars) {
         List<Expr> disjointExpressions = new LinkedList<>();
+        List<Sig> nonBuiltIntSigs = instance.getAllReachableSigs().makeCopy().stream().filter(s -> !s.isBuiltInSig()).collect(Collectors.toList());
         for (int i = 0; i < vars.size(); i++) {
             ExprVar var1 = vars.get(i);
             for (int j = i + 1; j < vars.size(); j++) {
                 ExprVar var2 = vars.get(j);
                 if (var1 == var2)
                     continue;
-                if (!var1.type().equals(var2.type()))
+                boolean typesMatch = var1.type().equals(var2.type()) || var2.type().isSubtypeOf(var1.type());
+                if (!typesMatch) {
+                    List<Sig> var1ExtendingSigs = parentSignatures(unaryTypeToSig(var1.type()), nonBuiltIntSigs);
+                    List<Sig> var2ExtendingSigs = parentSignatures(unaryTypeToSig(var2.type()), nonBuiltIntSigs);
+                    typesMatch = var1ExtendingSigs.stream().anyMatch(var2ExtendingSigs::contains);
+                }
+                if (!typesMatch)
                     continue;
                 ExprVar var1Updated = skolemVars?getSkolemVarFromInstance(instance, var1.label):getSignatureVarFromInstance(instance, var1.label);
                 ExprVar var2Updated = skolemVars?getSkolemVarFromInstance(instance, var2.label):getSignatureVarFromInstance(instance, var2.label);
