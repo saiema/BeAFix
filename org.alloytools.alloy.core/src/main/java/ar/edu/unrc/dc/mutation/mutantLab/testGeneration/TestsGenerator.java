@@ -1299,7 +1299,7 @@ public class TestsGenerator {
                 ExprVar var2 = vars.get(j);
                 if (var1 == var2)
                     continue;
-                boolean typesMatch = var1.type().equals(var2.type()) || var2.type().isSubtypeOf(var1.type());
+                boolean typesMatch = var1.type().equals(var2.type()) || var2.type().isSubtypeOf(var1.type()) || var1.type().isSubtypeOf(var2.type());
                 if (!typesMatch) {
                     List<Sig> var1ExtendingSigs = parentSignatures(unaryTypeToSig(var1.type()), nonBuiltIntSigs);
                     List<Sig> var2ExtendingSigs = parentSignatures(unaryTypeToSig(var2.type()), nonBuiltIntSigs);
