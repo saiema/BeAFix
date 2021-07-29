@@ -936,9 +936,6 @@ public class TestsGenerator {
                             } else  {
                                 testBodies.addAll(generateUnsatPredicateTestBodies(expressionToTest, !untrustedFacts, variableMapping));
                             }
-                            if (untrustedFacts) {
-                                testBodies.add(TestBody.untrustedUnexpectedInstance());
-                            }
                             return testBodies;
                         } else {
                             logger.warning("Evaluation of " + formulaToEvaluate + " didn't yield any integer constant value");
@@ -973,7 +970,6 @@ public class TestsGenerator {
                                 else {
                                     testBodies.addAll(generateUnsatPredicateTestBodies(predsFormula, false, variableMapping));
                                 }
-                                testBodies.add(TestBody.untrustedUnexpectedInstance());
                             } else {
                                 if (expected) {
                                     testBodies.add(TestBody.trustedSatisfiablePredicate(predsFormula, variableMapping));
@@ -1013,10 +1009,7 @@ public class TestsGenerator {
                         if (expected) {
                             if (precedentIsTrue) {
                                 if (untrustedFacts) {
-                                    return Arrays.asList(
-                                            TestBody.untrustedSatisfiablePredicate(predsFormula, variableMapping),
-                                            TestBody.untrustedUnexpectedInstance()
-                                    );
+                                    return Collections.singletonList(TestBody.untrustedSatisfiablePredicate(predsFormula, variableMapping));
                                 } else {
                                     return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula, variableMapping));
                                 }
@@ -1057,17 +1050,12 @@ public class TestsGenerator {
                         }
                         if (expected) {
                             if (untrustedFacts) {
-                                return Arrays.asList(
-                                        TestBody.untrustedSatisfiablePredicate(predsFormula, variableMapping),
-                                        TestBody.untrustedUnexpectedInstance()
-                                );
+                                return Collections.singletonList(TestBody.untrustedSatisfiablePredicate(predsFormula, variableMapping));
                             } else {
                                 return Collections.singletonList(TestBody.trustedSatisfiablePredicate(predsFormula, variableMapping));
                             }
                         } else if (untrustedFacts) {
-                            List<TestBody> testBodies = generateUnsatPredicateTestBodies(predsFormula, false, variableMapping);
-                            testBodies.add(TestBody.untrustedUnexpectedInstance());
-                            return testBodies;
+                            return generateUnsatPredicateTestBodies(predsFormula, false, variableMapping);
                         } else {
                             return generateUnsatPredicateTestBodies(predsFormula, true, variableMapping);
                         }
@@ -1122,10 +1110,7 @@ public class TestsGenerator {
                         return generateUnsatPredicateTestBodies(currentAsExprUnary.sub, !untrustedFacts, variableMapping);
                     } else {
                         return untrustedFacts?
-                                Arrays.asList(
-                                        TestBody.untrustedSatisfiablePredicate(currentAsExprUnary.sub, variableMapping),
-                                        TestBody.untrustedUnexpectedInstance()
-                                ):
+                                Collections.singletonList(TestBody.untrustedSatisfiablePredicate(currentAsExprUnary.sub, variableMapping)):
                                 Collections.singletonList(TestBody.trustedSatisfiablePredicate(currentAsExprUnary.sub, variableMapping));
                     }
                 } else {
