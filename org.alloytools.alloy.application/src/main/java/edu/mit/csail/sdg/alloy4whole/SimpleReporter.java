@@ -1096,7 +1096,7 @@ final class SimpleReporter extends A4Reporter {
             final SimpleReporter rep = new SimpleReporter(out, options.recordKodkod);
             final CompModule world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
             if (world.markedEprsToMutate.isEmpty()) {
-                String buggyFuncsFileRaw = TestsGenerator.buggyFuncsFile();
+                String buggyFuncsFileRaw = TestsGenerator.buggyFunctionsFile();
                 if (!buggyFuncsFileRaw.trim().isEmpty()) {
                     File buggyFuncsFile = new File(buggyFuncsFileRaw);
                     BuggyPredsMarker.markBuggyFunctionsAndFacts(world, buggyFuncsFile);

@@ -247,6 +247,7 @@ public class AStrykerCLI {
     private static final String TESTS_AREPAIR_INTEGRATION_RELAXED_KEY = "arelaxed";
     private static final String TESTS_AREPAIR_INTEGRATION_RELAXED_FACTS_KEY = "relaxedfacts";
     private static final String TESTS_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS_KEY = "fassertiontests";
+    private static final String TESTS_AREPAIR_INTEGRATION_NO_EXPECT_INSTANCE_WHEN_NO_FACTS_KEY = "noexpectinstancewhennofacts";
     private static final String TESTS_NAME_KEY = "tname";
     private static final String TESTS_NAME_STARTING_INDEX_KEY = "tindex";
     private static final String MODEL_OVERRIDING_KEY = "modeloverriding";
@@ -297,6 +298,11 @@ public class AStrykerCLI {
             case TESTS_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS_KEY: {
                 boolean arepairForceAssertionTests = getBooleanValue(TESTS_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS_KEY, value);
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS, arepairForceAssertionTests);
+                break;
+            }
+            case TESTS_AREPAIR_INTEGRATION_NO_EXPECT_INSTANCE_WHEN_NO_FACTS_KEY: {
+                boolean arepairNoExpectInstanceWhenNoFacts = getBooleanValue(TESTS_AREPAIR_INTEGRATION_NO_EXPECT_INSTANCE_WHEN_NO_FACTS_KEY, value);
+                AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS, arepairNoExpectInstanceWhenNoFacts);
                 break;
             }
             case TESTS_NAME_KEY: {
@@ -511,41 +517,44 @@ public class AStrykerCLI {
                 "<path to model> TESTS [options]" + "\n" +
                 "\n" +
                 "Options:" + "\n" +
-                "--generate <int>                     :     How many tests to generate (default is 4)." + "\n" +
-                "--out <path to existing folder>      :     Where to store tests (default is the model's folder)." + "\n" +
-                "--arepair <boolean>                  :     Enables/disables ARepair integration (default is false)." + "\n" +
-                "--arelaxed <boolean>                 :     Enables/disables relaxed mode for ARepair integration, this will widen the supported properties while increasing untrusted tests" + "\n" +
-                "--relaxfacts <boolean>               :     Enables/disables test generation where facts will be disabled one by one, this will generate all untrusted tests without considering model's facts during solver calls" + "\n" +
-                "--fassertiontests <boolean>          :     When enabled assertions that doesn't produce any counterexamples will be turn into preds, each with one of the following modifications (when applicable):" + "\n" +
-                "                                              * 'all x | P[x]' will be transformed to 'some x | P[x]' and 'some x | not P[x]'" + "\n" +
-                "                                              * 'P' will be transformed to 'not P'" + "\n" +
-                "                                              * 'no x | P[x]' will be transformed as if 'all x | not P[x]'" + "\n" +
-                "                                              * 'some x | P[x]' will be transformed to 'some x | not P[x]'" + "\n" +
-                "                                           Tests generated from the original expression will be used in 'run ... expect 1' commands and" + "\n" +
-                "                                           tests generated from the negation of the original expression will be used in 'run ... expect 0' commands." + "\n" +
-                "--tname <name>                       :     Base name for generated tests, all tests will start with name and be followed by an index." + "\n" +
-                "                                           if name is empty (or a string with all blank space) the base name will be that of the command" + "\n" +
-                "                                           from which the counterexample came, in this case no index will be used." + "\n" +
-                "--tindex <int>                       :     A positive number to be used with a non empty tname that defines the starting index for generated tests" + "\n" +
-                "--modeloverriding <boolean>          :     Enables/disables model overriding (can ignore signatures and use functions instead of fields). This requires" + "\n" +
-                "                                           a folder with files <model name>.overrides with the following lines" + "\n" +
-                "                                              * signatures.<signature name>=IGNORE : to ignore a signature in the generated test." + "\n" +
-                "                                              * field.<field name>=IGNORE : to ignore a field in the generated test." + "\n" +
-                "                                              * field.<signature name>=function.<no arguments function> : to use a function instead of a field in the generated test" + "\n" +
-                "                                           An example can be found in modelOverrides/ordering.overrides." + "\n" +
-                "                                           This feature is disabled by default." + "\n" +
-                "--mofolder <path to existing folder> :     From which directory to load the .overrides files, default is modelOverrides." + "\n" +
-                "--itests <boolean>                   :     Enables/disables instance based test generation. This will generate three types of tests:" + "\n" +
-                "                                              * positive trusted tests : the instances from which these tests come from are positive and" + "\n" +
-                "                                                does not they don't involve calling a bugged function or predicate." + "\n" +
-                "                                              * positive untrusted tests : the instances from which these tests come from are positive but" + "\n" +
-                "                                                involve calling at least one buggy function or predicate." + "\n" +
-                "                                              * negative tests : tests are made such that the originating property is negated." + "\n" +
-                "                                           This tests are created from run expect > 0 commands, buggy facts are not supported." + "\n" +
-                "                                           This feature is disabled by default." + "\n" +
-                "--buggyfuncs <path to existing file> :     When there are no expressions marked, lines in this file will be used to define which functions/predicates" + "\n" +
-                "                                           are to be considered as buggy. This is used in conjunction with the <itests> feature." + "\n" +
-                "                                           The default value is empty." + "\n";
+                "--generate <int>                        :      How many tests to generate (default is 4)." + "\n" +
+                "--out <path to existing folder>         :      Where to store tests (default is the model's folder)." + "\n" +
+                "--arepair <boolean>                     :      Enables/disables ARepair integration (default is false)." + "\n" +
+                "--arelaxed <boolean>                    :      Enables/disables relaxed mode for ARepair integration, this will widen the supported properties while increasing untrusted tests" + "\n" +
+                "--relaxfacts <boolean>                  :      Enables/disables test generation where facts will be disabled one by one, this will generate all untrusted tests without considering model's facts during solver calls" + "\n" +
+                "--fassertiontests <boolean>             :      When enabled assertions that doesn't produce any counterexamples will be turn into preds, each with one of the following modifications (when applicable):" + "\n" +
+                "                                                   * 'all x | P[x]' will be transformed to 'some x | P[x]' and 'some x | not P[x]'" + "\n" +
+                "                                                   * 'P' will be transformed to 'not P'" + "\n" +
+                "                                                   * 'no x | P[x]' will be transformed as if 'all x | not P[x]'" + "\n" +
+                "                                                   * 'some x | P[x]' will be transformed to 'some x | not P[x]'" + "\n" +
+                "                                               Tests generated from the original expression will be used in 'run ... expect 1' commands and" + "\n" +
+                "                                               tests generated from the negation of the original expression will be used in 'run ... expect 0' commands." + "\n" +
+                "--noexpectinstancewhennofacts <boolean> :      Given a model with no facts, and a test like '<INSTANCE> && <PRED> expect 0' is generated, a test with '<INSTANCE> expect 1'" + "\n" +
+                "                                               is also generated. When this option is set to true, the second test will not be generated." + "\n" +
+                "                                               This feature is disabled by default." + "\n" +
+                "--tname <name>                          :      Base name for generated tests, all tests will start with name and be followed by an index." + "\n" +
+                "                                               if name is empty (or a string with all blank space) the base name will be that of the command" + "\n" +
+                "                                               from which the counterexample came, in this case no index will be used." + "\n" +
+                "--tindex <int>                          :      A positive number to be used with a non empty tname that defines the starting index for generated tests" + "\n" +
+                "--modeloverriding <boolean>             :      Enables/disables model overriding (can ignore signatures and use functions instead of fields). This requires" + "\n" +
+                "                                               a folder with files <model name>.overrides with the following lines" + "\n" +
+                "                                                   * signatures.<signature name>=IGNORE : to ignore a signature in the generated test." + "\n" +
+                "                                                   * field.<field name>=IGNORE : to ignore a field in the generated test." + "\n" +
+                "                                                   * field.<signature name>=function.<no arguments function> : to use a function instead of a field in the generated test" + "\n" +
+                "                                               An example can be found in modelOverrides/ordering.overrides." + "\n" +
+                "                                               This feature is disabled by default." + "\n" +
+                "--mofolder <path to existing folder>    :      From which directory to load the .overrides files, default is modelOverrides." + "\n" +
+                "--itests <boolean>                      :      Enables/disables instance based test generation. This will generate three types of tests:" + "\n" +
+                "                                                   * positive trusted tests : the instances from which these tests come from are positive and" + "\n" +
+                "                                                     does not they don't involve calling a bugged function or predicate." + "\n" +
+                "                                                   * positive untrusted tests : the instances from which these tests come from are positive but" + "\n" +
+                "                                                     involve calling at least one buggy function or predicate." + "\n" +
+                "                                                   * negative tests : tests are made such that the originating property is negated." + "\n" +
+                "                                               This tests are created from run expect > 0 commands, buggy facts are not supported." + "\n" +
+                "                                               This feature is disabled by default." + "\n" +
+                "--buggyfuncs <path to existing file>    :      When there are no expressions marked, lines in this file will be used to define which functions/predicates" + "\n" +
+                "                                               are to be considered as buggy. This is used in conjunction with the <itests> feature." + "\n" +
+                "                                               The default value is empty." + "\n";
         System.out.println(sb);
     }
 
