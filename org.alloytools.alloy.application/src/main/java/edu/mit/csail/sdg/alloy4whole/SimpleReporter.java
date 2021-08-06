@@ -19,7 +19,7 @@ import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.MutationConfiguration.ConfigKey;
 import ar.edu.unrc.dc.mutation.Ops;
 import ar.edu.unrc.dc.mutation.mutantLab.*;
-import ar.edu.unrc.dc.mutation.mutantLab.commandMutation.CommandMutation;
+import ar.edu.unrc.dc.mutation.mutantLab.commandMutation.AssertionsToPredicates;
 import ar.edu.unrc.dc.mutation.mutantLab.commandMutation.CommandMutationException;
 import ar.edu.unrc.dc.mutation.mutantLab.mutantGeneration.ExpressionsMarker;
 import ar.edu.unrc.dc.mutation.mutantLab.testGeneration.BuggyPredsMarker;
@@ -1088,6 +1088,8 @@ final class SimpleReporter extends A4Reporter {
             // canceled...
         }
 
+
+
         private void runTestGeneration(WorkerEngine.WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Test generation started...\n\n");
             logger.info("Starting test generation for model: " + options.originalFilename);
@@ -1114,13 +1116,13 @@ final class SimpleReporter extends A4Reporter {
             Pruning.initializeInstance(null, options);
             MutantLab.initialize(world, maxDepthForRepair());
             TestGenerationResult lastCETestGenerationRes = generateVariabilizationTests(world, rep, true);
-            Map<Command, Boolean> forcedCommands = null;
-            if (lastCETestGenerationRes.equals(TestGenerationResult.NO_COUNTEREXAMPLES) && TestsGenerator.arepairForceAssertionTests()) {
+            Collection<Command> forcedCommands = null;
+            if (/*lastCETestGenerationRes.equals(TestGenerationResult.NO_COUNTEREXAMPLES)*/ !lastCETestGenerationRes.equals(TestGenerationResult.GENERATED) && TestsGenerator.arepairForceAssertionTests()) {
                 logger.info("Check commands found but no counterexamples obtained, forcing assertion tests generation...");
-                forcedCommands = new HashMap<>();
+                forcedCommands = new LinkedList<>();
                 try {
                     for (Command checkCommand : world.getAllCommands().stream().filter(c -> c.check).collect(Collectors.toList())) {
-                        forcedCommands.putAll(CommandMutation.generateCommandMutations(checkCommand));
+                        AssertionsToPredicates.generatePredicateFromAssertion(checkCommand, world).ifPresent(forcedCommands::addAll);
                     }
                 } catch (CommandMutationException e) {
                     StringWriter sw = new StringWriter();
@@ -1134,7 +1136,7 @@ final class SimpleReporter extends A4Reporter {
             TestGenerationResult lastInstanceTestsGenerationRes = TestGenerationResult.UNDEFINED;
             if (TestsGenerator.generateInstanceTests() || TestsGenerator.arepairForceAssertionTests()) {
                 if (TestsGenerator.arepairForceAssertionTests() && forcedCommands != null) {
-                    lastInstanceTestsGenerationRes = generateInstanceTests(world, rep, forcedCommands.keySet(), forcedCommands);
+                    lastInstanceTestsGenerationRes = generateInstanceTests(world, rep, forcedCommands, true);
                 } else {
                     lastInstanceTestsGenerationRes = generateInstanceTests(world, rep);
                 }
@@ -1189,8 +1191,6 @@ final class SimpleReporter extends A4Reporter {
             Sig.Field.resetIDs();
             CompModule.enableFacts();
         }
-
-
 
         public void runRepair(WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Reparing process...\n\n");
@@ -1443,10 +1443,10 @@ final class SimpleReporter extends A4Reporter {
         }
 
         private TestGenerationResult generateInstanceTests(CompModule world, SimpleReporter rep) {
-            return generateInstanceTests(world, rep, world.getAllCommands(), null);
+            return generateInstanceTests(world, rep, world.getAllCommands(), false);
         }
 
-        private TestGenerationResult generateInstanceTests(CompModule world, SimpleReporter rep, Collection<Command> commands, Map<Command, Boolean> forcedExpectations) {
+        private TestGenerationResult generateInstanceTests(CompModule world, SimpleReporter rep, Collection<Command> commands, boolean forcedExpectations) {
             TestGenerationResult testGenerationResult = TestGenerationResult.NO_TESTS_TO_RUN;
             Candidate original = Candidate.original(world);
             boolean atLeastOneTestGenerated = false;
@@ -1458,7 +1458,7 @@ final class SimpleReporter extends A4Reporter {
                     continue;
                 atLeastOneRunCommand = true;
                 List<Command> modifiedCommandsToRun = new LinkedList<>();
-                if (TestsGenerator.arepairRelaxedFacts() && cmd.hasFacts() && forcedExpectations == null) {
+                if (TestsGenerator.arepairRelaxedFacts() && cmd.hasFacts() && !forcedExpectations) {
                     modifiedCommandsToRun.addAll(cmd.getFactRelaxedCommands());
                 } else {
                     modifiedCommandsToRun.add(cmd);
@@ -1469,12 +1469,8 @@ final class SimpleReporter extends A4Reporter {
                         if (result != null && result.satisfiable()) {
                             try {
                                 TestGenerationRequest request;
-                                if (forcedExpectations != null) {
-                                    if (!forcedExpectations.containsKey(cmd)) {
-                                        logger.warning("Command not found in existing forcedExpectations map: " + cmd.toString());
-                                        break;
-                                    }
-                                    request = TestGenerationRequest.createInstancePositiveTestRequestForcingExpect(result, world, c, forcedExpectations.get(cmd));
+                                if (forcedExpectations) {
+                                    request = TestGenerationRequest.createInstancePositiveTestFromAssertion(result, world, c);
                                 } else if (DependencyGraph.getInstance().trustedCommand(c, world)) {
                                     request = TestGenerationRequest.createInstancePositiveTestRequestFromTrustedCommand(result, world, c);
                                 } else {
@@ -1484,7 +1480,7 @@ final class SimpleReporter extends A4Reporter {
                                 if (!atLeastOneTestGenerated && !instanceTests.isEmpty()) {
                                     atLeastOneTestGenerated = true;
                                     testGenerationResult = TestGenerationResult.GENERATED;
-                                    if (TestsGenerator.arepairRelaxedFacts() || (TestsGenerator.generateInstanceTests() && forcedExpectations != null)) {
+                                    if (TestsGenerator.arepairRelaxedFacts() || (TestsGenerator.generateInstanceTests() && forcedExpectations)) {
                                         logger.info("Generated tests with relaxed facts or forcing instance tests from assertions, stopping...");
                                         break;
                                     }

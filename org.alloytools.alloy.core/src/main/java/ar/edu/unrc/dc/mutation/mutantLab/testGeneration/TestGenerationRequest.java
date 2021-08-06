@@ -29,10 +29,8 @@ public class TestGenerationRequest {
         return new TestGenerationRequest(solution, context, command, null, false);
     }
 
-    public static TestGenerationRequest createInstancePositiveTestRequestForcingExpect(A4Solution solution, CompModule context, Command command, boolean forcedExpect) {
-        TestGenerationRequest request = createInstancePositiveTest(solution, context, command, false);
-        request.forceExpect = forcedExpect?POSITIVE_FORCE:NEGATIVE_FORCE;
-        return request;
+    public static TestGenerationRequest createInstancePositiveTestFromAssertion(A4Solution solution, CompModule context, Command command) {
+        return createInstancePositiveTest(solution, context, command, false);
     }
 
     public static TestGenerationRequest createInstancePositiveTestRequestFromTrustedCommand(A4Solution solution, CompModule context, Command command) {
