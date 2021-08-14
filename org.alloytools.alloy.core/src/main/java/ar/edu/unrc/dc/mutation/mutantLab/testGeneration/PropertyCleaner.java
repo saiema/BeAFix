@@ -11,6 +11,8 @@ public class PropertyCleaner extends VisitReturn<Expr> {
 
     private boolean clean = true;
 
+    public Expr removeSuperficialNoop(Expr x) { return cleanNoop(x); }
+
     public Expr cleanExpression(Expr x) {
         return visitThis(cleanNoop(x));
     }
@@ -67,7 +69,7 @@ public class PropertyCleaner extends VisitReturn<Expr> {
             if (newArgs.size() == 1)
                 return newArgs.get(0);
             ExprList cleanedExprList = ExprList.make(null, null, x.op, newArgs);
-            if (cleanedExprList.errors != null && !cleanedExprList.errors.isEmpty())
+            if (!cleanedExprList.errors.isEmpty())
                 throw new IllegalStateException("Bad expression while cleaning (" +
                         x.op +
                         "[ " + newArgs.stream().map(Expr::toString).collect(Collectors.joining(",")) + "]" +

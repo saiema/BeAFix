@@ -282,7 +282,7 @@ public class TestsGenerator {
         solution.getAllSkolems().forEach(solutionsSkolemVariables::add);
         VariableMapping internalVariableMapping = new VariableMapping(originalVariables, solutionsSkolemVariables, command);
         PropertyCleaner propertyCleaner = new PropertyCleaner();
-        Expr cleanedFormula = propertyCleaner.cleanExpression(extractedProperty.getProperty());
+        Expr cleanedFormula = propertyCleaner.removeSuperficialNoop(extractedProperty.getProperty());//propertyCleaner.cleanExpression(extractedProperty.getProperty());
         if (cleanedFormula == null)
             throw new IllegalStateException("Cleaned formula is null");
         if (arepairIntegration()) { //We will check that at most one predicate/function is present, unless in relaxed mode
@@ -896,7 +896,7 @@ public class TestsGenerator {
         if (originalBody instanceof ExprUnary && ((ExprUnary)originalBody).op.equals(ExprUnary.Op.NOOP))
             return getBodyForARepairIntegrationInstance(((ExprUnary)originalBody).sub, context, instance, variableMapping, buggyFunc);
         if (buggyFunc == null)
-            return Collections.singletonList(TestBody.trustedExpectedInstance());
+            return Collections.singletonList(TestBody.trustedSatisfiablePredicate(originalBody, variableMapping));//TestBody.trustedExpectedInstance());
         Boolean expected = null;
         boolean lor; //false: left, true: right
         Expr current = originalBody;
