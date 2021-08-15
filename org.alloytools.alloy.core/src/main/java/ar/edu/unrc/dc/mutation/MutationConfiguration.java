@@ -568,6 +568,14 @@ public class MutationConfiguration {
             public Object defaultValue() { return Boolean.FALSE; }
         },
 
+        TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES {
+            @Override
+            public Class<?> getValueType() { return String.class; }
+
+            @Override
+            public Object defaultValue() { return "BOTH"; }
+        },
+
         MUTANT_GENERATION_OUTPUT_FOLDER {
 
             @Override
@@ -724,6 +732,9 @@ public class MutationConfiguration {
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS)) {
                 setConfig(ConfigKey.TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS, aconfig.getBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS));
             }
+            if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES)) {
+                setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES));
+            }
             if (aconfig.argumentExist(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME)) {
                 setConfig(ConfigKey.TEST_GENERATION_NAME, aconfig.getStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NAME));
             }
@@ -757,7 +768,7 @@ public class MutationConfiguration {
 
     public void setConfig(ConfigKey configKey, Object value) {
         if (!configKey.getValueType().isAssignableFrom(value.getClass()))
-            throw new IllegalArgumentException("Wrong value type for configuration key " + configKey.toString() + ", expected type is " + configKey.getValueType().getCanonicalName() + ", but got value of type " + value.getClass().getCanonicalName());
+            throw new IllegalArgumentException("Wrong value type for configuration key " + configKey + ", expected type is " + configKey.getValueType().getCanonicalName() + ", but got value of type " + value.getClass().getCanonicalName());
         if (configKey.equals(ConfigKey.MUTATION_STRICT_TYPE_CHECKING)) {
             this.config.put(configKey.toString(), value);
             setConfig(ConfigKey.OPERATOR_BES_STRICT_TYPE_CHECK, value);
@@ -794,9 +805,9 @@ public class MutationConfiguration {
         sb.append("***MUTATION CONFIGURATION***\n");
         for (ConfigKey configKey : ConfigKey.values()) {
             Optional<Object> configValue = getConfigValue(configKey);
-            sb.append(configKey.toString()).append(" : ");
+            sb.append(configKey).append(" : ");
             if (configValue.isPresent()) {
-                sb.append(configValue.get().toString());
+                sb.append(configValue.get());
             } else {
                 sb.append(configKey.defaultValue().toString());
             }

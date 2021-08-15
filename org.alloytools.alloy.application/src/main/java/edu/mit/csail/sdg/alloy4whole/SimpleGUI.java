@@ -1520,6 +1520,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS, AStrykerTestGenerationARepairIntegrationNoUnnecessaryExpectInstanceWhenNoFacts.get());
                                 break;
                             }
+                            case "AStrykerTestGenerationARepairIntegrationInstanceTestsBranches" : {
+                                asConfig.setStringArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES, AStrykerTestGenerationARepairIntegrationInstanceTestsBranches.get());
+                                break;
+                            }
                             case "AStrykerTestGenerationARepairIntegrationRelaxedFacts" : {
                                 asConfig.setBooleanArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS, AStrykerTestGenerationARepairIntegrationRelaxedFacts.get());
                                 break;
@@ -1560,6 +1564,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             AStrykerTestGenerationARepairIntegration.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION).orElse(TEST_GENERATION_AREPAIR_INTEGRATION.defaultValue()));
             AStrykerTestGenerationARepairIntegrationRelaxed.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE.defaultValue()));
             AStrykerTestGenerationARepairIntegrationNoUnnecessaryExpectInstanceWhenNoFacts.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS).orElse(TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS.defaultValue()));
+            AStrykerTestGenerationARepairIntegrationInstanceTestsBranches.set((String) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES).orElse(TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES.defaultValue()));
             AStrykerTestGenerationARepairIntegrationRelaxedFacts.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS.defaultValue()));
             AStrykerTestGenerationARepairIntegrationForceAssertionTests.set((Boolean) mconfig.getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS.defaultValue()));
             if (CompUtil.hasMutableExpressions(text.get().getText())){
@@ -1602,6 +1607,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegration);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationRelaxed);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationNoUnnecessaryExpectInstanceWhenNoFacts);
+                addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationInstanceTestsBranches);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationRelaxedFacts);
                 addToMenu(optmenu, AStrykerTestGenerationARepairIntegrationForceAssertionTests);
                 addToMenu(optmenu, AStrykerTestGenerationModelOverrides);
@@ -1610,6 +1616,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 AStrykerTestGenerationARepairIntegration.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegrationRelaxed.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegrationNoUnnecessaryExpectInstanceWhenNoFacts.addChangeListener(astrykerChangeListener);
+                AStrykerTestGenerationARepairIntegrationInstanceTestsBranches.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegrationRelaxedFacts.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationARepairIntegrationForceAssertionTests.addChangeListener(astrykerChangeListener);
                 AStrykerTestGenerationModelOverrides.addChangeListener(astrykerChangeListener);

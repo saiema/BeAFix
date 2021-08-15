@@ -248,12 +248,16 @@ public class AStrykerCLI {
     private static final String TESTS_AREPAIR_INTEGRATION_RELAXED_FACTS_KEY = "relaxedfacts";
     private static final String TESTS_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS_KEY = "fassertiontests";
     private static final String TESTS_AREPAIR_INTEGRATION_NO_EXPECT_INSTANCE_WHEN_NO_FACTS_KEY = "noexpectinstancewhennofacts";
+    private static final String TESTS_AREPAIR_INTEGRATION_INSTANCES_BRANCHES_KEY = "instancesbranches";
     private static final String TESTS_NAME_KEY = "tname";
     private static final String TESTS_NAME_STARTING_INDEX_KEY = "tindex";
     private static final String MODEL_OVERRIDING_KEY = "modeloverriding";
     private static final String MODEL_OVERRIDING_FOLDER_KEY = "mofolder";
     private static final String INSTANCES_TESTS_GENERATION_KEY = "itests";
     private static final String BUGGY_FUNCS_FILE_KEY = "buggyfuncs";
+    private static final String INSTANCE_TESTS_BOTH_BRANCHES = "BOTH";
+    private static final String INSTANCE_TESTS_POS_BRANCHES = "POS";
+    private static final String INSTANCE_TESTS_NEG_BRANCHES = "NEG";
     private static void setConfig_tests(String key, String value) {
         switch (key.toLowerCase()) {
             case TESTS_TO_GENERATE_KEY: {
@@ -303,6 +307,23 @@ public class AStrykerCLI {
             case TESTS_AREPAIR_INTEGRATION_NO_EXPECT_INSTANCE_WHEN_NO_FACTS_KEY: {
                 boolean arepairNoExpectInstanceWhenNoFacts = getBooleanValue(TESTS_AREPAIR_INTEGRATION_NO_EXPECT_INSTANCE_WHEN_NO_FACTS_KEY, value);
                 AStrykerConfigReader.getInstance().setBooleanArgument(TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS, arepairNoExpectInstanceWhenNoFacts);
+                break;
+            }
+            case TESTS_AREPAIR_INTEGRATION_INSTANCES_BRANCHES_KEY: {
+                String arepairInstanceTestsBranches = value.trim();
+                if (arepairInstanceTestsBranches.isEmpty()) {
+                    AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES, INSTANCE_TESTS_BOTH_BRANCHES);
+                    break;
+                }
+                if (arepairInstanceTestsBranches.compareTo(INSTANCE_TESTS_BOTH_BRANCHES) == 0) {
+                    AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES, INSTANCE_TESTS_BOTH_BRANCHES);
+                } else if (arepairInstanceTestsBranches.compareTo(INSTANCE_TESTS_POS_BRANCHES) == 0) {
+                    AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES, INSTANCE_TESTS_POS_BRANCHES);
+                } else if (arepairInstanceTestsBranches.compareTo(INSTANCE_TESTS_NEG_BRANCHES) == 0) {
+                    AStrykerConfigReader.getInstance().setStringArgument(TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES, INSTANCE_TESTS_NEG_BRANCHES);
+                } else {
+                    throw new IllegalArgumentException("Invalid value for " + key + " (" + arepairInstanceTestsBranches + ") valid values are " + INSTANCE_TESTS_BOTH_BRANCHES + ", " + INSTANCE_TESTS_POS_BRANCHES + ", and " + INSTANCE_TESTS_NEG_BRANCHES);
+                }
                 break;
             }
             case TESTS_NAME_KEY: {
@@ -532,6 +553,10 @@ public class AStrykerCLI {
                 "--noexpectinstancewhennofacts <boolean> :      Given a model with no facts, and a test like '<INSTANCE> && <PRED> expect 0' is generated, a test with '<INSTANCE> expect 1'" + "\n" +
                 "                                               is also generated. When this option is set to true, the second test will not be generated." + "\n" +
                 "                                               This feature is disabled by default." + "\n" +
+                "--instancesbranches (BOTH|POS|NEG)      :      Which branches to generate for predicate tests:" + "\n" +
+                "                                                   * BOTH : will generate positive and negative tests" + "\n" +
+                "                                                   * POS : will generate only positive tests" + "\n" +
+                "                                                   * NEG : will generate only negative tests" + "\n" +
                 "--tname <name>                          :      Base name for generated tests, all tests will start with name and be followed by an index." + "\n" +
                 "                                               if name is empty (or a string with all blank space) the base name will be that of the command" + "\n" +
                 "                                               from which the counterexample came, in this case no index will be used." + "\n" +

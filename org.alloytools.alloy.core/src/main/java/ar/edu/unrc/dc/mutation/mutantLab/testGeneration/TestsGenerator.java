@@ -159,6 +159,21 @@ public class TestsGenerator {
         return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE).orElse(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE.defaultValue());
     }
 
+    private static final String INSTANCE_TESTS_BOTH_BRANCHES = "BOTH";
+    private static final String INSTANCE_TESTS_POS_BRANCHES = "POS";
+    private static final String INSTANCE_TESTS_NEG_BRANCHES = "NEG";
+    private boolean instanceTestsArepairIntegrationBothBranches() {
+        return ((String) MutationConfiguration.getInstance().getConfigValueOrDefault(MutationConfiguration.ConfigKey.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES)).compareTo(INSTANCE_TESTS_BOTH_BRANCHES) == 0;
+    }
+
+    private boolean instanceTestsArepairIntegrationPosBranches() {
+        return ((String) MutationConfiguration.getInstance().getConfigValueOrDefault(MutationConfiguration.ConfigKey.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES)).compareTo(INSTANCE_TESTS_POS_BRANCHES) == 0;
+    }
+
+    private boolean instanceTestsArepairIntegrationNegBranches() {
+        return ((String) MutationConfiguration.getInstance().getConfigValueOrDefault(MutationConfiguration.ConfigKey.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES)).compareTo(INSTANCE_TESTS_NEG_BRANCHES) == 0;
+    }
+
     public List<Command> generateCEBasedTestsFor(A4Solution solution, CompModule context, Command command) throws Err {
         if (solution.getOriginalCommand().compareTo(command.toString()) != 0)
             throw new IllegalArgumentException("Command argument doesn't match the one use for the obtained solution");
@@ -202,16 +217,22 @@ public class TestsGenerator {
             logger.info(msg + request.solution().getEvaluator().instance().relationTuples().entrySet());
             if (positiveAndNegativeTestGeneration) {
                 int testIndexBackup = testIndex;
+                Set<Command> positiveTests = null;
+                Set<Command> negativeTests = null;
                 List<TestGenerationRequest> positiveAndNegativeRequests = request.splitABothRequestIntoPositiveAndNegative();
-                testNamePostfix = POS_POSTFIX;
-                Set<Command> positiveTests = generateNewTest(positiveAndNegativeRequests.get(0));
-                generatedTests.addAll(positiveTests);
-                testNamePostfix = NEG_POSTFIX;
-                testIndex = testIndexBackup;
-                subTestIndex = 0;
-                Set<Command> negativeTests = generateNewTest(positiveAndNegativeRequests.get(1));
-                generatedTests.addAll(negativeTests);
-                testsGenerated += positiveTests.size() + negativeTests.size();
+                if (instanceTestsArepairIntegrationBothBranches() || instanceTestsArepairIntegrationPosBranches()) {
+                    testNamePostfix = POS_POSTFIX;
+                    positiveTests = generateNewTest(positiveAndNegativeRequests.get(0));
+                    generatedTests.addAll(positiveTests);
+                }
+                if (instanceTestsArepairIntegrationBothBranches() || instanceTestsArepairIntegrationNegBranches()) {
+                    testNamePostfix = NEG_POSTFIX;
+                    testIndex = testIndexBackup;
+                    subTestIndex = 0;
+                    negativeTests = generateNewTest(positiveAndNegativeRequests.get(1));
+                    generatedTests.addAll(negativeTests);
+                }
+                testsGenerated += (positiveTests == null?0:positiveTests.size()) + (negativeTests == null?0:negativeTests.size());
             } else {
                 Set<Command> newTests = generateNewTest(request);
                 generatedTests.addAll(newTests);
@@ -480,7 +501,15 @@ public class TestsGenerator {
     }
 
     private Func generateTestPredicate(Expr initialization, Expr testFormula, List<ExprVar> skolemVariables, Map<Sig, List<ExprVar>> signatureValues, Command cmd, String relatedTo) {
-        Expr sub = testFormula!=null?ExprBinary.Op.AND.make(null, null, initialization, testFormula):initialization;
+        Expr sub;// = testFormula!=null?ExprBinary.Op.AND.make(null, null, initialization, testFormula):initialization;
+        if (testFormula != null) {
+            List<Expr> expressions = new LinkedList<>();
+            expressions.add(initialization);
+            expressions.add(testFormula);
+            sub = ExprList.make(null, null, ExprList.Op.AND, ConstList.make(expressions));
+        } else {
+            sub = initialization;
+        }
         List<Decl> signatureDecls = getVariablesDecls(signatureValues);
         List<Decl> skolemDecls = getVariablesDecls(skolemVariables);
         Expr body;

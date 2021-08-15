@@ -52,6 +52,10 @@ public class AStrykerConfigReader {
             @Override
             public String getKey() { return "beafix.testgeneration.arepairintegration.noinstancetestfornegationtestwithnofacts"; }
         },
+        TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES {
+            @Override
+            public String getKey() { return "beafix.testgeneration.arepairintegration.instancebranches"; }
+        },
         TEST_GENERATION_NAME {
             @Override
             public String getKey() {
@@ -251,7 +255,7 @@ public class AStrykerConfigReader {
 
     public boolean getBooleanArgument(Config_key key) {
         if (isNotBooleanKey(key))
-            throw new IllegalStateException("Config key is not boolean " + key.toString());
+            throw new IllegalStateException("Config key is not boolean " + key);
         if (isNotDefined(key))
             return false;
         String propValue = prop.getProperty(key.getKey());
@@ -262,7 +266,7 @@ public class AStrykerConfigReader {
 
     public int getIntArgument(Config_key key) {
         if (isNotIntKey(key))
-            throw new IllegalStateException("Config key is not int " + key.toString());
+            throw new IllegalStateException("Config key is not int " + key);
         if (isNotDefined(key))
             return 0;
         String propValue = prop.getProperty(key.getKey());
@@ -273,7 +277,7 @@ public class AStrykerConfigReader {
 
     public String getStringArgument(Config_key key) {
         if (isNotStringKey(key))
-            throw new IllegalStateException("Config key is not String " + key.toString());
+            throw new IllegalStateException("Config key is not String " + key);
         if (isNotDefined(key))
             return "";
         return prop.getProperty(key.getKey(), "");
@@ -281,19 +285,19 @@ public class AStrykerConfigReader {
 
     public void setIntArgument(Config_key key, int value) {
         if (isNotIntKey(key))
-            throw new IllegalStateException("Config key is not int " + key.toString());
+            throw new IllegalStateException("Config key is not int " + key);
         prop.setProperty(key.getKey(), Integer.toString(value));
     }
 
     public void setBooleanArgument(Config_key key, boolean value) {
         if (isNotBooleanKey(key))
-            throw new IllegalStateException("Config key is not boolean " + key.toString());
+            throw new IllegalStateException("Config key is not boolean " + key);
         prop.setProperty(key.getKey(), Boolean.toString(value));
     }
 
     public void setStringArgument(Config_key key, String value) {
         if (isNotStringKey(key))
-            throw new IllegalStateException("Config key is not String " + key.toString());
+            throw new IllegalStateException("Config key is not String " + key);
         prop.setProperty(key.getKey(), value);
     }
 
@@ -344,6 +348,7 @@ public class AStrykerConfigReader {
             case TEST_GENERATION_MODEL_OVERRIDING_FOLDER:
             case TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE:
             case TEST_GENERATION_OUTPUT_FOLDER:
+            case TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES:
             case HACKS_CANDIDATE_HASHES: return false;
             default : return true;
         }

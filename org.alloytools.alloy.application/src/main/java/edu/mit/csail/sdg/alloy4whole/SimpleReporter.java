@@ -864,6 +864,8 @@ final class SimpleReporter extends A4Reporter {
             }
             MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
             MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND));
+            if (repair || !((Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION)))
+                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES, "BOTH");
             if (repair) {
                 logger.info(MutationConfiguration.getInstance().toString());
                 cb(out, "RepairTittle", MutationConfiguration.getInstance().toString());
@@ -945,13 +947,13 @@ final class SimpleReporter extends A4Reporter {
                     outFolder = Paths.get(System.getProperty("user.dir")).toFile();
             }
             if (!outFolder.exists()) {
-                logger.info("Mutants output folder doesn't exists ( " + outFolder.toString() + ") .. creating");
+                logger.info("Mutants output folder doesn't exists ( " + outFolder + ") .. creating");
                 if (!outFolder.isDirectory())
-                    throw new IllegalStateException("Mutants output folder is not a folder ( " + outFolder.toString() + ")");
+                    throw new IllegalStateException("Mutants output folder is not a folder ( " + outFolder + ")");
                 if (!outFolder.canExecute() || !outFolder.canWrite())
-                    throw new IllegalStateException("Insufficient access to output folder ( " + outFolder.toString() + ")");
+                    throw new IllegalStateException("Insufficient access to output folder ( " + outFolder + ")");
                 if (!outFolder.mkdirs()) {
-                    throw new IllegalStateException("Couldn't create mutants output folder ( " + outFolder.toString() + ")");
+                    throw new IllegalStateException("Couldn't create mutants output folder ( " + outFolder + ")");
                 }
             }
             //======================== mutants test cycle ===========
@@ -1010,16 +1012,16 @@ final class SimpleReporter extends A4Reporter {
                         File mutantFile = Paths.get(outFolder.getPath(), mutantModelFile).toFile();
                         File mutant = FileUtils.writeCandidateToFile(current, mutantFile.toString(), false, true);
                         if (mutant != null) {
-                            logger.info("Mutant written to " + mutant.toString());
-                            cb(out, "RepairSubTittle", "Mutant written to file : " + mutant.toString());
+                            logger.info("Mutant written to " + mutant);
+                            cb(out, "RepairSubTittle", "Mutant written to file : " + mutant);
                         } else {
-                            logger.info("Failed to write mutants\n" + current.toString());
-                            cb(out, "RepairError", "Failed to write mutants\n" + current.toString());
+                            logger.info("Failed to write mutants\n" + current);
+                            cb(out, "RepairError", "Failed to write mutants\n" + current);
                         }
                     } else {
                         current.markAsInvalid();
-                        cb(out, "RepairError", "Invalid mutant\n" + current.toString());
-                        logger.info("Invalid mutant\n" + current.toString());
+                        cb(out, "RepairError", "Invalid mutant\n" + current);
+                        logger.info("Invalid mutant\n" + current);
                     }
                 }
                 if (mutationsLimit > 0 && current.mutations() < mutationsLimit)
@@ -1087,8 +1089,6 @@ final class SimpleReporter extends A4Reporter {
             (new File(tempdir)).delete(); // In case it was UNSAT, or
             // canceled...
         }
-
-
 
         private void runTestGeneration(WorkerEngine.WorkerCallback out) throws Exception {
             cb(out, "RepairTittle", "Test generation started...\n\n");
@@ -1219,7 +1219,7 @@ final class SimpleReporter extends A4Reporter {
                 logger.info("Detailed tests results is ENABLED " + (MutantLab.getInstance().isPartialRepairSupported()?"AND SUPPORTED":"BUT NOT SUPPORTED"));
                 if (MutantLab.getInstance().isPartialRepairSupported()) {
                     MutationConfiguration.getInstance().setConfig(ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD, 0);
-                    logger.info("Changing " + ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD.toString() + " to 0");
+                    logger.info("Changing " + ConfigKey.REPAIR_GENERATOR_TRIGGER_THRESHOLD + " to 0");
                     if (!MutantLab.partialRepairAllFPANeedTests()) {
                         StringBuilder sb = new StringBuilder("Using detailed tests results for some bugged predicates/functions/assertions");
                         sb.append("\n");
@@ -1302,14 +1302,14 @@ final class SimpleReporter extends A4Reporter {
                         current.setCommandsResults(results.getCommandResults());
                     if (results.isDiscarded()) {
                         cb(out, "RepairResults", Collections.singletonList("E"));
-                        logger.info("ERROR, mutant discarded\ncurrent mutant is:\n" + current.toString());
+                        logger.info("ERROR, mutant discarded\ncurrent mutant is:\n" + current);
                         StringWriter sw = new StringWriter();
                         results.getException().printStackTrace(new PrintWriter(sw));
                         String exceptionAsString = sw.toString();
                         logger.info(exceptionAsString);
                         RepairReport.getInstance().incInvalidCandidates();
                         current.markAsInvalid();
-                        logger.info("Current combination " + current.toString() + " reported as invalid by repair task");
+                        logger.info("Current combination " + current + " reported as invalid by repair task");
                     } else if (results.isRepaired()) {
                         repairFound = true;
                         repair = current;
@@ -1362,8 +1362,8 @@ final class SimpleReporter extends A4Reporter {
             if (repairFound) {
                 File repairFile = FileUtils.writeCandidateToFile(repair, options.originalFilename, true, true);
                 if (repairFile != null) {
-                    logger.info("Repair written to " + repairFile.toString());
-                    cb(out, "RepairSubTittle", "Repair written to file : " + repairFile.toString());
+                    logger.info("Repair written to " + repairFile);
+                    cb(out, "RepairSubTittle", "Repair written to file : " + repairFile);
                 }
             }
             logger.info(RepairReport.getInstance().toString());
@@ -1413,8 +1413,8 @@ final class SimpleReporter extends A4Reporter {
                                     e.printStackTrace(new PrintWriter(sw));
                                     String exceptionAsString = sw.toString();
                                     logger.info("Error while generating variabilization tests\n" +
-                                            "Current candidate (should be original): " + original.toString() + "\n" +
-                                            "Current command (should be either a check or a run with expect 0): " + cmd.toString() + "\n" +
+                                            "Current candidate (should be original): " + original + "\n" +
+                                            "Current command (should be either a check or a run with expect 0): " + cmd + "\n" +
                                             "Exception:\n" + exceptionAsString
                                     );
                                 }
@@ -1493,7 +1493,7 @@ final class SimpleReporter extends A4Reporter {
                                 e.printStackTrace(new PrintWriter(sw));
                                 String exceptionAsString = sw.toString();
                                 logger.warning("Error while generating instance tests\n" +
-                                        "Current candidate (should be original): " + original.toString() + "\n" +
+                                        "Current candidate (should be original): " + original + "\n" +
                                         "Current command (should be a run expect >0): " + c.toString() + "\n" +
                                         "Exception:\n" + exceptionAsString
                                 );
@@ -1614,8 +1614,8 @@ final class SimpleReporter extends A4Reporter {
                                         e.printStackTrace(new PrintWriter(sw));
                                         String exceptionAsString = sw.toString();
                                         logger.info("Error while generating variabilization tests\n" +
-                                                "Current candidate: " + current.toString() + "\n" +
-                                                "Current command (should be either a check or a run with expect 0): " + cmd.toString() + "\n" +
+                                                "Current candidate: " + current + "\n" +
+                                                "Current command (should be either a check or a run with expect 0): " + cmd + "\n" +
                                                 "Exception:\n" + exceptionAsString
                                         );
                                     }
