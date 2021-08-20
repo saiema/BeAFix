@@ -1082,8 +1082,6 @@ final class SimpleReporter extends A4Reporter {
             DependencyGraph.destroyInstance();
             Pruning.destroyInstance();
             MutantLab.destroyInstance();
-            RepairReport.destroyInstance();
-            RepairTimeOut.destroyInstance();
             Browsable.unfreezeParents();
             Browsable.resetIDs();
             ExprVar.resetIDs();
