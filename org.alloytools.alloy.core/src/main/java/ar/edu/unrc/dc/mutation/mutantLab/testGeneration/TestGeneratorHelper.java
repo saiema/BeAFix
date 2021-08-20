@@ -147,7 +147,7 @@ public class TestGeneratorHelper {
          return expr;
      }
 
-     static Expr getInitValue(List<? extends Expr> values) {
+     static Expr exprListToSet(List<? extends Expr> values) {
         if (values == null || values.isEmpty())
             return null;
         Expr initValue = null;

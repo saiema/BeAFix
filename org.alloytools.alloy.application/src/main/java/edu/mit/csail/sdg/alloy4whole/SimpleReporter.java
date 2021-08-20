@@ -864,6 +864,9 @@ final class SimpleReporter extends A4Reporter {
             }
             MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_TESTS_PER_STEP, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
             MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_MAX_TESTS_PER_COMMAND));
+            if (!repair) {
+                MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_MAX_TESTS_PER_COMMAND, aStrykerConfig.getIntArgument(AStrykerConfigReader.Config_key.TEST_GENERATION_TESTS_PER_STEP));
+            }
             if (repair || !((Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(ConfigKey.TEST_GENERATION_AREPAIR_INTEGRATION)))
                 MutationConfiguration.getInstance().setConfig(ConfigKey.TEST_GENERATION_AREPAIR_INSTANCE_TESTS_BRANCHES, "BOTH");
             if (repair) {

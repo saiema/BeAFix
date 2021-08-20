@@ -2,6 +2,7 @@ package ar.edu.unrc.dc.mutation.mutantLab.testGeneration;
 
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.ExprVar;
+import edu.mit.csail.sdg.ast.Sig;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -10,17 +11,19 @@ import static ar.edu.unrc.dc.mutation.mutantLab.testGeneration.TestGeneratorHelp
 
 public class VariableMapping {
 
+    private final Map<Sig, List<ExprVar>> signatureValues;
     private final Map<ExprVar, ExprVar> originalVarsToSkolemVars;
     private final Map<String, Integer> originalVarsLabelCount;
     private final List<ExprVar> skolemVars;
     private final Command cmd;
     private boolean extended = false;
 
-    public VariableMapping(List<ExprVar> originalVars, List<ExprVar> skolemVars, Command cmd) {
+    public VariableMapping(List<ExprVar> originalVars, List<ExprVar> skolemVars, Map<Sig, List<ExprVar>> signatureValues, Command cmd) {
         originalVarsToSkolemVars = new HashMap<>();
         originalVarsLabelCount = new TreeMap<>();
         this.skolemVars = new LinkedList<>(skolemVars);
         this.cmd = cmd;
+        this.signatureValues = new HashMap<>(signatureValues);
         createMapping(originalVars, skolemVars);
     }
 
@@ -30,6 +33,7 @@ public class VariableMapping {
         originalVarsToSkolemVars.putAll(from.originalVarsToSkolemVars);
         originalVarsLabelCount.putAll(from.originalVarsLabelCount);
         cmd = from.cmd;
+        this.signatureValues = new HashMap<>(from.signatureValues);
         skolemVars = new LinkedList<>(from.skolemVars);
         extended = from.extended;
     }
@@ -51,15 +55,14 @@ public class VariableMapping {
         return originalVarsToSkolemVars.values().stream().anyMatch(exprVar -> exprVar.label.compareTo(svar.label) == 0);
     }
 
+    public Map<Sig, List<ExprVar>> signatureValues() {
+        return signatureValues;
+    }
+
     public boolean isExtended() { return extended; }
 
     public VariableMapping cleanMappingToAlloyNames() {
-        return new VariableMapping(new LinkedList<>(originalVarsToSkolemVars.keySet()), new LinkedList<>(skolemVars), cmd);
-        /*TODO: remove in a later version
-        List<ExprVar> cleanSkolemVars = skolemVars.stream().map(
-                TestGeneratorHelper::internalNamedVarToAlloyNamedVar
-        ).collect(Collectors.toList());
-        return new VariableMapping(new LinkedList<>(originalVarsToSkolemVars.keySet()), cleanSkolemVars, cmd);*/
+        return new VariableMapping(new LinkedList<>(originalVarsToSkolemVars.keySet()), new LinkedList<>(skolemVars), this.signatureValues, cmd);
     }
 
     @Override
@@ -103,7 +106,6 @@ public class VariableMapping {
 
     private ExprVar getSkolemVar(String label, List<ExprVar> skolemVars) {
         for (ExprVar sVar : skolemVars) {
-            //if (internalAtomNotationToAlloyName(sVar.label).compareTo(label) == 0)
             if (sVar.label.compareTo(label) == 0)
                 return sVar;
         }

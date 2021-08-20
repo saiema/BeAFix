@@ -4,7 +4,6 @@ import ar.edu.unrc.dc.mutation.CheatingIsBadMkay;
 import ar.edu.unrc.dc.mutation.Cheats;
 import ar.edu.unrc.dc.mutation.MutationConfiguration;
 import ar.edu.unrc.dc.mutation.mutantLab.MutantLab;
-import ar.edu.unrc.dc.mutation.util.ExpressionEvaluator;
 import ar.edu.unrc.dc.mutation.util.RepairReport;
 import ar.edu.unrc.dc.mutation.visitors.FunctionsCollector;
 import ar.edu.unrc.dc.mutation.visitors.SearchCall;
@@ -108,55 +107,55 @@ public class TestsGenerator {
     }
 
     public static int testsToGeneratePerCommand() {
-        return (Integer) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_MAX_TESTS_PER_COMMAND).orElse(TEST_GENERATION_MAX_TESTS_PER_COMMAND.defaultValue());
+        return (Integer) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_MAX_TESTS_PER_COMMAND);
     }
 
     public static int testsPerGeneration() {
-        return (Integer) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_TESTS_PER_STEP).orElse(TEST_GENERATION_TESTS_PER_STEP.defaultValue());
+        return (Integer) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_TESTS_PER_STEP);
     }
 
     public static boolean arepairIntegration() {
-        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION).orElse(TEST_GENERATION_AREPAIR_INTEGRATION.defaultValue());
+        return (Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_AREPAIR_INTEGRATION);
     }
 
     public static boolean arepairRelaxed() {
-        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE.defaultValue());
+        return (Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_MODE);
     }
 
     public static boolean arepairRelaxedFacts() {
-        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS.defaultValue());
+        return (Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_AREPAIR_INTEGRATION_RELAXED_FACTS);
     }
 
     public static boolean arepairForceAssertionTests() {
-        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS).orElse(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS.defaultValue());
+        return (Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_AREPAIR_INTEGRATION_FORCE_ASSERTION_TESTS);
     }
 
     public static boolean arepairNoExpectInstanceForNegativeTestWhenNoFacts() {
-        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS).orElse(TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS.defaultValue());
+        return (Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_NO_EXPECT_INSTANCE_FOR_NEGATION_TEST_WHEN_NO_FACTS);
     }
 
     public static String testBaseName() {
-        return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NAME).orElse(TEST_GENERATION_NAME.defaultValue());
+        return (String) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_NAME);
     }
 
     public static int testBaseNameStartingIndex() {
-        return (int) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_NAME_STARTING_INDEX).orElse(TEST_GENERATION_NAME_STARTING_INDEX.defaultValue());
+        return (int) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_NAME_STARTING_INDEX);
     }
 
     public static boolean useModelOverriding() {
-        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_USE_MODEL_OVERRIDING).orElse(TEST_GENERATION_USE_MODEL_OVERRIDING.defaultValue());
+        return (Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_USE_MODEL_OVERRIDING);
     }
 
     public static String modelOverridingFolder() {
-        return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_MODEL_OVERRIDING_FOLDER).orElse(TEST_GENERATION_MODEL_OVERRIDING_FOLDER.defaultValue());
+        return (String) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_MODEL_OVERRIDING_FOLDER);
     }
 
     public static boolean generateInstanceTests() {
-        return (Boolean) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_INSTANCES_TESTS_GENERATION).orElse(TEST_GENERATION_INSTANCES_TESTS_GENERATION.defaultValue());
+        return (Boolean) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_INSTANCES_TESTS_GENERATION);
     }
 
     public static String buggyFunctionsFile() {
-        return (String) MutationConfiguration.getInstance().getConfigValue(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE).orElse(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE.defaultValue());
+        return (String) MutationConfiguration.getInstance().getConfigValueOrDefault(TEST_GENERATION_INSTANCES_TESTS_GENERATION_BUGGY_FUNCS_FILE);
     }
 
     private static final String INSTANCE_TESTS_BOTH_BRANCHES = "BOTH";
@@ -298,10 +297,10 @@ public class TestsGenerator {
             extractedProperty = propertyExtractor.extractFromAssertion((Expr) predicateOrAssertionCalled);
         }
         List<ExprVar> originalVariables = extractedProperty.getVariables();
-        VariableMapping variableMapping = new VariableMapping(originalVariables, skolemVariables, command);
+        VariableMapping variableMapping = new VariableMapping(originalVariables, skolemVariables, signatureValues, command);
         List<ExprVar> solutionsSkolemVariables = new LinkedList<>();
         solution.getAllSkolems().forEach(solutionsSkolemVariables::add);
-        VariableMapping internalVariableMapping = new VariableMapping(originalVariables, solutionsSkolemVariables, command);
+        VariableMapping internalVariableMapping = new VariableMapping(originalVariables, solutionsSkolemVariables, signatureValues, command);
         PropertyCleaner propertyCleaner = new PropertyCleaner();
         Expr cleanedFormula = propertyCleaner.removeSuperficialNoop(extractedProperty.getProperty());//propertyCleaner.cleanExpression(extractedProperty.getProperty());
         if (cleanedFormula == null)
@@ -674,35 +673,30 @@ public class TestsGenerator {
                     return Collections.emptyList();
                 }
                 Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
-                if (formulaToEvaluate.type().is_int() || formulaToEvaluate.type().is_small_int()) {
+                if (ExpressionEvaluator.isNonBooleanExpression(formulaToEvaluate)) {
                     if (needToIterate(predsFormula)) {
-                        logger.warning("Can't support complex expressions for preds related formula when dealing with int expressions");
+                        logger.warning("Can't support complex expressions for preds related formula when dealing with non boolean expressions");
                         return Collections.emptyList();
                     }
-                    if (isArithmeticComparisonBinaryOp(currentAsBinaryExpr.op)) {
-                        Optional<ExprConstant> constantValue = ExpressionEvaluator.evaluateIntFormula(instance, formulaToEvaluate, variableMapping);
-                        if (constantValue.isPresent()) {
-                            Expr expressionToTest = currentAsBinaryExpr.op.make(null, null, (Expr) predsFormula.clone(), constantValue.get());
-                            if (expressionToTest.errors != null && !expressionToTest.errors.isEmpty()) {
-                                logger.warning("An error occurred while trying to generate the arithmetic expression to test:\n" + expressionToTest.errors.stream().map(Err::toString).collect(Collectors.joining("\n")));
-                                return Collections.emptyList();
-                            }
-                            List<TestBody> testBodies = new LinkedList<>();
-                            if (expected == null || expected) {
-                                testBodies.add(untrustedFacts?TestBody.untrustedSatisfiablePredicate(expressionToTest, variableMapping):TestBody.trustedSatisfiablePredicate(expressionToTest, variableMapping));
-                            } else  {
-                                testBodies.addAll(generateUnsatPredicateTestBodies(expressionToTest, !untrustedFacts, hasFacts, variableMapping));
-                            }
-                            if (untrustedFacts) {
-                                testBodies.add(TestBody.untrustedUnexpectedInstance());
-                            }
-                            return testBodies;
-                        } else {
-                            logger.warning("Evaluation of " + formulaToEvaluate + " didn't yield any integer constant value");
+                    Optional<? extends Expr> constantValue = ExpressionEvaluator.evaluateNonBooleanFormula(instance, formulaToEvaluate, variableMapping);
+                    if (constantValue.isPresent()) {
+                        Expr expressionToTest = currentAsBinaryExpr.op.make(null, null, (Expr) predsFormula.clone(), constantValue.get());
+                        if (expressionToTest.errors != null && !expressionToTest.errors.isEmpty()) {
+                            logger.warning("An error occurred while trying to generate the non boolean expression to test:\n" + expressionToTest.errors.stream().map(Err::toString).collect(Collectors.joining("\n")));
                             return Collections.emptyList();
                         }
+                        List<TestBody> testBodies = new LinkedList<>();
+                        if (expected == null || expected) {
+                            testBodies.add(untrustedFacts?TestBody.untrustedSatisfiablePredicate(expressionToTest, variableMapping):TestBody.trustedSatisfiablePredicate(expressionToTest, variableMapping));
+                        } else  {
+                            testBodies.addAll(generateUnsatPredicateTestBodies(expressionToTest, !untrustedFacts, hasFacts, variableMapping));
+                        }
+                        if (untrustedFacts) {
+                            testBodies.add(TestBody.untrustedUnexpectedInstance());
+                        }
+                        return testBodies;
                     } else {
-                        logger.warning("Can't support other arithmetic operators, only equality ones; current operator is (" + currentAsBinaryExpr.op + ") in " + currentAsBinaryExpr);
+                        logger.warning("Evaluation of " + formulaToEvaluate + " didn't yield any constant value");
                         return Collections.emptyList();
                     }
                 }
@@ -950,32 +944,27 @@ public class TestsGenerator {
                     return Collections.emptyList();
                 }
                 Expr predsFormula = lor?currentAsBinaryExpr.right:currentAsBinaryExpr.left;
-                if (formulaToEvaluate.type().is_int() || formulaToEvaluate.type().is_small_int()) {
+                if (ExpressionEvaluator.isNonBooleanExpression(formulaToEvaluate)) {
                     if (needToIterate(predsFormula)) {
-                        logger.warning("Can't support complex expressions for preds related formula when dealing with int expressions");
+                        logger.warning("Can't support complex expressions for preds related formula when dealing with non boolean expressions");
                         return Collections.emptyList();
                     }
-                    if (isArithmeticComparisonBinaryOp(currentAsBinaryExpr.op)) {
-                        Optional<ExprConstant> constantValue = ExpressionEvaluator.evaluateIntFormula(instance, formulaToEvaluate, variableMapping);
-                        if (constantValue.isPresent()) {
-                            Expr expressionToTest = currentAsBinaryExpr.op.make(null, null, (Expr) predsFormula.clone(), constantValue.get());
-                            if (expressionToTest.errors != null && !expressionToTest.errors.isEmpty()) {
-                                logger.warning("An error occurred while trying to generate the arithmetic expression to test:\n" + expressionToTest.errors.stream().map(Err::toString).collect(Collectors.joining("\n")));
-                                return Collections.emptyList();
-                            }
-                            List<TestBody> testBodies = new LinkedList<>();
-                            if (expected == null || expected) {
-                                testBodies.add(untrustedFacts?TestBody.untrustedSatisfiablePredicate(expressionToTest, variableMapping):TestBody.trustedSatisfiablePredicate(expressionToTest, variableMapping));
-                            } else  {
-                                testBodies.addAll(generateUnsatPredicateTestBodies(expressionToTest, !untrustedFacts, hasFacts, variableMapping));
-                            }
-                            return testBodies;
-                        } else {
-                            logger.warning("Evaluation of " + formulaToEvaluate + " didn't yield any integer constant value");
+                    Optional<? extends Expr> constantValue = ExpressionEvaluator.evaluateNonBooleanFormula(instance, formulaToEvaluate, variableMapping);//ExpressionEvaluator.evaluateIntFormula(instance, formulaToEvaluate, variableMapping);
+                    if (constantValue.isPresent()) {
+                        Expr expressionToTest = currentAsBinaryExpr.op.make(null, null, (Expr) predsFormula.clone(), constantValue.get());
+                        if (expressionToTest.errors != null && !expressionToTest.errors.isEmpty()) {
+                            logger.warning("An error occurred while trying to generate the non boolean expression to test:\n" + expressionToTest.errors.stream().map(Err::toString).collect(Collectors.joining("\n")));
                             return Collections.emptyList();
                         }
+                        List<TestBody> testBodies = new LinkedList<>();
+                        if (expected == null || expected) {
+                            testBodies.add(untrustedFacts?TestBody.untrustedSatisfiablePredicate(expressionToTest, variableMapping):TestBody.trustedSatisfiablePredicate(expressionToTest, variableMapping));
+                        } else  {
+                            testBodies.addAll(generateUnsatPredicateTestBodies(expressionToTest, !untrustedFacts, hasFacts, variableMapping));
+                        }
+                        return testBodies;
                     } else {
-                        logger.warning("Can't support other arithmetic operators, only equality ones; current operator is (" + currentAsBinaryExpr.op + ") in " + currentAsBinaryExpr);
+                        logger.warning("Evaluation of " + formulaToEvaluate + " didn't yield any constant value");
                         return Collections.emptyList();
                     }
                 }
@@ -1208,22 +1197,6 @@ public class TestsGenerator {
         return testBodies;
     }
 
-    private boolean isArithmeticComparisonBinaryOp(ExprBinary.Op op) {
-        switch (op) {
-            case EQUALS:
-            case NOT_EQUALS:
-            case LT:
-            case LTE:
-            case GT:
-            case GTE:
-            case NOT_LT:
-            case NOT_LTE:
-            case NOT_GT:
-            case NOT_GTE: return true;
-            default: return false;
-        }
-    }
-
     private boolean needToIterate(Expr x) {
         return !(x instanceof ExprCall);
     }
@@ -1412,7 +1385,7 @@ public class TestsGenerator {
                 left = (Expr) leftAsField.fullCopy();
             } else
                 left = (Expr) values.getKey().clone();
-            Expr right = getInitValue(values.getValue());
+            Expr right = exprListToSet(values.getValue());
             Expr init;
             if (right == null)
                 init = ExprUnary.Op.NO.make(null, left);
