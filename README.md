@@ -43,3 +43,10 @@ You might need to manually install gradle and run `gradle wrapper` if gradle wra
 * **VCR** 		: Replaces a **_field_**, **_signature_**, **_variable_**, or **_constant_**, which is not a part of a join expression,  with reachable **_variables_**, **_signatures_**, **_fields_**, and **_constants_**.
 
 *All mutations are both type checked (although some invalid mutations can happen); irrelevant mutations are also analysed and skipped, as for example, adding a closure operator to an expression with a reflexive closure operator;  and finally, repeated expressions are also detected and removed from analysis.*
+
+## Adding Mutation Operators
+
+**BeAFix** core is implemented in `org.alloytools.alloy.core.are.edu.unrc.dc.mutation`. Inside the `op` subpackage are all operators. Any new implemented operator must then be added to `Ops` enum, overriding the necesessary methods:
+ * `isImplemented() : boolean` must return either `true` or `false` and will determine if that operator will be used.
+ * `getOperator(CompModule) : Mutator` must return the implemented operator inside the `op` subpackage.
+ * `getComplexity() : Int` must return a positive number that will determine in which order (w.r.t. other operators) the operator will be used. 
