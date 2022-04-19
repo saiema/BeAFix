@@ -46,7 +46,7 @@ You might need to manually install gradle and run `gradle wrapper` if gradle wra
 
 ## Adding Mutation Operators
 
-**BeAFix** core is implemented in `org.alloytools.alloy.core.are.edu.unrc.dc.mutation`. Inside the `op` subpackage are all operators. Any new implemented operator must then be added to `Ops` enum, overriding the necesessary methods:
+**BeAFix** core is implemented in `org.alloytools.alloy.core.are.edu.unrc.dc`. Inside the `mutation.op` subpackage are all operators. Any new implemented operator must then be added to `Ops` enum, overriding the necesessary methods:
  * `isImplemented() : boolean` must return either `true` or `false` and will determine if that operator will be used.
- * `getOperator(CompModule) : Mutator` must return the implemented operator inside the `op` subpackage.
+ * `getOperator(CompModule) : Mutator` must return the implemented operator inside the `mutation.op` subpackage.
  * `getComplexity() : Int` must return a positive number that will determine in which order (w.r.t. other operators) the operator will be used. 
